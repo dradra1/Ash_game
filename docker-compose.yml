@@ -1,0 +1,11 @@
+services:
+  ash_and_iron:
+    container_name: ash_and_iron
+    build: .
+    ports:
+      - "127.0.0.1:8150:8150"
+    volumes:
+      - ./data:/app/data
+    environment:
+      ASH_DATA: /app/data
+    restart: unless-stopped

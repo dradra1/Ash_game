@@ -8,3 +8,5 @@ secret_key
 node_modules/
 scratch/
 *.zip
+.venv/
+venv/

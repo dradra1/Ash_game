@@ -35,7 +35,10 @@ def fetch(url):
         return Image.open(io.BytesIO(r.read())).convert("RGBA")
 
 
-FILL = 0.68  # доля холста под спрайтом у обычных листов pixellab
+# Доля холста под спрайтом. 0.92, а не 0.68 как в RTS-проекте: там спрайты были 32 px и
+# запас под анимацию был нужен, здесь игровой размер 48 и каждый пиксель на счету —
+# при 0.68 персонаж занимает ~22 px и силуэт разваливается (проверено на ch_censor).
+FILL = 0.92
 
 ROT = "https://backblaze.pixellab.ai/file/pixellab-characters/{acc}/{cid}/rotations/{d}.png"
 
@@ -64,7 +67,9 @@ def crop_to(frames, fit, fill=FILL):
     out = []
     for fr in frames:
         canvas = Image.new("RGBA", (fit, fit), (0, 0, 0, 0))
-        canvas.paste(fr.crop(box).resize((inner, inner), Image.NEAREST), (off, off))
+        # LANCZOS, а не NEAREST: при ужатии 124→48 NEAREST выбрасывает опорные пиксели
+        # силуэта (маска, ствол, контур), LANCZOS их сохраняет. Сравнение — в истории M0.
+        canvas.paste(fr.crop(box).resize((inner, inner), Image.LANCZOS), (off, off))
         out.append(canvas)
     return out
 

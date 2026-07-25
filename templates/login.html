@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прах и Железо — Вход</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-body">
+    <div class="auth-box">
+        <h1>Прах и Железо</h1>
+        <div class="tabs">
+            <button class="tab active" data-tab="login">Вход</button>
+            <button class="tab" data-tab="register">Регистрация</button>
+        </div>
+        <div id="error" class="error"></div>
+        <form id="login-form" class="form active">
+            <label for="login-name">Имя</label>
+            <input type="text" id="login-name" name="name" autocomplete="username" required>
+            <label for="login-password">Пароль</label>
+            <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+            <button type="submit">Войти</button>
+        </form>
+        <form id="register-form" class="form">
+            <label for="register-name">Имя</label>
+            <input type="text" id="register-name" name="name" autocomplete="username" required>
+            <label for="register-password">Пароль</label>
+            <input type="password" id="register-password" name="password" autocomplete="new-password" required>
+            <button type="submit">Создать аккаунт</button>
+        </form>
+    </div>
+    <script>
+        const tabs = document.querySelectorAll('.tab');
+        const forms = document.querySelectorAll('.form');
+        const errorBox = document.getElementById('error');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const key = tab.dataset.tab;
+                tabs.forEach(t => t.classList.toggle('active', t === tab));
+                forms.forEach(f => f.classList.toggle('active', f.id === key + '-form'));
+                errorBox.textContent = '';
+            });
+        });
+
+        async function post(url, body) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Ошибка ' + res.status);
+            }
+            return data;
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.textContent = '';
+            try {
+                await post('/api/login', {
+                    name: document.getElementById('login-name').value,
+                    password: document.getElementById('login-password').value
+                });
+                window.location.href = '/';
+            } catch (err) {
+                errorBox.textContent = err.message;
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorBox.textContent = '';
+            try {
+                await post('/api/register', {
+                    name: document.getElementById('register-name').value,
+                    password: document.getElementById('register-password').value
+                });
+                window.location.href = '/';
+            } catch (err) {
+                errorBox.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>

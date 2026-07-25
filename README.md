@@ -36,9 +36,10 @@ docker compose up -d --build
 ## Тесты
 
 ```bash
-pytest tests/py -q          # сервер: API, мета, валидация забегов
-node --test tests/js/       # формулы sim: статы, XP, лавка, экономика
-node tools/bench_sim.js     # бюджет производительности симуляции
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # разово
+.venv/bin/python -m pytest tests/py -q   # сервер: API, мета, валидация забегов
+node --test tests/js/                    # формулы sim: статы, XP, лавка, экономика
+node tools/bench_sim.js                  # бюджет производительности симуляции
 ```
 
 ## Документы

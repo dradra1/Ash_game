@@ -1,0 +1,126 @@
+{
+  "_doc": "Реестр промптов генерации. Правила стиля — ASSETS.md. Запрещённые слова режет tools/pxl.py. Поле silhouette — не для модели, а для человека: чем этот силуэт отличается от остальных в куче из восьми (ASSETS.md §4).",
+
+  "style": "2D pixel art, high top-down view, dark grimdark gothic sci-fi, limited palette, rust and ash tones, readable silhouette on very dark background",
+
+  "defaults": {
+    "mode": "v3",
+    "size": 64,
+    "view": "high top-down",
+    "outline": "single color outline",
+    "detail": "high detail",
+    "body_type": "humanoid",
+    "fit": 32,
+    "walk_template": "walking-4-frames",
+    "walk_frames": 4,
+    "attack_frames": 6
+  },
+
+  "characters": {
+    "ch_pilgrim": {
+      "faction": "cov", "accent": "#c8a35a",
+      "silhouette": "средний рост, глубокий капюшон — нейтральный эталон, от которого отличаются остальные",
+      "prompt": "wandering pilgrim warrior in patched grey leather robes over a dented steel breastplate, deep hood shadowing a plain iron face-mask, a rusty heavy cleaver in one hand, small lit lamp and wax-sealed paper scrolls hanging from the belt, muted ochre sash, accent color #c8a35a",
+      "attack": "swinging a heavy cleaver downward"
+    },
+    "ch_zealot": {
+      "faction": "cov", "accent": "#d8b36a",
+      "silhouette": "коренастый, рогатый гребенчатый шлем, свечи на плечах",
+      "prompt": "broad heavy-set fanatic knight in thick battered plate armour, tall crested helm with two curved iron horns, bare scarred muscular arms, a swinging chain flail ending in a smoking brass incense burner, lit candles fixed to the shoulder plates, dripping wax, accent color #d8b36a",
+      "attack": "swinging a chain flail in a wide circle"
+    },
+    "ch_flagellant": {
+      "faction": "cov", "accent": "#b08a4a",
+      "silhouette": "тощий до костей, голый рубцованный торс, голова замотана тряпьём, длинный хвост бича",
+      "prompt": "emaciated skeletal penitent, bare scarred torso covered in welts and driven nails, head completely wrapped in filthy bandages, tattered loincloth, dragging a long spiked barbed whip, small wax seals nailed into the skin, accent color #b08a4a",
+      "attack": "lashing a long spiked whip forward"
+    },
+    "ch_conductor": {
+      "faction": "cov", "accent": "#e0c07a",
+      "silhouette": "высокий, очень широкая мантия колоколом, венец из органных труб над головой",
+      "prompt": "tall solemn choirmaster in a vast bell-shaped brocade robe with heavy gold trim, a crown of small brass organ pipes rising around the head, a blank porcelain half-mask, holding a long conducting staff topped with a ringing bell, sheet-music ribbons trailing from the sleeves, accent color #e0c07a",
+      "attack": "raising a conducting staff and striking a bell"
+    },
+    "ch_brute": {
+      "faction": "scrap", "accent": "#6d8f3a", "size": 96, "fit": 48,
+      "silhouette": "огромный и сутулый, плечи вдвое шире прочих, крошечная голова в ведре-шлеме",
+      "prompt": "enormous hulking brute with massive hunched shoulders and huge fists, armour crudely riveted from scrap road signs and boiler plate, a tiny bucket helmet with a slit visor, dragging a giant industrial sledgehammer, chains and nails hammered into the pauldrons, accent color #6d8f3a",
+      "attack": "slamming a giant sledgehammer into the ground"
+    },
+    "ch_scavenger": {
+      "faction": "scrap", "accent": "#8aa84a",
+      "silhouette": "щуплый, согнут под огромным горбом-рюкзаком из хлама",
+      "prompt": "wiry stooped scavenger bent under an enormous towering backpack of salvaged junk, pipes, cans and coils of wire, goggles pushed up on a dirty cloth cap, holding a crude pneumatic nail gun, bulging satchels strapped to both legs, accent color #8aa84a",
+      "attack": "firing a nail gun from the hip"
+    },
+    "ch_artificer": {
+      "faction": "forge", "accent": "#a83a2a",
+      "silhouette": "средний, за спиной четыре паучьи механические лапы-манипулятора",
+      "prompt": "tech-priest artificer in a dark crimson work robe and leather apron, four segmented spider-like mechanical arms arching from the backpack, one clutching a small turret, brass welding visor with three lenses, tool bandoliers, oil stains, accent color #a83a2a",
+      "attack": "deploying a small turret with mechanical arms"
+    },
+    "ch_censor": {
+      "faction": "forge", "accent": "#c04a36",
+      "silhouette": "высокий и тощий, глухой респиратор с круглыми линзами, лишняя тонкая рука",
+      "prompt": "tall gaunt tech-priest judge in a deep crimson hooded robe, brass respirator mask with round green lenses, one extra slender mechanical arm, thick cable bundles trailing from the back, holding a long slim beam carbine, brass and bakelite fittings, accent color #c04a36",
+      "attack": "aiming and firing a long beam carbine"
+    },
+    "ch_thrall": {
+      "faction": "chit", "accent": "#4d8f6b",
+      "silhouette": "низкий, сгорбленный почти вчетверо, безглазая голова, очень длинные костяные когти",
+      "prompt": "low hunched hairless thrall crawling forward, smooth eyeless head, chitin plates fused into pale skin, very long curved bone claws extending from both forearms, faint green bioluminescence glowing in the joints between plates, accent color #4d8f6b",
+      "attack": "slashing forward with long bone claws"
+    },
+    "ch_broodmate": {
+      "faction": "chit", "accent": "#5aa87a",
+      "silhouette": "раздутое брюшко-выводок сзади, длинные усики, серп в руке",
+      "prompt": "insectoid brood-tender with a large swollen translucent egg sac abdomen trailing behind, small pale larvae visible inside, two long twitching antennae, a serrated sickle blade held in a chitin-plated arm, green glow seeping from the sac, accent color #5aa87a",
+      "attack": "sweeping a serrated sickle sideways"
+    },
+    "ch_hierophant": {
+      "faction": "rift", "accent": "#7a2f8f",
+      "silhouette": "асимметричный: одно плечо выше, лишняя рука, над посохом парит кристалл",
+      "prompt": "asymmetric mutant hierophant in torn violet vestments, one shoulder grotesquely higher than the other, a third withered arm sprouting from the ribs, extra eyes open across the forehead, holding a staff with a jagged crystal shard floating above it, accent color #7a2f8f",
+      "attack": "raising a staff as a crystal shard flares"
+    },
+    "ch_hollow": {
+      "faction": "rift", "accent": "#9a4aa8",
+      "silhouette": "тощий, сквозная дыра в груди, полностью без оружия — единственный с пустыми руками",
+      "prompt": "gaunt hollowed figure in loose grey rags, a clean empty hole punched straight through the chest with violet void light spilling from the edges, completely unarmed with bare clenched fists, head tilted, no face features, accent color #9a4aa8",
+      "attack": "throwing a bare-fisted punch"
+    },
+    "ch_warden": {
+      "faction": "tomb", "accent": "#2fa8a0", "size": 96, "fit": 48,
+      "silhouette": "массивный неподвижный монолит, прямоугольный корпус, зелёные линзы",
+      "prompt": "massive blocky metal construct sentinel, heavy rectangular torso of dull unpolished engraved plate, thick immobile stance, two dim green lenses for eyes, dark verdigris seams, a short phase-discharge rod mounted on the forearm, slow and monolithic, accent color #2fa8a0",
+      "attack": "discharging an arc from a forearm rod"
+    },
+    "ch_mirrorblade": {
+      "faction": "mirror", "accent": "#4a7fc8",
+      "silhouette": "стройный и удлинённый, гладкая зеркальная маска, парные клинки, плащ с гранями",
+      "prompt": "slender elongated duellist in a fitted dark blue coat, a smooth featureless mirror mask reflecting cold light, twin slim stiletto blades held reversed, a cloak cut into sharp mirrored facets, silver filigree at the cuffs, elegant poised stance, accent color #4a7fc8",
+      "attack": "crossing twin stilettos in a fast slash"
+    }
+  },
+
+  "enemies": {
+    "e_cultist": {
+      "accent": "#8a6a4a",
+      "silhouette": "щуплый, босой, мешковатый капюшон — самый мелкий силуэт в толпе",
+      "prompt": "scrawny barefoot cultist in filthy torn sackcloth hood, sunken hollow face, crude rusty knife, rope belt, hunched forward and running, accent color #8a6a4a",
+      "attack": "stabbing forward with a crude knife"
+    },
+    "e_flesh": {
+      "accent": "#9a4a5a",
+      "silhouette": "приземистый бесформенный ком, безголовый, шире чем выше",
+      "prompt": "squat bloated mass of fused mutant flesh, several mismatched stubby arms, no visible head, split grinning mouth across the torso, raw red muscle and grey scar tissue, accent color #9a4a5a",
+      "attack": "lunging forward with stubby arms"
+    },
+    "e_spitter": {
+      "accent": "#6a8f4a",
+      "silhouette": "сгорбленный с огромным раздутым горловым мешком",
+      "prompt": "hunched mutant with a hugely swollen bile sac throat, thin spindly arms, wide toothless mouth, pale blistered skin, dripping green acid, accent color #6a8f4a",
+      "attack": "spitting a stream of acid forward"
+    }
+  }
+}

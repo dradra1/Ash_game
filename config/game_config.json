@@ -1,6 +1,5 @@
 {
   "content_version": 1,
-
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -15,7 +14,6 @@
     "pickup_stack_merge": 5,
     "corpse_fade_sec": 0.6
   },
-
   "net": {
     "snapshot_hz": 20,
     "input_hz": 30,
@@ -29,30 +27,39 @@
     "room_code_alphabet": "ACDEFGHJKLMNPQRTUVWXY3479",
     "traffic_budget_kbs": 30
   },
-
   "coop": {
     "max_players": 8,
     "budget_per_player": 0.65,
-    "hp_per_player": 0.10,
+    "hp_per_player": 0.1,
     "boss_hp_per_player": 0.55,
     "ash_per_player": 0.55,
     "arena_per_player": 0.06,
-    "death_penalty": 0.10,
+    "death_penalty": 0.1,
     "revive_hp_pct": 0.5,
     "shop_timer": 120,
     "friendly_fire": false,
     "levelup_pauses": false,
     "gift_enabled": true
   },
-
+  "render": {
+    "sprite_default": 48,
+    "player_ring": true,
+    "player_ring_width": 2,
+    "nameplate": true,
+    "nameplate_offset": 30,
+    "ally_marker": true,
+    "hp_bar_width": 28
+  },
   "arena": {
-    "size": [1600, 1200],
+    "size": [
+      1600,
+      1200
+    ],
     "min_spawn_dist": 200,
     "spawn_margin": 40,
     "camera_lag": 0.12,
     "wall_padding": 16
   },
-
   "player": {
     "move_speed": 130,
     "radius": 10,
@@ -79,28 +86,69 @@
       "knockback": 0
     }
   },
-
   "run": {
     "waves": 20,
     "wave_len_base": 20,
     "wave_len_step": 5,
     "wave_len_cap": 60,
-    "boss_waves": { "10": { "len_bonus": 30 }, "20": { "len": 90 } },
+    "boss_waves": {
+      "10": {
+        "len_bonus": 30
+      },
+      "20": {
+        "len": 90
+      }
+    },
     "weapon_slots": 6,
     "wave_end_collect_sec": 1.2,
     "wave_intro_sec": 1.5
   },
-
   "danger": [
-    { "id": 0, "name": "Послушник",   "hp_mult": 0.80, "dmg_mult": 0.80, "density": 0.85, "elite_from": 6, "price_mult": 1.00, "reward_mult": 1.0 },
-    { "id": 1, "name": "Ратник",      "hp_mult": 1.00, "dmg_mult": 1.00, "density": 1.00, "elite_from": 4, "price_mult": 1.00, "reward_mult": 1.35 },
-    { "id": 2, "name": "Крестоносец", "hp_mult": 1.30, "dmg_mult": 1.20, "density": 1.25, "elite_from": 3, "price_mult": 1.10, "reward_mult": 1.8 },
-    { "id": 3, "name": "Мученик",     "hp_mult": 1.60, "dmg_mult": 1.45, "density": 1.50, "elite_from": 2, "price_mult": 1.20, "reward_mult": 2.4, "elite_wave_every": 5 }
+    {
+      "id": 0,
+      "name": "Послушник",
+      "hp_mult": 0.8,
+      "dmg_mult": 0.8,
+      "density": 0.85,
+      "elite_from": 6,
+      "price_mult": 1.0,
+      "reward_mult": 1.0
+    },
+    {
+      "id": 1,
+      "name": "Ратник",
+      "hp_mult": 1.0,
+      "dmg_mult": 1.0,
+      "density": 1.0,
+      "elite_from": 4,
+      "price_mult": 1.0,
+      "reward_mult": 1.35
+    },
+    {
+      "id": 2,
+      "name": "Крестоносец",
+      "hp_mult": 1.3,
+      "dmg_mult": 1.2,
+      "density": 1.25,
+      "elite_from": 3,
+      "price_mult": 1.1,
+      "reward_mult": 1.8
+    },
+    {
+      "id": 3,
+      "name": "Мученик",
+      "hp_mult": 1.6,
+      "dmg_mult": 1.45,
+      "density": 1.5,
+      "elite_from": 2,
+      "price_mult": 1.2,
+      "reward_mult": 2.4,
+      "elite_wave_every": 5
+    }
   ],
-
   "stats": {
     "armor_k": 15,
-    "armor_cap": 0.80,
+    "armor_cap": 0.8,
     "dodge_cap": 60,
     "crit_mult": 2.0,
     "min_max_hp": 1,
@@ -108,77 +156,310 @@
     "range_melee_cooldown_pct": 0.35,
     "engineering_scale": 0.05,
     "order": [
-      "max_hp", "hp_regen", "lifesteal_pct", "damage_pct", "melee_dmg", "ranged_dmg",
-      "elem_dmg", "attack_speed_pct", "crit_pct", "engineering", "range", "armor",
-      "dodge_pct", "move_speed_pct", "luck", "tithe", "knockback"
+      "max_hp",
+      "hp_regen",
+      "lifesteal_pct",
+      "damage_pct",
+      "melee_dmg",
+      "ranged_dmg",
+      "elem_dmg",
+      "attack_speed_pct",
+      "crit_pct",
+      "engineering",
+      "range",
+      "armor",
+      "dodge_pct",
+      "move_speed_pct",
+      "luck",
+      "tithe",
+      "knockback"
     ],
     "meta": {
-      "max_hp":           { "name": "Здоровье",        "texture": "st_hp",     "kind": "flat",  "color": "#c34b4b" },
-      "hp_regen":         { "name": "Реген",           "texture": "st_regen",  "kind": "flat",  "color": "#7fbf6a" },
-      "lifesteal_pct":    { "name": "Вампиризм",       "texture": "st_leech",  "kind": "pct",   "color": "#a33a5a" },
-      "damage_pct":       { "name": "Урон",            "texture": "st_dmg",    "kind": "pct",   "color": "#e0a03a" },
-      "melee_dmg":        { "name": "Ближний урон",    "texture": "st_melee",  "kind": "flat",  "color": "#c8703a" },
-      "ranged_dmg":       { "name": "Дальний урон",    "texture": "st_ranged", "kind": "flat",  "color": "#6a9fc8" },
-      "elem_dmg":         { "name": "Стихийный урон",  "texture": "st_elem",   "kind": "flat",  "color": "#8f5ac8" },
-      "attack_speed_pct": { "name": "Скорость атаки",  "texture": "st_aspd",   "kind": "pct",   "color": "#d8c85a" },
-      "crit_pct":         { "name": "Крит",            "texture": "st_crit",   "kind": "pct",   "color": "#e05a3a" },
-      "engineering":      { "name": "Инженерия",       "texture": "st_engi",   "kind": "flat",  "color": "#a8a03a" },
-      "range":            { "name": "Дальность",       "texture": "st_range",  "kind": "flat",  "color": "#5ac8b0" },
-      "armor":            { "name": "Броня",           "texture": "st_armor",  "kind": "flat",  "color": "#8a8f9a" },
-      "dodge_pct":        { "name": "Уклонение",       "texture": "st_dodge",  "kind": "pct",   "color": "#5a9fd8" },
-      "move_speed_pct":   { "name": "Скорость",        "texture": "st_speed",  "kind": "pct",   "color": "#7fd8a0" },
-      "luck":             { "name": "Удача",           "texture": "st_luck",   "kind": "flat",  "color": "#c8a35a" },
-      "tithe":            { "name": "Десятина",        "texture": "st_tithe",  "kind": "flat",  "color": "#b0a070" },
-      "knockback":        { "name": "Отбрасывание",    "texture": "st_kb",     "kind": "flat",  "color": "#9a8a7a" }
+      "max_hp": {
+        "name": "Здоровье",
+        "texture": "st_hp",
+        "kind": "flat",
+        "color": "#c34b4b"
+      },
+      "hp_regen": {
+        "name": "Реген",
+        "texture": "st_regen",
+        "kind": "flat",
+        "color": "#7fbf6a"
+      },
+      "lifesteal_pct": {
+        "name": "Вампиризм",
+        "texture": "st_leech",
+        "kind": "pct",
+        "color": "#a33a5a"
+      },
+      "damage_pct": {
+        "name": "Урон",
+        "texture": "st_dmg",
+        "kind": "pct",
+        "color": "#e0a03a"
+      },
+      "melee_dmg": {
+        "name": "Ближний урон",
+        "texture": "st_melee",
+        "kind": "flat",
+        "color": "#c8703a"
+      },
+      "ranged_dmg": {
+        "name": "Дальний урон",
+        "texture": "st_ranged",
+        "kind": "flat",
+        "color": "#6a9fc8"
+      },
+      "elem_dmg": {
+        "name": "Стихийный урон",
+        "texture": "st_elem",
+        "kind": "flat",
+        "color": "#8f5ac8"
+      },
+      "attack_speed_pct": {
+        "name": "Скорость атаки",
+        "texture": "st_aspd",
+        "kind": "pct",
+        "color": "#d8c85a"
+      },
+      "crit_pct": {
+        "name": "Крит",
+        "texture": "st_crit",
+        "kind": "pct",
+        "color": "#e05a3a"
+      },
+      "engineering": {
+        "name": "Инженерия",
+        "texture": "st_engi",
+        "kind": "flat",
+        "color": "#a8a03a"
+      },
+      "range": {
+        "name": "Дальность",
+        "texture": "st_range",
+        "kind": "flat",
+        "color": "#5ac8b0"
+      },
+      "armor": {
+        "name": "Броня",
+        "texture": "st_armor",
+        "kind": "flat",
+        "color": "#8a8f9a"
+      },
+      "dodge_pct": {
+        "name": "Уклонение",
+        "texture": "st_dodge",
+        "kind": "pct",
+        "color": "#5a9fd8"
+      },
+      "move_speed_pct": {
+        "name": "Скорость",
+        "texture": "st_speed",
+        "kind": "pct",
+        "color": "#7fd8a0"
+      },
+      "luck": {
+        "name": "Удача",
+        "texture": "st_luck",
+        "kind": "flat",
+        "color": "#c8a35a"
+      },
+      "tithe": {
+        "name": "Десятина",
+        "texture": "st_tithe",
+        "kind": "flat",
+        "color": "#b0a070"
+      },
+      "knockback": {
+        "name": "Отбрасывание",
+        "texture": "st_kb",
+        "kind": "flat",
+        "color": "#9a8a7a"
+      }
     }
   },
-
   "level": {
-    "xp_formula": { "base": 4, "k": 3, "pow": 1.35 },
+    "xp_formula": {
+      "base": 4,
+      "k": 3,
+      "pow": 1.35
+    },
     "choices": 4,
     "reroll_weight_luck": 0.02,
     "pool": {
-      "max_hp":           { "weight": 10, "steps": [2, 3, 4] },
-      "hp_regen":         { "weight": 5,  "steps": [1, 1, 2] },
-      "lifesteal_pct":    { "weight": 4,  "steps": [1, 2, 2] },
-      "damage_pct":       { "weight": 8,  "steps": [3, 4, 6] },
-      "melee_dmg":        { "weight": 8,  "steps": [1, 2, 3] },
-      "ranged_dmg":       { "weight": 8,  "steps": [1, 2, 3] },
-      "elem_dmg":         { "weight": 6,  "steps": [1, 2, 3] },
-      "attack_speed_pct": { "weight": 8,  "steps": [3, 4, 6] },
-      "crit_pct":         { "weight": 6,  "steps": [2, 3, 4] },
-      "engineering":      { "weight": 4,  "steps": [1, 2, 2] },
-      "range":            { "weight": 5,  "steps": [1, 2, 2] },
-      "armor":            { "weight": 7,  "steps": [1, 1, 2] },
-      "dodge_pct":        { "weight": 6,  "steps": [2, 3, 4] },
-      "move_speed_pct":   { "weight": 7,  "steps": [3, 4, 5] },
-      "luck":             { "weight": 5,  "steps": [3, 4, 6] },
-      "tithe":            { "weight": 5,  "steps": [1, 1, 2] },
-      "knockback":        { "weight": 3,  "steps": [2, 3, 4] }
+      "max_hp": {
+        "weight": 10,
+        "steps": [
+          2,
+          3,
+          4
+        ]
+      },
+      "hp_regen": {
+        "weight": 5,
+        "steps": [
+          1,
+          1,
+          2
+        ]
+      },
+      "lifesteal_pct": {
+        "weight": 4,
+        "steps": [
+          1,
+          2,
+          2
+        ]
+      },
+      "damage_pct": {
+        "weight": 8,
+        "steps": [
+          3,
+          4,
+          6
+        ]
+      },
+      "melee_dmg": {
+        "weight": 8,
+        "steps": [
+          1,
+          2,
+          3
+        ]
+      },
+      "ranged_dmg": {
+        "weight": 8,
+        "steps": [
+          1,
+          2,
+          3
+        ]
+      },
+      "elem_dmg": {
+        "weight": 6,
+        "steps": [
+          1,
+          2,
+          3
+        ]
+      },
+      "attack_speed_pct": {
+        "weight": 8,
+        "steps": [
+          3,
+          4,
+          6
+        ]
+      },
+      "crit_pct": {
+        "weight": 6,
+        "steps": [
+          2,
+          3,
+          4
+        ]
+      },
+      "engineering": {
+        "weight": 4,
+        "steps": [
+          1,
+          2,
+          2
+        ]
+      },
+      "range": {
+        "weight": 5,
+        "steps": [
+          1,
+          2,
+          2
+        ]
+      },
+      "armor": {
+        "weight": 7,
+        "steps": [
+          1,
+          1,
+          2
+        ]
+      },
+      "dodge_pct": {
+        "weight": 6,
+        "steps": [
+          2,
+          3,
+          4
+        ]
+      },
+      "move_speed_pct": {
+        "weight": 7,
+        "steps": [
+          3,
+          4,
+          5
+        ]
+      },
+      "luck": {
+        "weight": 5,
+        "steps": [
+          3,
+          4,
+          6
+        ]
+      },
+      "tithe": {
+        "weight": 5,
+        "steps": [
+          1,
+          1,
+          2
+        ]
+      },
+      "knockback": {
+        "weight": 3,
+        "steps": [
+          2,
+          3,
+          4
+        ]
+      }
     }
   },
-
   "shop": {
     "slots": 4,
     "weapon_chance": 0.35,
     "reroll_base": 3,
     "reroll_growth": 1.4,
-    "inflation_pct": 0.10,
+    "inflation_pct": 0.1,
     "inflation_flat": 1,
     "sell_pct": 0.5,
     "merge_count": 2,
-    "tier_min_wave": { "2": 2, "3": 4, "4": 8 },
-    "tier_weights": [60, 25, 11, 4],
+    "tier_min_wave": {
+      "2": 2,
+      "3": 4,
+      "4": 8
+    },
+    "tier_weights": [
+      60,
+      25,
+      11,
+      4
+    ],
     "luck_tier_shift": 0.004,
-    "same_type_chance": 0.20,
+    "same_type_chance": 0.2,
     "same_tag_chance": 0.15,
     "gift_limit_pct": 0.5,
-    "tier_color": ["#9aa0a8", "#6a9fc8", "#a86ac8", "#e0a03a"]
+    "tier_color": [
+      "#9aa0a8",
+      "#6a9fc8",
+      "#a86ac8",
+      "#e0a03a"
+    ]
   },
-
   "waves": {
     "hp_growth": 0.22,
-    "dmg_growth": 0.10,
+    "dmg_growth": 0.1,
     "speed_growth": 0.02,
     "speed_cap": 1.6,
     "budget_base": 2,
@@ -192,32 +473,142 @@
     "elite_dmg_mult": 1.6,
     "elite_size_mult": 1.8,
     "elite_ash_mult": 8,
-    "boss_target_random_pct": 0.30
+    "boss_target_random_pct": 0.3
   },
-
   "meta": {
-    "relic_formula": { "per_wave": 3, "win": 25, "per_boss": 8, "coop_per_player": 0.05 },
+    "relic_formula": {
+      "per_wave": 3,
+      "win": 25,
+      "per_boss": 8,
+      "coop_per_player": 0.05
+    },
     "first_clear_bonus": 50,
-    "weapon_unlock_price": { "1": 120, "2": 250, "3": 400 },
+    "weapon_unlock_price": {
+      "1": 120,
+      "2": 250,
+      "3": 400
+    },
     "achievement_discount": 0.5,
     "upgrades": [
-      { "id": "mu_ash",    "name": "Полные карманы", "texture": "mu_ash",    "stat": "start_ash_pct", "step": 5, "max_ranks": 3, "price": [100, 250, 500] },
-      { "id": "mu_hp",     "name": "Крепкая плоть",  "texture": "mu_hp",     "stat": "start_hp",     "step": 1, "max_ranks": 5, "price": [80, 160, 300, 500, 800] },
-      { "id": "mu_luck",   "name": "Милость праха",  "texture": "mu_luck",   "stat": "start_luck",   "step": 1, "max_ranks": 3, "price": [120, 300, 600] },
-      { "id": "mu_reroll", "name": "Торговая жилка", "texture": "mu_reroll",  "stat": "reroll_discount_pct", "step": 5, "max_ranks": 2, "price": [150, 400] }
+      {
+        "id": "mu_ash",
+        "name": "Полные карманы",
+        "texture": "mu_ash",
+        "stat": "start_ash_pct",
+        "step": 5,
+        "max_ranks": 3,
+        "price": [
+          100,
+          250,
+          500
+        ]
+      },
+      {
+        "id": "mu_hp",
+        "name": "Крепкая плоть",
+        "texture": "mu_hp",
+        "stat": "start_hp",
+        "step": 1,
+        "max_ranks": 5,
+        "price": [
+          80,
+          160,
+          300,
+          500,
+          800
+        ]
+      },
+      {
+        "id": "mu_luck",
+        "name": "Милость праха",
+        "texture": "mu_luck",
+        "stat": "start_luck",
+        "step": 1,
+        "max_ranks": 3,
+        "price": [
+          120,
+          300,
+          600
+        ]
+      },
+      {
+        "id": "mu_reroll",
+        "name": "Торговая жилка",
+        "texture": "mu_reroll",
+        "stat": "reroll_discount_pct",
+        "step": 5,
+        "max_ranks": 2,
+        "price": [
+          150,
+          400
+        ]
+      }
     ]
   },
-
   "factions": {
-    "cov":    { "name": "Ковенант Свечи",     "color": "#c8a35a", "desc": "Фанатики-крестоносцы в тяжёлой броне. Вера платит здоровьем за силу.", "unlock": { "type": "default" } },
-    "scrap":  { "name": "Драка-Орда",         "color": "#6d8f3a", "desc": "Громилы с оружием из хлама. Сила растёт от числа врагов.",            "unlock": { "type": "relics", "cost": 300 } },
-    "forge":  { "name": "Литейный Синод",     "color": "#a83a2a", "desc": "Техно-жрецы в красных робах. Турели, мины, дроны.",                   "unlock": { "type": "relics", "cost": 500 } },
-    "chit":   { "name": "Рой Хитина",         "color": "#4d8f6b", "desc": "Хитин и серпы. Скорость, вампиризм, спутники-личинки.",               "unlock": { "type": "relics", "cost": 800 } },
-    "rift":   { "name": "Скверна Разлома",    "color": "#7a2f8f", "desc": "Мутанты-культисты. Риск, мутации, самоурон, стихии.",                 "unlock": { "type": "relics", "cost": 1200 } },
-    "tomb":   { "name": "Курганные Литые",    "color": "#2fa8a0", "desc": "Металлические конструкты-нежить. Броня, реген, медлительность.",      "unlock": { "type": "relics", "cost": 1600 } },
-    "mirror": { "name": "Синклит Зеркал",     "color": "#4a7fc8", "desc": "Изящные долгожители в масках. Крит, уклонение, дальность.",           "unlock": { "type": "relics", "cost": 2200 } }
+    "cov": {
+      "name": "Ковенант Свечи",
+      "color": "#c8a35a",
+      "desc": "Фанатики-крестоносцы в тяжёлой броне. Вера платит здоровьем за силу.",
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "scrap": {
+      "name": "Драка-Орда",
+      "color": "#6d8f3a",
+      "desc": "Громилы с оружием из хлама. Сила растёт от числа врагов.",
+      "unlock": {
+        "type": "relics",
+        "cost": 300
+      }
+    },
+    "forge": {
+      "name": "Литейный Синод",
+      "color": "#a83a2a",
+      "desc": "Техно-жрецы в красных робах. Турели, мины, дроны.",
+      "unlock": {
+        "type": "relics",
+        "cost": 500
+      }
+    },
+    "chit": {
+      "name": "Рой Хитина",
+      "color": "#4d8f6b",
+      "desc": "Хитин и серпы. Скорость, вампиризм, спутники-личинки.",
+      "unlock": {
+        "type": "relics",
+        "cost": 800
+      }
+    },
+    "rift": {
+      "name": "Скверна Разлома",
+      "color": "#7a2f8f",
+      "desc": "Мутанты-культисты. Риск, мутации, самоурон, стихии.",
+      "unlock": {
+        "type": "relics",
+        "cost": 1200
+      }
+    },
+    "tomb": {
+      "name": "Курганные Литые",
+      "color": "#2fa8a0",
+      "desc": "Металлические конструкты-нежить. Броня, реген, медлительность.",
+      "unlock": {
+        "type": "relics",
+        "cost": 1600
+      }
+    },
+    "mirror": {
+      "name": "Синклит Зеркал",
+      "color": "#4a7fc8",
+      "desc": "Изящные долгожители в масках. Крит, уклонение, дальность.",
+      "unlock": {
+        "type": "relics",
+        "cost": 2200
+      }
+    }
   },
-
   "characters": {
     "ch_pilgrim": {
       "name": "Пилигрим",
@@ -225,11 +616,16 @@
       "faction": "cov",
       "texture": "ch_pilgrim",
       "color": "#c8a35a",
-      "start_weapons": ["w_cleaver_1"],
+      "start_weapons": [
+        "w_cleaver_1"
+      ],
       "stats": {},
       "levelup_weights": {},
       "unique": null,
-      "unlock": { "type": "default" }
+      "unlock": {
+        "type": "default"
+      },
+      "sprite": 48
     },
     "ch_zealot": {
       "name": "Ревнитель",
@@ -237,11 +633,28 @@
       "faction": "cov",
       "texture": "ch_zealot",
       "color": "#d8b36a",
-      "start_weapons": ["w_censer_1"],
-      "stats": { "melee_dmg": 4, "max_hp_pct": -20 },
-      "levelup_weights": { "melee_dmg": 2.0, "ranged_dmg": 0.3, "elem_dmg": 0.5 },
-      "unique": { "type": "low_hp_haste", "threshold": 0.5, "value": 0.30 },
-      "unlock": { "type": "relics", "cost": 150 }
+      "start_weapons": [
+        "w_censer_1"
+      ],
+      "stats": {
+        "melee_dmg": 4,
+        "max_hp_pct": -20
+      },
+      "levelup_weights": {
+        "melee_dmg": 2.0,
+        "ranged_dmg": 0.3,
+        "elem_dmg": 0.5
+      },
+      "unique": {
+        "type": "low_hp_haste",
+        "threshold": 0.5,
+        "value": 0.3
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 150
+      },
+      "sprite": 48
     },
     "ch_censor": {
       "name": "Цензор",
@@ -249,134 +662,365 @@
       "faction": "forge",
       "texture": "ch_censor",
       "color": "#a83a2a",
-      "start_weapons": ["w_carbine_1"],
-      "stats": { "range": 2, "attack_speed_pct": -20 },
-      "levelup_weights": { "ranged_dmg": 2.0, "range": 1.5, "melee_dmg": 0.0 },
-      "unique": { "type": "no_melee" },
-      "unlock": { "type": "relics", "cost": 450 }
+      "start_weapons": [
+        "w_carbine_1"
+      ],
+      "stats": {
+        "range": 2,
+        "attack_speed_pct": -20
+      },
+      "levelup_weights": {
+        "ranged_dmg": 2.0,
+        "range": 1.5,
+        "melee_dmg": 0.0
+      },
+      "unique": {
+        "type": "no_melee"
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 450
+      },
+      "sprite": 48
     }
   },
-
   "weapons": {
     "w_cleaver_1": {
-      "name": "Ржавый тесак", "texture": "w_cleaver", "tier": 1, "class": "melee",
-      "tags": ["blade", "primitive"],
-      "damage": 10, "cooldown": 0.90, "range": 105, "knockback": 6, "crit_pct": 5,
-      "scaling": { "melee_dmg": 1.0, "damage_pct": 1.0 },
-      "shape": { "type": "arc", "angle": 80 },
-      "price": 12, "next_tier": "w_cleaver_2", "unlock": { "type": "default" }
+      "name": "Ржавый тесак",
+      "texture": "w_cleaver",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 10,
+      "cooldown": 0.9,
+      "range": 105,
+      "knockback": 6,
+      "crit_pct": 5,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 80
+      },
+      "price": 12,
+      "next_tier": "w_cleaver_2",
+      "unlock": {
+        "type": "default"
+      }
     },
     "w_cleaver_2": {
-      "name": "Точёный тесак", "texture": "w_cleaver", "tier": 2, "class": "melee",
-      "tags": ["blade", "primitive"],
-      "damage": 17, "cooldown": 0.85, "range": 112, "knockback": 7, "crit_pct": 6,
-      "scaling": { "melee_dmg": 1.2, "damage_pct": 1.0 },
-      "shape": { "type": "arc", "angle": 85 },
-      "price": 28, "next_tier": "w_cleaver_3", "unlock": { "type": "default" }
+      "name": "Точёный тесак",
+      "texture": "w_cleaver",
+      "tier": 2,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 17,
+      "cooldown": 0.85,
+      "range": 112,
+      "knockback": 7,
+      "crit_pct": 6,
+      "scaling": {
+        "melee_dmg": 1.2,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 85
+      },
+      "price": 28,
+      "next_tier": "w_cleaver_3",
+      "unlock": {
+        "type": "default"
+      }
     },
     "w_censer_1": {
-      "name": "Кадило-цеп", "texture": "w_censer", "tier": 1, "class": "melee",
-      "tags": ["blunt", "holy"],
-      "damage": 9, "cooldown": 0.85, "range": 110, "knockback": 10, "crit_pct": 3,
-      "scaling": { "melee_dmg": 1.0, "damage_pct": 1.0 },
-      "shape": { "type": "arc", "angle": 120 },
-      "price": 15, "next_tier": "w_censer_2", "unlock": { "type": "default" }
+      "name": "Кадило-цеп",
+      "texture": "w_censer",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blunt",
+        "holy"
+      ],
+      "damage": 9,
+      "cooldown": 0.85,
+      "range": 110,
+      "knockback": 10,
+      "crit_pct": 3,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 120
+      },
+      "price": 15,
+      "next_tier": "w_censer_2",
+      "unlock": {
+        "type": "default"
+      }
     },
     "w_nailer_1": {
-      "name": "Гвоздомёт", "texture": "w_nailer", "tier": 1, "class": "ranged",
-      "tags": ["gun", "primitive", "spread"],
-      "damage": 6, "cooldown": 0.55, "range": 280, "knockback": 3, "crit_pct": 4,
-      "scaling": { "ranged_dmg": 1.0, "damage_pct": 1.0 },
-      "shape": { "type": "projectile", "count": 1, "spread": 6, "speed": 420, "pierce": 0, "ttl": 1.1, "texture": "p_nail" },
-      "price": 14, "next_tier": "w_nailer_2", "unlock": { "type": "default" }
+      "name": "Гвоздомёт",
+      "texture": "w_nailer",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "primitive",
+        "spread"
+      ],
+      "damage": 6,
+      "cooldown": 0.55,
+      "range": 280,
+      "knockback": 3,
+      "crit_pct": 4,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 6,
+        "speed": 420,
+        "pierce": 0,
+        "ttl": 1.1,
+        "texture": "p_nail"
+      },
+      "price": 14,
+      "next_tier": "w_nailer_2",
+      "unlock": {
+        "type": "default"
+      }
     },
     "w_carbine_1": {
-      "name": "Лучевой карабин", "texture": "w_carbine", "tier": 1, "class": "ranged",
-      "tags": ["gun", "precise"],
-      "damage": 11, "cooldown": 1.05, "range": 360, "knockback": 2, "crit_pct": 8,
-      "scaling": { "ranged_dmg": 1.0, "damage_pct": 1.0 },
-      "shape": { "type": "projectile", "count": 1, "spread": 0, "speed": 620, "pierce": 1, "ttl": 1.0, "texture": "p_beam" },
-      "price": 20, "next_tier": "w_carbine_2", "unlock": { "type": "default" }
+      "name": "Лучевой карабин",
+      "texture": "w_carbine",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise"
+      ],
+      "damage": 11,
+      "cooldown": 1.05,
+      "range": 360,
+      "knockback": 2,
+      "crit_pct": 8,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 620,
+        "pierce": 1,
+        "ttl": 1.0,
+        "texture": "p_beam"
+      },
+      "price": 20,
+      "next_tier": "w_carbine_2",
+      "unlock": {
+        "type": "default"
+      }
     }
   },
-
   "items": {
     "it_wax_seal": {
-      "name": "Восковая печать", "desc": "Каждая волна оставляет на ней новый оттиск.",
-      "texture": "it_wax_seal", "tier": 2, "price": 30,
-      "tags": ["holy"],
-      "stats": { "armor": 1, "move_speed_pct": -3 },
-      "effect": { "trigger": "wave_end", "type": "add_stat", "stat": "damage_pct", "value": 2 },
+      "name": "Восковая печать",
+      "desc": "Каждая волна оставляет на ней новый оттиск.",
+      "texture": "it_wax_seal",
+      "tier": 2,
+      "price": 30,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "armor": 1,
+        "move_speed_pct": -3
+      },
+      "effect": {
+        "trigger": "wave_end",
+        "type": "add_stat",
+        "stat": "damage_pct",
+        "value": 2
+      },
       "coop_only": false
     },
     "it_rusty_nail": {
-      "name": "Ржавый гвоздь", "desc": "Мелочь, а колет.",
-      "texture": "it_rusty_nail", "tier": 1, "price": 10,
-      "tags": ["primitive"],
-      "stats": { "melee_dmg": 2, "ranged_dmg": 1 },
+      "name": "Ржавый гвоздь",
+      "desc": "Мелочь, а колет.",
+      "texture": "it_rusty_nail",
+      "tier": 1,
+      "price": 10,
+      "tags": [
+        "primitive"
+      ],
+      "stats": {
+        "melee_dmg": 2,
+        "ranged_dmg": 1
+      },
       "effect": null,
       "coop_only": false
     },
     "it_lamp_oil": {
-      "name": "Лампадное масло", "desc": "Горит ровно и долго.",
-      "texture": "it_lamp_oil", "tier": 1, "price": 12,
-      "tags": ["holy"],
-      "stats": { "attack_speed_pct": 5, "max_hp": -1 },
+      "name": "Лампадное масло",
+      "desc": "Горит ровно и долго.",
+      "texture": "it_lamp_oil",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "attack_speed_pct": 5,
+        "max_hp": -1
+      },
       "effect": null,
       "coop_only": false
     }
   },
-
   "enemies": {
     "e_cultist": {
-      "name": "Культист", "texture": "e_cultist", "color": "#8a6a4a", "ai": "chase",
-      "hp": 8, "damage": 4, "speed": 92, "size": 14, "ash": 1, "xp": 1, "score": 2,
-      "arenas": ["ar_hive"], "min_wave": 1, "max_wave": 12, "weight": 10
+      "name": "Культист",
+      "texture": "e_cultist",
+      "color": "#8a6a4a",
+      "ai": "chase",
+      "hp": 8,
+      "damage": 4,
+      "speed": 92,
+      "size": 14,
+      "ash": 1,
+      "xp": 1,
+      "score": 2,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 1,
+      "max_wave": 12,
+      "weight": 10,
+      "sprite": 48
     },
     "e_flesh": {
-      "name": "Ком плоти", "texture": "e_flesh", "color": "#9a4a5a", "ai": "chase",
-      "hp": 26, "damage": 7, "speed": 62, "size": 20, "ash": 2, "xp": 2, "score": 5,
-      "arenas": ["ar_hive"], "min_wave": 2, "max_wave": 20, "weight": 6,
-      "knockback_resist": 0.6
+      "name": "Ком плоти",
+      "texture": "e_flesh",
+      "color": "#9a4a5a",
+      "ai": "chase",
+      "hp": 26,
+      "damage": 7,
+      "speed": 62,
+      "size": 20,
+      "ash": 2,
+      "xp": 2,
+      "score": 5,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 2,
+      "max_wave": 20,
+      "weight": 6,
+      "knockback_resist": 0.6,
+      "sprite": 48
     },
     "e_spitter": {
-      "name": "Плевальщик", "texture": "e_spitter", "color": "#6a8f4a", "ai": "shooter",
-      "hp": 12, "damage": 5, "speed": 70, "size": 15, "ash": 2, "xp": 2, "score": 4,
-      "arenas": ["ar_hive"], "min_wave": 3, "max_wave": 20, "weight": 5,
-      "attack": { "cooldown": 2.2, "range": 300, "keep_dist": 220,
-                  "projectile": { "speed": 260, "ttl": 1.6, "size": 6, "texture": "p_spit" } }
+      "name": "Плевальщик",
+      "texture": "e_spitter",
+      "color": "#6a8f4a",
+      "ai": "shooter",
+      "hp": 12,
+      "damage": 5,
+      "speed": 70,
+      "size": 15,
+      "ash": 2,
+      "xp": 2,
+      "score": 4,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 3,
+      "max_wave": 20,
+      "weight": 5,
+      "attack": {
+        "cooldown": 2.2,
+        "range": 300,
+        "keep_dist": 220,
+        "projectile": {
+          "speed": 260,
+          "ttl": 1.6,
+          "size": 6,
+          "texture": "p_spit"
+        }
+      },
+      "sprite": 48
     }
   },
-
   "bosses": {},
-
   "arenas": {
     "ar_hive": {
       "name": "Улей-Город",
       "desc": "Ржавые плиты, трубы и вечный смог нижних ярусов.",
-      "ground": ["gr_hive_a"],
+      "ground": [
+        "gr_hive_a"
+      ],
       "ground_color": "#1a1c22",
       "decor": [],
-      "enemy_pool": ["e_cultist", "e_flesh", "e_spitter"],
+      "enemy_pool": [
+        "e_cultist",
+        "e_flesh",
+        "e_spitter"
+      ],
       "boss_mid": null,
       "boss_final": null,
-      "unlock": { "type": "default" }
+      "unlock": {
+        "type": "default"
+      }
     }
   },
-
   "achievements": {
-    "ac_wave10": { "name": "Десятая волна", "desc": "Дойти до волны 10.", "cond": { "type": "reach_wave", "value": 10 } },
-    "ac_win_d2": { "name": "Крестовый поход", "desc": "Победить на сложности «Крестоносец».", "cond": { "type": "win_danger", "value": 2 } },
-    "ac_coop4":  { "name": "Плечом к плечу", "desc": "Победить в комнате из 4+ игроков.", "cond": { "type": "win_coop", "value": 4 } }
+    "ac_wave10": {
+      "name": "Десятая волна",
+      "desc": "Дойти до волны 10.",
+      "cond": {
+        "type": "reach_wave",
+        "value": 10
+      }
+    },
+    "ac_win_d2": {
+      "name": "Крестовый поход",
+      "desc": "Победить на сложности «Крестоносец».",
+      "cond": {
+        "type": "win_danger",
+        "value": 2
+      }
+    },
+    "ac_coop4": {
+      "name": "Плечом к плечу",
+      "desc": "Победить в комнате из 4+ игроков.",
+      "cond": {
+        "type": "win_coop",
+        "value": 4
+      }
+    }
   },
-
   "audio": {
-    "master": 0.8, "music": 0.5, "sfx": 0.7,
+    "master": 0.8,
+    "music": 0.5,
+    "sfx": {},
     "sfx_instance_limit": 4,
-    "tracks": {},
-    "sfx": {}
+    "tracks": {}
   },
-
   "i18n": {
     "ru": {
       "ui.menu.play": "Играть",

@@ -138,10 +138,14 @@ ui/              screens hud shop_ui levelup_ui meta_ui tooltip
 ## 8. Тесты
 
 ```bash
-pytest tests/py -q          # сервер: API, мета, реестр комнат, валидация забегов
-node --test tests/js/       # чистые формулы sim (без DOM): статы, XP, лавка, экономика
-node tools/bench_sim.js     # 450 врагов + 600 снарядов, sim ≤ 6 мс/тик
+.venv/bin/python -m pytest tests/py -q   # сервер: API, мета, реестр комнат, валидация забегов
+node --test tests/js/                    # чистые формулы sim (без DOM): статы, XP, лавка, экономика
+node tools/bench_sim.js                  # 450 врагов + 600 снарядов, sim ≤ 6 мс/тик
 ```
+
+Зависимости бэкенда стоят в локальном `.venv` (в системный Python их не ставим — на машине
+живут соседние проекты). Создать: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
+В проде зависимости ставит Dockerfile, venv туда не попадает.
 
 ## 9. Деплой
 
