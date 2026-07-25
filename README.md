@@ -38,7 +38,7 @@ docker compose up -d --build
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # разово
 .venv/bin/python -m pytest tests/py -q   # сервер: API, мета, валидация забегов
-node --test tests/js/                    # формулы sim: статы, XP, лавка, экономика
+node --test tests/js/*.test.js       # формулы sim: статы, XP, лавка, экономика
 node tools/bench_sim.js                  # бюджет производительности симуляции
 ```
 

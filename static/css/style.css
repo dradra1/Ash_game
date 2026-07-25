@@ -34,6 +34,12 @@ html, body {
     pointer-events: none;
 }
 
+/* Слой UI прозрачен для мыши, чтобы клики по миру доходили до canvas,
+   но сами панели и кнопки обязаны кликаться — иначе меню недоступно. */
+#ui > * {
+    pointer-events: auto;
+}
+
 .auth-body {
     display: flex;
     align-items: center;

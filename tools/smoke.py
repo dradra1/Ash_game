@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Браузерная проверка игры: логин, запуск забега, движение, fps, ошибки консоли.
+
+DoD этапов формулируется в терминах «залогиненный игрок видит, как оно бегает на 60 fps» —
+проверять это надо в настоящем браузере, а не по HTTP-кодам.
+
+    tools/smoke.py                       # прогон по умолчанию, 6 секунд
+    tools/smoke.py --seconds 12 --shot scratch/game.png
+    tools/smoke.py --url http://127.0.0.1:8150 --user testrunner --password pepel123
+
+Выход 0 — всё сошлось; 1 — упало, с описанием. Скриншот пишется всегда.
+"""
+import argparse
+import sys
+
+from playwright.sync_api import sync_playwright
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--url", default="http://127.0.0.1:8150")
+    ap.add_argument("--user", default="smoke")
+    ap.add_argument("--password", default="pepel123")
+    ap.add_argument("--seconds", type=float, default=6.0)
+    ap.add_argument("--shot", default="scratch/smoke.png")
+    ap.add_argument("--min-fps", type=float, default=50.0)
+    a = ap.parse_args()
+
+    errors, problems = [], []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(args=["--no-sandbox"])
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
+
+        # Регистрация (или вход, если такой игрок уже есть) — через API, не через форму:
+        # форма — отдельная забота, здесь проверяется игра.
+        page.goto(a.url + "/login")
+        res = page.evaluate(
+            """async ([u, pw]) => {
+                let r = await fetch('/api/register', {method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({name:u, password:pw})});
+                if (r.status === 409) {
+                    r = await fetch('/api/login', {method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({name:u, password:pw})});
+                }
+                return r.status;
+            }""", [a.user, a.password])
+        if res >= 400:
+            problems.append(f"вход не удался: HTTP {res}")
+
+        page.goto(a.url + "/", wait_until="networkidle")
+
+        # Кнопка «Играть» — ищем по тексту из конфига, чтобы не завязываться на разметку
+        label = page.evaluate(
+            """async () => {
+                const c = await (await fetch('/api/config')).json();
+                return c.i18n.ru['ui.menu.play'];
+            }""")
+        clicked = False
+        for locator in (page.get_by_role("button", name=label),
+                        page.get_by_text(label),
+                        page.locator(f"text={label}")):
+            try:
+                locator.first.click(timeout=3000)
+                clicked = True
+                break
+            except Exception:
+                continue
+        if not clicked:
+            problems.append(f"не нашёл кликабельную кнопку «{label}»")
+
+        page.wait_for_timeout(1500)
+
+        # Позиция игрока до и после удержания клавиш — проверяем, что мир живой
+        def pos():
+            return page.evaluate(
+                "() => { const r = globalThis.__RUN__; "
+                "return r && r.state && r.state.players && r.state.players[0] "
+                "? [r.state.players[0].x, r.state.players[0].y] : null; }")
+
+        before = pos()
+        page.keyboard.down("KeyD")
+        page.keyboard.down("KeyS")
+        page.wait_for_timeout(int(a.seconds * 1000))
+        page.keyboard.up("KeyD")
+        page.keyboard.up("KeyS")
+        after = pos()
+
+        fps = page.evaluate(
+            "() => globalThis.__LOOP__ && globalThis.__LOOP__.stats "
+            "? globalThis.__LOOP__.stats.fps : null")
+        sim_ms = page.evaluate(
+            "() => globalThis.__LOOP__ && globalThis.__LOOP__.stats "
+            "? globalThis.__LOOP__.stats.simMs : null")
+
+        page.screenshot(path=a.shot)
+        browser.close()
+
+    if before is None or after is None:
+        problems.append("не видно globalThis.__RUN__.state.players[0] "
+                        "(main.js должен выставлять __RUN__ и __LOOP__ для проверки)")
+    elif abs(after[0] - before[0]) < 1 and abs(after[1] - before[1]) < 1:
+        problems.append(f"игрок не сдвинулся при удержании WASD: {before} → {after}")
+
+    if fps is None:
+        problems.append("нет globalThis.__LOOP__.stats.fps")
+    elif fps < a.min_fps:
+        problems.append(f"fps {fps:.1f} ниже порога {a.min_fps}")
+
+    # Отсутствующая текстура — штатное поведение (нет PNG → цветной прямоугольник),
+    # а 409 на регистрации означает «игрок уже есть» и гасится входом.
+    def noise(msg):
+        low = msg.lower()
+        return ("favicon" in low
+                or "/static/textures/" in msg
+                or "409" in msg)
+
+    real_errors = [e for e in errors if not noise(e)]
+    if real_errors:
+        problems.append("ошибки в консоли: " + " | ".join(real_errors[:5]))
+
+    print(f"позиция: {before} → {after}")
+    print(f"fps: {fps if fps is None else round(fps, 1)}   "
+          f"sim: {sim_ms if sim_ms is None else round(sim_ms, 3)} мс")
+    print(f"скриншот: {a.shot}")
+    if problems:
+        print("\nПРОБЛЕМЫ:")
+        for pr in problems:
+            print(" -", pr)
+        return 1
+    print("\nOK")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

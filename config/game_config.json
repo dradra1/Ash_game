@@ -48,7 +48,10 @@
     "nameplate": true,
     "nameplate_offset": 30,
     "ally_marker": true,
-    "hp_bar_width": 28
+    "hp_bar_width": 28,
+    "bg_color": "#0a0b0e",
+    "wall_color": "#3a3f4a",
+    "joystick_radius": 48
   },
   "arena": {
     "size": [

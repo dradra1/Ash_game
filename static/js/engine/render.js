@@ -1,0 +1,117 @@
+// Рендер на одном canvas: камера с запаздыванием, целочисленный масштаб,
+// devicePixelRatio, никаких shadowBlur/filter в горячем пути.
+
+import { drawSheet } from './sprites.js';
+
+const TEXT_FONT = '12px monospace';
+
+export function createRenderer(canvas, config) {
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // Цвета — из конфига, как и всё остальное содержимое (см. AGENTS.md §3.1)
+  const BG_COLOR = config.render.bg_color;
+  const WALL_COLOR = config.render.wall_color;
+
+  const arenaW = config.arena.size[0];
+  const arenaH = config.arena.size[1];
+  const wallPad = config.arena.wall_padding;
+  const cameraLag = config.arena.camera_lag;
+  // Вертикальная видимая область в мировых единицах ≈ радиус обзора из конфига
+  const viewRef = (config.net && config.net.view_radius) || 900;
+
+  const camera = { x: arenaW / 2, y: arenaH / 2 };
+  const view = { w: 0, h: 0, zoom: 1 };
+  let dpr = 1;
+
+  function resize() {
+    dpr = globalThis.devicePixelRatio || 1;
+    const w = canvas.clientWidth || globalThis.innerWidth || arenaW;
+    const h = canvas.clientHeight || globalThis.innerHeight || arenaH;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    view.w = w;
+    view.h = h;
+    view.zoom = Math.max(1, Math.floor(h / viewRef));
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  function clampCamera() {
+    const hw = view.w / (2 * view.zoom);
+    const hh = view.h / (2 * view.zoom);
+    camera.x = arenaW >= hw * 2 ? Math.min(Math.max(camera.x, hw), arenaW - hw) : arenaW / 2;
+    camera.y = arenaH >= hh * 2 ? Math.min(Math.max(camera.y, hh), arenaH - hh) : arenaH / 2;
+  }
+
+  // Следование за целью с запаздыванием camera_lag
+  function follow(x, y, dt) {
+    const k = cameraLag > 0 ? Math.min(1, dt / cameraLag) : 1;
+    camera.x += (x - camera.x) * k;
+    camera.y += (y - camera.y) * k;
+    clampCamera();
+  }
+
+  function begin() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = BG_COLOR;
+    ctx.fillRect(0, 0, view.w, view.h);
+    ctx.translate(view.w / 2, view.h / 2);
+    ctx.scale(view.zoom, view.zoom);
+    ctx.translate(-camera.x, -camera.y);
+  }
+
+  // Возврат в экранные координаты (для оверлеев)
+  function end() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function worldToScreen(x, y, out) {
+    out.x = (x - camera.x) * view.zoom + view.w / 2;
+    out.y = (y - camera.y) * view.zoom + view.h / 2;
+    return out;
+  }
+
+  function drawArena(arena) {
+    ctx.fillStyle = WALL_COLOR;
+    ctx.fillRect(-wallPad, -wallPad, arenaW + wallPad * 2, arenaH + wallPad * 2);
+    ctx.fillStyle = arena.ground_color;
+    ctx.fillRect(0, 0, arenaW, arenaH);
+  }
+
+  function drawRect(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  // Спрайт, при отсутствии PNG — цветной квадрат-плейсхолдер
+  function drawEntity(textureId, dir, frame, x, y, size, color) {
+    if (drawSheet(ctx, textureId, dir, frame, x, y, size)) return;
+    const half = size / 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
+  }
+
+  function drawText(text, x, y, color, align) {
+    ctx.font = TEXT_FONT;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+  }
+
+  resize();
+
+  return {
+    camera,
+    ctx,
+    resize,
+    begin,
+    end,
+    follow,
+    worldToScreen,
+    drawArena,
+    drawEntity,
+    drawRect,
+    drawText,
+  };
+}
