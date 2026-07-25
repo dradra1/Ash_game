@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+data/
+*.db
+secret_key
+.mcp.json
+.env
+node_modules/
+scratch/
+*.zip
