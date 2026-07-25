@@ -14,8 +14,9 @@
 
 - 2D pixel art, **вид сверху (`high top-down`)**, фон арены `#0d0f14` — всё должно
   читаться на очень тёмном.
-- Единый `outline: single color outline`, `shading: medium shading`,
-  `detail: highly detailed`, ограниченная палитра.
+- Единый `outline: single color outline`, `detail: high detail`, ограниченная палитра.
+  Значения — из перечислений pixellab; `detail` принимает только
+  `low detail` / `medium detail` / `high detail`.
 - Общая гамма мира: ржавчина, охра, запёкшаяся кровь, тусклая сталь, кость, сажа.
   Цвет приходит акцентом фракции, а не заливкой всего силуэта.
 - Прозрачный фон обязателен (PNG с альфой): под спрайтом рисуется пол арены и обводка
@@ -124,8 +125,11 @@ attack, иначе листы разъезжаются по масштабу) л
 
 ## 6. Пайплайн
 
-1. **Гуманоиды** → `create_character`, `mode: standard`, `n_directions: 4`,
-   `view: "high top-down"`, `size: 64`.
+1. **Гуманоиды** → `create_character`, **`mode: v3`**, `view: "high top-down"`, `size: 64`.
+   v3 даёт лучшее качество из трёх режимов и стоит **2 генерации** против 20–40 у `pro`
+   (`standard` дешевле, но заметно грубее — на персонажах не использовать). v3 всегда
+   отдаёт 8 направлений; в лист берутся 4 кардинальных. **Один v3-персонаж занимает
+   2 джоба из 10**, то есть больше 5 штук одновременно не поставить.
 2. **Ходьба** → `animate_character`, шаблон `walking-4-frames` (4 джоба).
 3. **Атака** (где нужна) → `animate_character`, `mode: v3`, все 4 направления,
    `frame_count: 6`, `keep_first_frame: false`.
@@ -169,28 +173,28 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 | texture | персонаж | фракция | px | статус |
 |---|---|---|---|---|
-| `ch_pilgrim` | Пилигрим | cov | 32 | ⬜ |
-| `ch_zealot` | Ревнитель | cov | 32 | ⬜ |
-| `ch_flagellant` | Флагеллант | cov | 32 | ⬜ |
+| `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle (48px), walk в очереди |
+| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle (48px) |
+| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle (48px) |
 | `ch_conductor` | Хормейстер | cov | 32 | ⬜ |
-| `ch_brute` | Громила | scrap | 48 | ⬜ |
+| `ch_brute` | Громила | scrap | 64 | ⬜ |
 | `ch_scavenger` | Падальщик | scrap | 32 | ⬜ |
 | `ch_artificer` | Артифекс | forge | 32 | ⬜ |
-| `ch_censor` | Цензор | forge | 32 | ⬜ |
+| `ch_censor` | Цензор | forge | 48 | ✅ idle (48px) |
 | `ch_thrall` | Невольник | chit | 32 | ⬜ |
 | `ch_broodmate` | Выводковый | chit | 32 | ⬜ |
 | `ch_hierophant` | Иерофант | rift | 32 | ⬜ |
 | `ch_hollow` | Полый | rift | 32 | ⬜ |
-| `ch_warden` | Хранитель Гробниц | tomb | 48 | ⬜ |
+| `ch_warden` | Хранитель Гробниц | tomb | 64 | ⬜ |
 | `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ⬜ |
 
 ### Враги, элиты, боссы
 
 | texture | враг | арена | px | статус |
 |---|---|---|---|---|
-| `e_cultist` | Культист | ar_hive | 32 | ⬜ |
-| `e_flesh` | Ком плоти | ar_hive | 32 | ⬜ |
-| `e_spitter` | Плевальщик | ar_hive | 32 | ⬜ |
+| `e_cultist` | Культист | ar_hive | 48 | ✅ idle (48px), walk в очереди |
+| `e_flesh` | Ком плоти | ar_hive | 48 | ✅ idle (48px) |
+| `e_spitter` | Плевальщик | ar_hive | 48 | ✅ idle (48px) |
 
 Остальные 15 обычных, 6 элит и 6 боссов заводятся на этапе M4 вместе с их записями в
 конфиге — реестр пополняется тогда же.
