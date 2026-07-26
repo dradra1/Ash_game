@@ -58,10 +58,48 @@ def _init_secret_key() -> bytes:
 app.secret_key = _init_secret_key()
 
 
+def _write_live_config(cfg: dict) -> None:
+    LIVE_CONFIG.write_text(
+        json.dumps(cfg, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _merge_missing_i18n(live: dict, repo: dict) -> bool:
+    """Доливает отсутствующие ключи i18n из репо — защита от сырых ui.* на экране."""
+    changed = False
+    repo_i18n = repo.get("i18n") or {}
+    live_i18n = live.setdefault("i18n", {})
+    for lang, repo_dict in repo_i18n.items():
+        if not isinstance(repo_dict, dict):
+            continue
+        live_dict = live_i18n.setdefault(lang, {})
+        for key, value in repo_dict.items():
+            if key not in live_dict:
+                live_dict[key] = value
+                changed = True
+    return changed
+
+
 def _copy_config_if_needed():
+    """Сид + промоут: volume data/ переживает rebuild и иначе остаётся на старой версии."""
     _ensure_data_dir()
-    if not LIVE_CONFIG.exists() and REPO_CONFIG.exists():
-        LIVE_CONFIG.write_bytes(REPO_CONFIG.read_bytes())
+    if not REPO_CONFIG.exists():
+        return
+    repo = json.loads(REPO_CONFIG.read_text(encoding="utf-8"))
+    if not LIVE_CONFIG.exists():
+        _write_live_config(repo)
+        return
+
+    live = json.loads(LIVE_CONFIG.read_text(encoding="utf-8"))
+    repo_ver = int(repo.get("content_version") or 0)
+    live_ver = int(live.get("content_version") or 0)
+    if repo_ver > live_ver:
+        # Репо впереди (после деплоя патчей) — вливаем сид в живой конфиг.
+        _write_live_config(repo)
+        return
+    if _merge_missing_i18n(live, repo):
+        _write_live_config(live)
 
 
 def load_config() -> dict:

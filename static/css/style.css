@@ -286,8 +286,16 @@ html, body {
 .setup-grid .inv-cell.locked,
 .lobby-chars .inv-cell.locked {
     border-color: #6a8f4a;
-    box-shadow: inset 0 0 0 1px #6a8f4a;
+    box-shadow: inset 0 0 0 2px #6a8f4a;
+    background: #1c2818;
     color: #a8d07a;
+}
+.setup-grid .inv-cell.locked .inv-name,
+.lobby-chars .inv-cell.locked .inv-name {
+    color: #a8d07a;
+}
+.setup-grid .inv-cell.locked .meta-sub {
+    color: #8aab6a;
 }
 
 .mini {
