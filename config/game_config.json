@@ -2817,7 +2817,10 @@
       "ui.class.ranged": "дальнее",
       "ui.class.elem": "стихийное",
       "ui.class.engi": "инженерное",
-      "ui.hud.shop": "Лавка"
+      "ui.hud.shop": "Лавка",
+      "ui.error.no_room": "Ты не в комнате",
+      "ui.error.not_host": "Только хост может это сделать",
+      "ui.error.auth_required": "Нужно войти"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -2882,7 +2885,10 @@
       "ui.class.ranged": "ranged",
       "ui.class.elem": "elemental",
       "ui.class.engi": "engineering",
-      "ui.hud.shop": "Shop"
+      "ui.hud.shop": "Shop",
+      "ui.error.no_room": "You are not in a room",
+      "ui.error.not_host": "Host only",
+      "ui.error.auth_required": "Log in first"
     }
   }
 }

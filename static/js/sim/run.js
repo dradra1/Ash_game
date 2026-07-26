@@ -14,6 +14,7 @@ import { makePickup, resetPickup, dropAsh, stepPickups } from './pickup.js';
 import { stepWeapons } from './weapon.js';
 import { createSpawner, spawnPoint } from './spawn.js';
 import { createShop } from './shop.js';
+import { createEconomy } from './economy.js';
 import { createLevelUp } from './level.js';
 
 export const PHASE_INTRO = 'intro';
@@ -26,8 +27,11 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   const rng = createRng(seed);
   const arenaId = arena || firstKey(config.arenas);
   const dangerCfg = config.danger[danger || 0];
-  const arenaW = config.arena.size[0];
-  const arenaH = config.arena.size[1];
+  // В коопе арена растёт: восемь человек с шестью оружиями каждый на исходном
+  // прямоугольнике превращают экран в кашу (ТЗ §3.6).
+  const arenaScale = 1 + config.coop.arena_per_player * (players.length - 1);
+  const arenaW = Math.round(config.arena.size[0] * arenaScale);
+  const arenaH = Math.round(config.arena.size[1] * arenaScale);
 
   const state = {
     wave: 1,
@@ -46,7 +50,11 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     win: false,
     bossUid: -1,        // кто сейчас босс: HUD рисует его полосу HP
     shopOpen: false,
+    arenaW,
+    arenaH,
   };
+
+  const economy = createEconomy(config, players.length);
 
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
@@ -133,7 +141,8 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
         }
       }
       const tithe = owner ? owner.stats.tithe : 0;
-      const ashAmount = e.ash + tithe;
+      // Множитель дропа компенсирует деление котла на число игроков
+      const ashAmount = (e.ash + tithe) * economy.dropMultiplier();
       dropAsh(pickupPool, e.x, e.y, ashAmount, e.xp, config);
       // Опыт в коопе НЕ делится: каждый получает полный XP со всех убийств
       for (let i = 0; i < state.players.length; i++) {
@@ -143,8 +152,22 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   }
 
   function hitPlayer(player, amount, nx, ny) {
+    const wasAlive = player.alive;
     const dealt = hurtPlayer(player, config, rng, amount);
-    if (dealt > 0 && !player.alive) pushEvent('player_down', player.id);
+    if (dealt > 0 && wasAlive && !player.alive) {
+      economy.onDeath();                 // выбывание срезает долю котла
+      syncAsh();
+      pushEvent('player_down', player.id);
+    }
+  }
+
+  function syncAsh() {
+    state.pot = economy.state.pot;
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      p.ash = economy.solo ? economy.state.pot - (economy.state.spent[p.id] || 0)
+        : economy.shareOf(p.id);
+    }
   }
 
   function fireProjectile(enemy, nx, ny) {
@@ -170,9 +193,15 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   }
 
   function onCollect(player, amount, xp) {
-    // Прах идёт в общий котёл комнаты; личная доля считается в лавке (M3)
-    state.pot += amount;
-    player.ash += amount;
+    // Прах идёт в ОБЩИЙ котёл комнаты, а не в карман поднявшего.
+    economy.add(amount);
+    state.pot = economy.state.pot;
+    // Личный баланс в соло равен котлу, в коопе — своей доле
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      p.ash = economy.solo ? economy.state.pot - (economy.state.spent[p.id] || 0)
+        : economy.shareOf(p.id);
+    }
   }
 
   const enemyDeps = {
@@ -189,7 +218,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   const pickupDeps = { config, players: state.players, onCollect };
   const spawnDeps = {
     config, players: state.players, rng, pool: enemyPool,
-    wave: 1, danger: dangerCfg, arenaId,
+    wave: 1, danger: dangerCfg, arenaId, arenaW, arenaH,
   };
 
   function findPlayer(id) {
@@ -244,7 +273,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
       * (1 + config.waves.hp_growth * (n - 1)) * dangerCfg.hp_mult
       * (1 + config.coop.boss_hp_per_player * (state.players.length - 1));
     e.hp = e.maxHp;
-    if (!spawnPoint(config, rng, state.players, bossPoint)) {
+    if (!spawnPoint(config, rng, state.players, bossPoint, 8, arenaW, arenaH)) {
       bossPoint.x = arenaW / 2;
       bossPoint.y = config.arena.spawn_margin;
     }
@@ -322,7 +351,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
       gridInsert(i, e.x, e.y);
     }
 
-    stepPlayers(state.players, dt, config);
+    stepPlayers(state.players, dt, config, arenaW, arenaH);
 
     if (state.phase === PHASE_WAVE) {
       spawner.step(dt, spawnDeps);
@@ -413,8 +442,8 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   return {
     state, step, applyInput, snapshot, stats, refreshStats, events,
     enemyPool, projPool, pickupPool, rng,
-    startWave, endRun, openShop, readyUp, shopFor, levelUp, coop,
-    danger: dangerCfg,
+    startWave, endRun, openShop, readyUp, shopFor, levelUp, coop, economy, syncAsh,
+    danger: dangerCfg, arenaW, arenaH,
   };
 }
 

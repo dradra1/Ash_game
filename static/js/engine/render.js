@@ -5,7 +5,9 @@ import { drawSheet } from './sprites.js';
 
 const TEXT_FONT = '12px monospace';
 
-export function createRenderer(canvas, config) {
+// arenaSize — фактический размер арены этого забега: в коопе он масштабируется
+// числом игроков, и брать его из конфига напрямую нельзя.
+export function createRenderer(canvas, config, arenaSize) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
@@ -13,8 +15,8 @@ export function createRenderer(canvas, config) {
   const BG_COLOR = config.render.bg_color;
   const WALL_COLOR = config.render.wall_color;
 
-  const arenaW = config.arena.size[0];
-  const arenaH = config.arena.size[1];
+  const arenaW = (arenaSize && arenaSize[0]) || config.arena.size[0];
+  const arenaH = (arenaSize && arenaSize[1]) || config.arena.size[1];
   const wallPad = config.arena.wall_padding;
   const cameraLag = config.arena.camera_lag;
   // Вертикальная видимая область в мировых единицах ≈ радиус обзора из конфига

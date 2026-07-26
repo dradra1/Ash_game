@@ -72,9 +72,10 @@ def main():
                 return c.i18n.ru['ui.menu.play'];
             }""")
         clicked = False
-        for locator in (page.get_by_role("button", name=label),
-                        page.get_by_text(label),
-                        page.locator(f"text={label}")):
+        # Сначала по id — он стабильнее подписи, которая меняется вместе с меню
+        for locator in (page.locator("#btn-play"),
+                        page.get_by_role("button", name=label),
+                        page.get_by_text(label)):
             try:
                 locator.first.click(timeout=3000)
                 clicked = True

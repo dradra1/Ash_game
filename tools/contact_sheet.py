@@ -20,10 +20,22 @@ LABEL = (170, 165, 150, 255)
 GRID = (32, 36, 44, 255)
 
 
+def is_sheet(path, img):
+    """Лист или одиночная иконка.
+
+    По одному размеру не отличить: квадрат 32×32 формально сходится за лист 4×4,
+    и иконка оружия превращалась в свой левый верхний уголок. Признак листа —
+    либо суффикс анимации в имени, либо высота ровно вчетверо больше ширины (idle).
+    """
+    name = os.path.basename(path)
+    if "_walk" in name or "_attack" in name:
+        return True
+    return img.height == img.width * 4
+
+
 def load(path, game_size):
     img = Image.open(path).convert("RGBA")
-    # спрайт-лист 4×N: сторона кадра = высота/4, показываем только кадр 0 всех направлений
-    if img.height % 4 == 0 and img.width >= img.height // 4:
+    if is_sheet(path, img):
         side = img.height // 4
         cols = max(1, img.width // side)
         if cols > 1:  # это лист анимации — берём первый кадр каждого направления

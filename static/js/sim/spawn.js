@@ -35,9 +35,9 @@ export function poolForWave(config, arenaId, wave, out) {
 
 // Точка спавна за краем арены, не ближе min_spawn_dist к любому живому игроку.
 // Пишет в out {x, y}; возвращает false, если за attempts попыток не нашлось места.
-export function spawnPoint(config, rng, players, out, attempts) {
-  const w = config.arena.size[0];
-  const h = config.arena.size[1];
+export function spawnPoint(config, rng, players, out, attempts, arenaW, arenaH) {
+  const w = arenaW || config.arena.size[0];
+  const h = arenaH || config.arena.size[1];
   const margin = config.arena.spawn_margin;
   const minDist = config.arena.min_spawn_dist;
   const minDist2 = minDist * minDist;
@@ -105,7 +105,7 @@ export function createSpawner(config) {
     const want = Math.min(packSize, Math.floor(state.credit));
     for (let i = 0; i < want; i++) {
       if (deps.pool.count >= cap) break;            // деградация, а не рост
-      if (!spawnPoint(config_, deps.rng, players, point)) break;
+      if (!spawnPoint(config_, deps.rng, players, point, 8, deps.arenaW, deps.arenaH)) break;
       const e = deps.pool.spawn();
       if (!e) break;                                 // пул кончился — тоже деградация
       const typeId = pickType(config_, deps.rng, typeBuf, nTypes);

@@ -15,10 +15,11 @@ from flask import (
     request,
     session,
 )
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, join_room, leave_room
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import db
+from rooms import Rooms
 
 APP_ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("ASH_DATA", "data"))
@@ -314,6 +315,20 @@ def api_board():
         conn.close()
 
 
+# --- Комнаты: сервер только релеит, симуляции здесь нет -------------------
+
+rooms = Rooms(get_config)
+
+
+def _sid():
+    return request.sid
+
+
+def _broadcast(room, event="room"):
+    """Разослать состояние комнаты всем её участникам."""
+    socketio.emit("room:state", {"event": event, "room": room.public()}, room=room.code)
+
+
 @socketio.on("connect")
 def on_connect():
     if "user_id" not in session:
@@ -321,6 +336,164 @@ def on_connect():
     user = current_user()
     if user is None:
         return False
+    rooms.rejoin(_sid())
+
+
+@socketio.on("disconnect")
+def on_disconnect():
+    # Отвал: держим место reconnect_grace_sec, уборщик добьёт (ТЗ §2)
+    room = rooms.mark_gone(_sid())
+    if room is not None:
+        _broadcast(room, "player_gone")
+
+
+def _me():
+    user = current_user()
+    return user["name"] if user else None, session.get("user_id")
+
+
+@socketio.on("room:create")
+def on_room_create(data):
+    name, uid = _me()
+    if name is None:
+        return {"error": "auth_required"}
+    room = rooms.create(_sid(), name, uid, (data or {}).get("character"))
+    join_room(room.code)
+    _broadcast(room, "created")
+    return {"ok": True, "room": room.public(), "you": room.index_of(_sid())}
+
+
+@socketio.on("room:join")
+def on_room_join(data):
+    name, uid = _me()
+    if name is None:
+        return {"error": "auth_required"}
+    code = (data or {}).get("code", "")
+    room, err = rooms.join(_sid(), code, name, uid, (data or {}).get("character"))
+    if err:
+        return {"error": err}
+    join_room(room.code)
+    _broadcast(room, "joined")
+    return {"ok": True, "room": room.public(), "you": room.index_of(_sid())}
+
+
+@socketio.on("room:leave")
+def on_room_leave(_data=None):
+    room, _was_host = rooms.leave(_sid())
+    if room is not None:
+        leave_room(room.code)
+        _broadcast(room, "left")
+    return {"ok": True}
+
+
+@socketio.on("room:ready")
+def on_room_ready(data):
+    room = rooms.set_ready(_sid(), (data or {}).get("ready", True))
+    if room is None:
+        return {"error": "no_room"}
+    _broadcast(room, "ready")
+    return {"ok": True}
+
+
+@socketio.on("room:character")
+def on_room_character(data):
+    room = rooms.set_character(_sid(), (data or {}).get("character"))
+    if room is None:
+        return {"error": "no_room"}
+    _broadcast(room, "character")
+    return {"ok": True}
+
+
+@socketio.on("room:setup")
+def on_room_setup(data):
+    d = data or {}
+    room = rooms.set_setup(_sid(), d.get("arena"), d.get("danger"))
+    if room is None:
+        return {"error": "not_host"}
+    _broadcast(room, "setup")
+    return {"ok": True}
+
+
+@socketio.on("room:start")
+def on_room_start(_data=None):
+    """Старт забега. Сид выдаёт сервер — как и в соло, клиент его не выбирает."""
+    user = current_user()
+    if user is None:
+        return {"error": "auth_required"}
+    room = rooms.of(_sid())
+    if room is None:
+        return {"error": "no_room"}
+    if room.host_sid != _sid():
+        return {"error": "not_host"}
+
+    run_id = secrets.token_urlsafe(12)
+    seed = secrets.randbits(32)
+    db.start_run(user_id=user["id"], run_id=run_id, seed=seed,
+                 character=room.players[_sid()].get("character"),
+                 arena=room.arena, danger=room.danger, room=room.code,
+                 players=len(room.players))
+    room, err = rooms.start(_sid(), seed, run_id)
+    if err:
+        return {"error": err}
+    socketio.emit("room:start", {"seed": seed, "run_id": run_id,
+                                 "room": room.public()}, room=room.code)
+    return {"ok": True, "seed": seed, "run_id": run_id}
+
+
+# --- Релей игрового трафика ----------------------------------------------
+# Сервер не разбирает содержимое: он пересылает байты внутри комнаты.
+
+@socketio.on("net:input")
+def on_net_input(payload):
+    room = rooms.of(_sid())
+    if room is None or room.host_sid is None:
+        return
+    # Ввод идёт адресно хосту, а не всей комнате
+    socketio.emit("net:input", payload, to=room.host_sid)
+
+
+@socketio.on("net:snapshot")
+def on_net_snapshot(payload):
+    room = rooms.of(_sid())
+    if room is None or room.host_sid != _sid():
+        return          # снапшоты шлёт только хост
+    rooms.touch(_sid())
+    socketio.emit("net:snapshot", payload, room=room.code, include_self=False)
+
+
+@socketio.on("net:event")
+def on_net_event(payload):
+    room = rooms.of(_sid())
+    if room is None:
+        return
+    rooms.touch(_sid())
+    if room.host_sid == _sid():
+        socketio.emit("net:event", payload, room=room.code, include_self=False)
+    else:
+        socketio.emit("net:event", payload, to=room.host_sid)
+
+
+@socketio.on("net:ping")
+def on_net_ping(data):
+    d = data or {}
+    if "ping" in d:
+        rooms.set_ping(_sid(), d["ping"])
+    return {"t": d.get("t")}
+
+
+def _sweeper():
+    """Периодическая уборка протухших комнат. Это не игровой цикл — раз в 5 с."""
+    while True:
+        socketio.sleep(5)
+        try:
+            for room, event in rooms.sweep():
+                if room.players:
+                    _broadcast(room, event)
+        except Exception:
+            pass
+
+
+socketio.start_background_task(_sweeper)
 
 
 if __name__ == "__main__":

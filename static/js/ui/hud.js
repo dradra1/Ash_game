@@ -100,7 +100,9 @@ export function createHud(config, t) {
       for (let i = 0; i < state.players.length; i++) {
         const p = state.players[i];
         if (p.id === me.id) continue;
-        const color = config.characters[p.character].color;
+        // У клиента персонаж союзника приходит из лобби и может ещё не дойти
+        const chCfg = config.characters[p.character];
+        const color = chCfg ? chCfg.color : h.text;
         label(ctx, p.name, pad, ay, p.alive ? h.text : h.dim);
         bar(ctx, pad, ay + 13, ALLY_BAR_W, 6,
           p.maxHp > 0 ? p.hp / p.maxHp : 0, h.hp_bg, p.alive ? color : h.dim);

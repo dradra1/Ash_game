@@ -1,0 +1,161 @@
+// Экран лобби: код комнаты, список игроков, выбор персонажа, арена и сложность
+// (за хостом), предупреждение об отвале хоста, кнопки «Готов» и «Начать забег».
+
+import { inviteLink } from '../net/lobby.js';
+
+export function createLobbyUi(root, config, t) {
+  const doc = root.ownerDocument;
+
+  const panel = doc.createElement('div');
+  panel.id = 'lobby';
+  panel.className = 'modal wide';
+  panel.style.display = 'none';
+  panel.innerHTML =
+    '<div class="modal-title"></div>'
+    + '<div class="lobby-code"><span class="code"></span>'
+    + '<button type="button" class="btn copy"></button></div>'
+    + '<div class="lobby-warn"></div>'
+    + '<div class="shop-cols">'
+    + '<div class="col"><div class="col-title"></div><div class="lobby-players"></div></div>'
+    + '<div class="col"><div class="col-title"></div><div class="lobby-chars"></div></div>'
+    + '<div class="col"><div class="col-title"></div><div class="lobby-setup"></div></div>'
+    + '</div>'
+    + '<div class="shop-top"><div class="ash"></div>'
+    + '<button type="button" class="btn ready"></button>'
+    + '<button type="button" class="btn go start"></button></div>';
+  root.appendChild(panel);
+
+  const q = (s) => panel.querySelector(s);
+  const titleEl = q('.modal-title');
+  const codeEl = q('.code');
+  const copyBtn = q('.copy');
+  const warnEl = q('.lobby-warn');
+  const cols = panel.querySelectorAll('.col-title');
+  const playersEl = q('.lobby-players');
+  const charsEl = q('.lobby-chars');
+  const setupEl = q('.lobby-setup');
+  const readyBtn = q('.ready');
+  const startBtn = q('.start');
+
+  cols[0].textContent = t('ui.lobby.code');
+  cols[1].textContent = t('ui.select.character');
+  cols[2].textContent = t('ui.select.arena');
+  copyBtn.textContent = t('ui.lobby.copy');
+  warnEl.textContent = t('ui.lobby.host_warning');
+
+  let ctx = null;   // {lobby, onStart}
+
+  function renderPlayers(room, you) {
+    playersEl.innerHTML = '';
+    for (let i = 0; i < room.players.length; i++) {
+      const p = room.players[i];
+      const chCfg = p.character ? config.characters[p.character] : null;
+      const row = doc.createElement('div');
+      row.className = 'inv-cell' + (p.gone ? ' empty' : '');
+      row.innerHTML =
+        `<span class="inv-name" style="color:${chCfg ? chCfg.color : '#c9c4b8'}">`
+        + `${p.name}${p.host ? ' ★' : ''}${i === you ? ' ←' : ''}</span>`
+        + `<span>${chCfg ? chCfg.name : '—'}</span>`
+        + `<span style="color:${p.ready ? '#a8d07a' : '#7a7568'}">`
+        + `${p.ready ? '✓' : '…'}</span>`
+        + `<span style="color:#7a7568">${p.ping} мс</span>`;
+      playersEl.appendChild(row);
+    }
+  }
+
+  function renderCharacters(room, you) {
+    charsEl.innerHTML = '';
+    const mine = room.players[you] ? room.players[you].character : null;
+    for (const id in config.characters) {
+      const c = config.characters[id];
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = 'inv-cell' + (id === mine ? ' locked' : '');
+      btn.style.borderColor = c.color;
+      btn.innerHTML = `<span class="inv-name" style="color:${c.color}">${c.name}</span>`;
+      btn.addEventListener('click', () => ctx.lobby.character(id));
+      charsEl.appendChild(btn);
+    }
+  }
+
+  function renderSetup(room, isHost) {
+    setupEl.innerHTML = '';
+    const arenaRow = doc.createElement('div');
+    for (const id in config.arenas) {
+      const a = config.arenas[id];
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = 'inv-cell' + (room.arena === id ? ' locked' : '');
+      btn.disabled = !isHost;
+      btn.innerHTML = `<span class="inv-name">${a.name}</span>`;
+      btn.addEventListener('click', () => ctx.lobby.setup(id, null));
+      arenaRow.appendChild(btn);
+    }
+    setupEl.appendChild(arenaRow);
+
+    const dTitle = doc.createElement('div');
+    dTitle.className = 'col-title';
+    dTitle.textContent = t('ui.select.danger');
+    setupEl.appendChild(dTitle);
+
+    for (let i = 0; i < config.danger.length; i++) {
+      const d = config.danger[i];
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = 'inv-cell' + (room.danger === d.id ? ' locked' : '');
+      btn.disabled = !isHost;
+      btn.innerHTML = `<span class="inv-name">${d.name}</span>`;
+      btn.addEventListener('click', () => ctx.lobby.setup(null, d.id));
+      setupEl.appendChild(btn);
+    }
+  }
+
+  function render() {
+    if (!ctx) return;
+    const room = ctx.lobby.room;
+    if (!room) return;
+    const you = ctx.lobby.you;
+    const isHost = ctx.lobby.isHost;
+
+    titleEl.textContent = t('ui.menu.coop');
+    codeEl.textContent = room.code;
+    readyBtn.textContent = t('ui.lobby.ready');
+    startBtn.textContent = t('ui.lobby.start');
+    startBtn.style.display = isHost ? '' : 'none';
+    // Хост может форсировать старт; остальные ждут
+    const allReady = room.players.every((p) => p.ready || p.gone);
+    startBtn.disabled = !allReady && room.players.length > 1 ? false : false;
+
+    renderPlayers(room, you);
+    renderCharacters(room, you);
+    renderSetup(room, isHost);
+  }
+
+  copyBtn.addEventListener('click', () => {
+    const room = ctx && ctx.lobby.room;
+    if (!room) return;
+    const link = inviteLink(room.code);
+    const nav = doc.defaultView.navigator;
+    if (nav && nav.clipboard) nav.clipboard.writeText(link).catch(() => {});
+    copyBtn.textContent = link;
+  });
+
+  readyBtn.addEventListener('click', () => {
+    const room = ctx.lobby.room;
+    const me = room && room.players[ctx.lobby.you];
+    ctx.lobby.ready(!(me && me.ready));
+  });
+
+  startBtn.addEventListener('click', () => ctx.lobby.start());
+
+  return {
+    show(lobby) {
+      ctx = { lobby };
+      render();
+      panel.style.display = '';
+    },
+    hide() { panel.style.display = 'none'; },
+    get visible() { return panel.style.display !== 'none'; },
+    refresh: render,
+  };
+}
