@@ -2,8 +2,8 @@
 
 Ключевое правило ТЗ §3.10: **реликвии начисляет сервер по своей формуле**, а не
 по числу от клиента. Клиент присылает итог забега, сервер сам решает, сколько
-это стоит и не врёт ли клиент. Всё, что не сходится, помечается флагом и не
-попадает в лидерборд.
+это стоит. Подозрительные забеги помечаются флагом и не попадают в лидерборд,
+но реликвии всё равно начисляются по формуле.
 """
 import db
 
@@ -77,20 +77,35 @@ def first_clear_bonus(config, conn, user_id, run_row, win):
 # Ресимуляции нет и быть не может: мир считает браузер. Поэтому проверяем не
 # «так ли всё было», а «могло ли так быть в принципе» (ТЗ §2).
 
-def min_run_time(config, wave, wave_len_mult=1.0):
-    """Сумма длительностей пройденных волн — быстрее физически не бывает."""
+def _wave_length(config, w, wave_len_mult=1.0):
+    """Полная длительность одной волны (бой + intro + collect)."""
     r = config["run"]
     mult = wave_len_mult if wave_len_mult and wave_len_mult > 0 else 1.0
+    boss = r["boss_waves"].get(str(w))
+    if boss and boss.get("len"):
+        length = boss["len"]
+    else:
+        length = min(r["wave_len_cap"], r["wave_len_base"] + r["wave_len_step"] * (w - 1))
+        if boss and boss.get("len_bonus"):
+            length += boss["len_bonus"]
+    return length * mult + r["wave_intro_sec"] + r["wave_end_collect_sec"]
+
+
+def min_run_time(config, wave, wave_len_mult=1.0):
+    """Минимальное игровое время до исхода на волне W.
+
+    Волны 1..W-1 пройдены полностью; текущая волна может оборваться смертью
+    или киллом босса — учитываем только intro. Полная длина W давала бы
+    ложный too_fast на честных mid-wave death / early boss kill.
+    """
+    r = config["run"]
+    w = max(0, int(wave))
+    if w <= 0:
+        return 0.0
     total = 0.0
-    for w in range(1, max(1, wave) + 1):
-        boss = r["boss_waves"].get(str(w))
-        if boss and boss.get("len"):
-            length = boss["len"]
-        else:
-            length = min(r["wave_len_cap"], r["wave_len_base"] + r["wave_len_step"] * (w - 1))
-            if boss and boss.get("len_bonus"):
-                length += boss["len_bonus"]
-        total += length * mult + r["wave_intro_sec"] + r["wave_end_collect_sec"]
+    for prev in range(1, w):
+        total += _wave_length(config, prev, wave_len_mult)
+    total += r["wave_intro_sec"]
     return total
 
 

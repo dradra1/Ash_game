@@ -56,6 +56,14 @@ export function createMetaUi(root, config, t, api) {
       && profile.achievements.some((a) => a.id === id));
   }
 
+  function anyCurseUnlocked() {
+    const curses = config.curses || {};
+    for (const id in curses) {
+      if (hasAch(curses[id].unlock_achievement)) return true;
+    }
+    return false;
+  }
+
   // Цена с учётом скидки за ачивку — ровно та же формула, что на сервере
   function priceOf(kind, id) {
     const entry = kind === 'weapon' ? config.weapons[id]
@@ -245,7 +253,10 @@ export function createMetaUi(root, config, t, api) {
 
   function renderTabs() {
     tabsEl.innerHTML = '';
+    const showCurses = anyCurseUnlocked();
+    if (tab === 'curses' && !showCurses) tab = 'factions';
     for (const [key, label] of TABS) {
+      if (key === 'curses' && !showCurses) continue;
       const btn = doc.createElement('button');
       btn.type = 'button';
       btn.className = 'btn tab' + (tab === key ? ' active' : '');

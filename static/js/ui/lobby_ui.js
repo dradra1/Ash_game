@@ -106,24 +106,17 @@ export function createLobbyUi(root, config, t) {
     setupEl.appendChild(dRow);
 
     const curses = room.curses || [];
-    if (curses.length || (config.curses && Object.keys(config.curses).length)) {
+    if (curses.length > 0) {
       const cTitle = doc.createElement('div');
       cTitle.className = 'col-title';
       cTitle.textContent = t('ui.setup.curses');
       setupEl.appendChild(cTitle);
-      if (!curses.length) {
-        const none = doc.createElement('div');
-        none.className = 'inv-cell empty';
-        none.innerHTML = `<span class="inv-name">${t('ui.setup.none')}</span>`;
-        setupEl.appendChild(none);
-      } else {
-        for (let i = 0; i < curses.length; i++) {
-          const c = config.curses && config.curses[curses[i]];
-          const row = doc.createElement('div');
-          row.className = 'inv-cell locked';
-          row.innerHTML = `<span class="inv-name">${c ? c.name : curses[i]}</span>`;
-          setupEl.appendChild(row);
-        }
+      for (let i = 0; i < curses.length; i++) {
+        const c = config.curses && config.curses[curses[i]];
+        const row = doc.createElement('div');
+        row.className = 'inv-cell locked';
+        row.innerHTML = `<span class="inv-name">${c ? c.name : curses[i]}</span>`;
+        setupEl.appendChild(row);
       }
     }
   }

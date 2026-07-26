@@ -388,19 +388,15 @@ def run_finish():
     players = run["players"] or 1
 
     cfg = get_config()
-    # Ресимуляции нет — есть плаузибилити-проверки. Всё, что не могло случиться,
-    # помечается флагом: реликвий не даёт и в лидерборд не идёт (ТЗ §2).
+    # Плаузибилити-проверки: подозрительное помечается флагом и не идёт в
+    # лидерборд, но реликвии всегда считает сервер по своей формуле.
     reasons = meta.check_run(cfg, run, wave, win, bosses, time_sec, kills, score, players)
-    if reasons:
-        db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, 0,
-                      damage_taken, ash_gained, shop_buys)
-        db.flag_run(run_id, ",".join(reasons))
-        return jsonify({"relics_gained": 0, "unlocks": [], "achievements": [],
-                        "flagged": reasons})
 
     relics = meta.award_relics(cfg, run, wave, win, bosses, players)
     db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics,
                   damage_taken, ash_gained, shop_buys)
+    if reasons:
+        db.flag_run(run_id, ",".join(reasons))
 
     conn = db.get_db()
     try:
@@ -415,7 +411,10 @@ def run_finish():
     for aid in fresh:
         db.add_achievement(user["id"], aid)
 
-    return jsonify({"relics_gained": relics, "unlocks": [], "achievements": fresh})
+    out = {"relics_gained": relics, "unlocks": [], "achievements": fresh}
+    if reasons:
+        out["flagged"] = reasons
+    return jsonify(out)
 
 
 @app.route("/api/meta/unlock", methods=["POST"])

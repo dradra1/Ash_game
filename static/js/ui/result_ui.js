@@ -25,9 +25,6 @@ export function createResultUi(root, config, t) {
   const againBtn = panel.querySelector('.again');
   const backBtn = panel.querySelector('.back');
 
-  againBtn.textContent = t('ui.result.again');
-  backBtn.textContent = t('ui.result.menu');
-
   let handlers = {};
 
   againBtn.addEventListener('click', () => {
@@ -54,6 +51,8 @@ export function createResultUi(root, config, t) {
     // state — состояние забега, award — ответ /api/run/finish
     show(state, award, h) {
       handlers = h || {};
+      againBtn.textContent = t('ui.result.again');
+      backBtn.textContent = t('ui.result.menu');
       const win = !!state.win;
       titleEl.textContent = win ? t('ui.result.victory') : t('ui.result.defeat');
       titleEl.style.color = win ? '#a8d07a' : '#c34b4b';

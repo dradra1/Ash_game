@@ -37,15 +37,30 @@ export function createSetupUi(root, config, t) {
     curses: [],
   };
 
-  function steps() {
-    return mode === 'solo'
-      ? ['character', 'arena', 'danger', 'curses']
-      : ['arena', 'danger', 'curses'];
-  }
-
   function hasAch(id) {
     return !!(profile && profile.achievements
       && profile.achievements.some((a) => a.id === id));
+  }
+
+  function curseUnlocked(cid) {
+    const c = config.curses && config.curses[cid];
+    if (!c) return false;
+    return hasAch(c.unlock_achievement);
+  }
+
+  function unlockedCurseCount() {
+    let n = 0;
+    const curses = config.curses || {};
+    for (const id in curses) if (curseUnlocked(id)) n += 1;
+    return n;
+  }
+
+  function steps() {
+    const base = mode === 'solo'
+      ? ['character', 'arena', 'danger']
+      : ['arena', 'danger'];
+    if (unlockedCurseCount() > 0) base.push('curses');
+    return base;
   }
 
   function ownsArena(id) {
@@ -67,12 +82,6 @@ export function createSetupUi(root, config, t) {
     if (!facOk) return false;
     return !!(profile && profile.unlocks && profile.unlocks.character
       && profile.unlocks.character.indexOf(id) >= 0);
-  }
-
-  function curseUnlocked(cid) {
-    const c = config.curses && config.curses[cid];
-    if (!c) return false;
-    return hasAch(c.unlock_achievement);
   }
 
   function firstOpen(kind) {

@@ -113,6 +113,17 @@ def test_too_fast_is_flagged(app_env):
     assert "too_fast" in reasons
 
 
+def test_mid_wave_death_is_not_too_fast(app_env):
+    """Смерть посреди волны W: время ≈ полные 1..W-1 + intro текущей."""
+    _app, _db, meta = app_env
+    c = cfg(app_env)
+    wave = 8
+    need = meta.min_run_time(c, wave)
+    reasons = meta.check_run(c, make_run(), wave=wave, win=False, bosses=1,
+                             time_sec=need + 2, kills=200, score=600, players=1)
+    assert "too_fast" not in reasons
+
+
 def test_impossible_kill_count_is_flagged(app_env):
     _app, _db, meta = app_env
     c = cfg(app_env)
@@ -189,7 +200,7 @@ def test_finish_awards_relics_and_they_persist(client, app_env):
     assert profile["relics"] == res["relics_gained"]
 
 
-def test_faked_result_is_flagged_and_pays_nothing(client, app_env):
+def test_faked_result_is_flagged_but_still_pays(client, app_env):
     started = start_run(client)
     # Даже если дать «настоящее» время — числа всё равно невозможные
     backdate(app_env[1], started["run_id"], 3600)
@@ -197,9 +208,9 @@ def test_faked_result_is_flagged_and_pays_nothing(client, app_env):
         "run_id": started["run_id"], "wave": 20, "win": True, "bosses": 2,
         "time_sec": 3, "kills": 10 ** 6, "score": 10 ** 9,
     }).get_json()
-    assert res["relics_gained"] == 0
+    assert res["relics_gained"] > 0, "реликвии начисляются по серверной формуле"
     assert res.get("flagged"), "подделанный забег должен быть помечен"
-    assert client.get("/api/profile").get_json()["relics"] == 0
+    assert client.get("/api/profile").get_json()["relics"] == res["relics_gained"]
 
     board = client.get("/api/board?mode=solo").get_json()
     assert all(r["score"] < 10 ** 9 for r in board), "помеченный забег не идёт в лидерборд"

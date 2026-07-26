@@ -1,5 +1,5 @@
 {
-  "content_version": 9,
+  "content_version": 5,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -6897,7 +6897,7 @@
       "ui.error.not_unlockable": "Это не открывается",
       "ui.error.bad_kind": "Неизвестный тип",
       "ui.error.bad_id": "Неизвестный идентификатор",
-      "ui.result.flagged": "Результат не сошёлся с проверкой — реликвии не начислены",
+      "ui.result.flagged": "Результат отмечен проверкой — в таблицу рекордов не попадёт",
       "ui.rarity.common": "Обычный",
       "ui.rarity.uncommon": "Необычный",
       "ui.rarity.rare": "Редкий",
@@ -7004,7 +7004,7 @@
       "ui.error.not_unlockable": "Not unlockable",
       "ui.error.bad_kind": "Unknown kind",
       "ui.error.bad_id": "Unknown id",
-      "ui.result.flagged": "The result failed validation — no relics awarded",
+      "ui.result.flagged": "Result flagged by checks — excluded from the leaderboard",
       "ui.rarity.common": "Common",
       "ui.rarity.uncommon": "Uncommon",
       "ui.rarity.rare": "Rare",

@@ -24,11 +24,6 @@ export function createPauseUi(root, config, t) {
   const menuBtn = panel.querySelector('.menu');
   const cheatsEl = panel.querySelector('.pause-cheats');
 
-  titleEl.textContent = t('ui.common.pause');
-  resumeBtn.textContent = t('ui.common.resume');
-  restartBtn.textContent = t('ui.pause.restart');
-  menuBtn.textContent = t('ui.pause.menu');
-
   let handlers = {};
 
   resumeBtn.addEventListener('click', () => {
@@ -44,6 +39,10 @@ export function createPauseUi(root, config, t) {
   return {
     show(h) {
       handlers = h || {};
+      titleEl.textContent = t('ui.common.pause');
+      resumeBtn.textContent = t('ui.common.resume');
+      restartBtn.textContent = t('ui.pause.restart');
+      menuBtn.textContent = t('ui.pause.menu');
       restartBtn.style.display = handlers.canRestart === false ? 'none' : '';
       panel.style.display = '';
     },

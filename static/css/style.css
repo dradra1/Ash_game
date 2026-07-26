@@ -282,6 +282,14 @@ html, body {
 .inv-cell.empty { opacity: 0.3; min-height: 18px; }
 .inv-name { margin-right: auto; }
 
+/* Выбранный пункт в сетапе / лобби (класс locked = selected) */
+.setup-grid .inv-cell.locked,
+.lobby-chars .inv-cell.locked {
+    border-color: #6a8f4a;
+    box-shadow: inset 0 0 0 1px #6a8f4a;
+    color: #a8d07a;
+}
+
 .mini {
     background: #22262f;
     border: 1px solid #3a3f4a;
