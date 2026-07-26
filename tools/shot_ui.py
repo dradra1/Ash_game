@@ -114,6 +114,16 @@ def main():
             page.wait_for_timeout(2500)
             if need("hud"):
                 shot(page, f"{a.outdir}/hud.png")
+            if need("pause"):
+                # Пауза снимается ВО ВРЕМЯ ВОЛНЫ, а не поверх лавки: два модала
+                # рядом накладываются рамками и снимок выглядит сломанным, хотя
+                # каждый по отдельности в порядке.
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(400)
+                if page.locator("#pause").is_visible():
+                    shot(page, f"{a.outdir}/pause.png")
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(300)
             if need("shop"):
                 page.evaluate("() => globalThis.__RUN__ && globalThis.__RUN__.cheatSkipWave()")
                 page.wait_for_timeout(1500)
@@ -121,11 +131,6 @@ def main():
                     shot(page, f"{a.outdir}/shop.png", "#shop")
                 else:
                     print("! лавка не открылась (нужен админ для чита?)")
-            if need("pause"):
-                page.keyboard.press("Escape")
-                page.wait_for_timeout(300)
-                if page.locator("#pause").is_visible():
-                    shot(page, f"{a.outdir}/pause.png", "#pause")
 
         browser.close()
 

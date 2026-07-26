@@ -86,8 +86,10 @@ html, body {
 .auth-box {
     width: 320px;
     padding: 20px;
-    border: 14px solid transparent;
-    border-image: url(/static/ui/ui_panel.png) 32 fill / 14px / 0 stretch;
+    /* Тот же срез без fill, что и у .modal: с fill середина ui_panel (а в ней
+       вложенная рамка) растягивалась плитой поверх полей ввода. */
+    border: 20px solid transparent;
+    border-image: url(/static/ui/ui_panel.png) 66 / 20px / 0 stretch;
     background: #14171f;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
@@ -189,6 +191,9 @@ html, body {
     padding: 10px 14px;
     color: var(--ink);
     font-family: monospace;
+    /* Рамка съедает 44 px ширины: без минимума узкие модалки (пауза, итоги)
+       обрезали собственные кнопки скроллом. */
+    min-width: 300px;
     max-height: 92vh;
     overflow-y: auto;
     box-sizing: border-box;
@@ -218,6 +223,8 @@ html, body {
 .modal-sub { font-size: 12px; color: #7a7568; margin-bottom: 12px; }
 
 .choice-row { display: flex; gap: 10px; }
+/* То же и для рядов кнопок: скин добавил высоты, и сжатие ломает вёрстку */
+.shop-top .btn, .setup-nav .btn, .meta-tabs .btn { flex: none; }
 
 .choice {
     flex: 1 1 0;
@@ -236,7 +243,12 @@ html, body {
 .choice-rarity { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; opacity: 0.9; }
 
 .pause-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.pause-actions .btn { width: 100%; }
+.pause-actions .btn {
+    width: 100%;
+    /* flex-shrink по умолчанию 1: в колонке кнопки со скином ужимались ниже
+       min-height и налезали друг на друга и на заголовок. */
+    flex: none;
+}
 .pause-cheats { margin-top: 16px; border-top: 1px solid #2a2e38; padding-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
 .pause-cheats .btn { font-size: 11px; padding: 6px 10px; }
 
@@ -254,12 +266,15 @@ html, body {
    цвет даёт скин; background остаётся запасным вариантом, если PNG не приехал. */
 .btn {
     background: var(--raised);
-    border: 10px solid transparent;
-    border-image: url(/static/ui/ui_btn.png) 26 fill / 10px / 0 stretch;
+    /* Рамка 8, а не 10: скин добавляет кнопке объёма против прежнего 1px-бордюра,
+       и на 10px мелкие модалки (пауза, итоги) переставали вмещать свои же кнопки. */
+    border: 8px solid transparent;
+    border-image: url(/static/ui/ui_btn.png) 26 fill / 8px / 0 stretch;
     color: var(--ink);
     font-family: monospace;
-    padding: 2px 10px;
-    min-height: 34px;
+    padding: 2px 8px;
+    min-height: 30px;
+    white-space: nowrap;
     cursor: pointer;
 }
 .btn:hover:not(:disabled) {
@@ -415,7 +430,11 @@ html, body {
 
 /* ---- Меню и лобби ------------------------------------------------------ */
 
-.menu {
+/* Прибито к id экрана: класс `menu` носит ещё и кнопка «В главное меню» в паузе
+   (`class="btn menu"`). Пока правило добавляло только фон и отступы, коллизия
+   была безвредна; с рамкой панели она сажала на кнопку 22-пиксельный фрейм,
+   и та накрывала собой и заголовок, и соседние кнопки. */
+#screen-menu.menu {
     position: absolute;
     left: 50%;
     top: 50%;
@@ -525,6 +544,6 @@ html, body {
     .lock { width: 32px; height: 32px; font-size: 18px; }
     .choice-row { flex-wrap: wrap; }
     .choice { min-width: 45%; }
-    .menu { min-width: 74vw; }
+    #screen-menu.menu { min-width: 74vw; }
     .lobby-code .code { font-size: 22px; letter-spacing: 3px; }
 }
