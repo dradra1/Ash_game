@@ -22,13 +22,18 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def grant_arenas(name):
-    """Открыть тестовому игроку все арены. Идемпотентно."""
+def grant_all(name, cfg):
+    """Открыть тестовому игроку весь контент. Идемпотентно.
+
+    Арены, персонажи и оружие заперты за сотни реликвий. Для приёмки графики
+    проходить ради каждого скриншота по двадцать волн незачем.
+    """
     user = db.get_user_by_name(name)
     if not user:
         return False
-    for aid in ("ar_ash", "ar_tomb"):
-        db.add_unlock(user["id"], "arena", aid)
+    for kind in ("arena", "character", "faction", "weapon"):
+        for item_id in cfg.get(kind + "s", {}):
+            db.add_unlock(user["id"], kind, item_id)
     return True
 
 
@@ -54,13 +59,16 @@ def pick_in_grid(page, name):
     cell.click(timeout=4000)
 
 
-def run_arena(page, url, arena_name, seconds, shot):
+def run_arena(page, url, arena_name, seconds, shot, character="", burst=0):
     page.goto(url + "/", wait_until="networkidle")
     page.locator("#btn-play").click(timeout=5000)
     page.wait_for_selector("#run-setup", timeout=5000)
 
     nxt = page.locator("#run-setup .setup-nav .btn").nth(1)
     # шаг 1 — персонаж (годится предвыбранный), шаг 2 — арена, дальше до конца
+    if character:
+        pick_in_grid(page, character)
+        page.wait_for_timeout(150)
     nxt.click()
     page.wait_for_timeout(200)
     pick_in_grid(page, arena_name)
@@ -76,6 +84,18 @@ def run_arena(page, url, arena_name, seconds, shot):
     page.wait_for_timeout(900)
     page.keyboard.up("KeyD")
     page.wait_for_timeout(300)
+
+    if burst:
+        # Замах длится доли секунды: одиночный кадр почти всегда попадает в паузу
+        # между ударами. Серия с шагом в кадр ловит саму анимацию.
+        out = []
+        base = shot[:-4]
+        for i in range(burst):
+            page.wait_for_timeout(110)
+            p = f"{base}_{i}.png"
+            page.screenshot(path=p)
+            out.append(p)
+        return out
     page.screenshot(path=shot)
     return shot
 
@@ -87,6 +107,8 @@ def main():
     ap.add_argument("--password", default="pepel123")
     ap.add_argument("--seconds", type=float, default=2.5)
     ap.add_argument("--arena", default="", help="только одна арена по id")
+    ap.add_argument("--character", default="", help="имя персонажа в визарде")
+    ap.add_argument("--burst", type=int, default=0, help="серия кадров подряд: ловит замах")
     ap.add_argument("--outdir", default="scratch")
     a = ap.parse_args()
 
@@ -109,13 +131,15 @@ def main():
         code = login(page, a.url, a.user, a.password)
         if code >= 400:
             raise SystemExit(f"вход не удался: HTTP {code}")
-        if not grant_arenas(a.user):
-            print("! игрока нет в БД, заперные арены будут недоступны")
+        if not grant_all(a.user, cfg):
+            print("! игрока нет в БД, запертый контент будет недоступен")
+        page.reload(wait_until="networkidle")
 
         for aid in want:
             shot = os.path.join(a.outdir, f"arena_{aid}.png")
-            run_arena(page, a.url, arenas[aid]["name"], a.seconds, shot)
-            print(f"{aid}: {shot}")
+            got = run_arena(page, a.url, arenas[aid]["name"], a.seconds, shot,
+                            a.character, a.burst)
+            print(f"{aid}: {got}")
 
         browser.close()
 

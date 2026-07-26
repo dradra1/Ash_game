@@ -541,35 +541,35 @@
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a single bent iron nail in flight, point forward"
+      "prompt": "a single bent iron nail in flight, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_spike": {
       "tool": "create_map_object",
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a slim steel spike dart, point forward"
+      "prompt": "a heavy iron spike, a long straight horizontal bar with a sharp point at its RIGHT end and a blunt flat end at its LEFT end. The bar lies FLAT AND LEVEL along the horizontal axis, parallel to the top and bottom edges of the frame. NOT DIAGONAL. NOT TILTED. NOT VERTICAL"
     },
     "p_slug": {
       "tool": "create_map_object",
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a blunt lead slug with a faint smoke trail behind it"
+      "prompt": "a blunt heavy lead slug in flight, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_beam": {
       "tool": "create_map_object",
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a short horizontal bolt of pale amber light with a bright core"
+      "prompt": "a short bright energy beam segment, hot white core fading at the tail, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_harpoon": {
       "tool": "create_map_object",
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a barbed harpoon head trailing a thin taut cable"
+      "prompt": "a barbed harpoon head with a short cable stub behind it, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_plasma": {
       "tool": "create_map_object",
@@ -583,7 +583,7 @@
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a jagged violet shard of unstable light with torn edges"
+      "prompt": "a twisted violet shard of unstable matter, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_venom": {
       "tool": "create_map_object",
@@ -597,7 +597,7 @@
       "gen": 32,
       "fit": 16,
       "view": "side",
-      "prompt": "a crackling blue electric arc, forked"
+      "prompt": "a crackling arc of blue electricity, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     },
     "p_spore": {
       "tool": "create_map_object",
@@ -619,6 +619,48 @@
       "fit": 16,
       "view": "side",
       "prompt": "a pale blue ice shard with frosted facets"
+    },
+    "p_bolt": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a short bright energy bolt, glowing pale blue core with a hot white tip, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
+    },
+    "p_grape": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a single small round lead shotgun pellet in flight, dull grey metal sphere with a highlight"
+    },
+    "p_shard": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a jagged torn scrap metal fragment, long axis LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
+    },
+    "p_shell": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a heavy autocannon shell, thick brass casing with a dark steel nose, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
+    },
+    "p_needle": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a very thin translucent glass needle, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
+    },
+    "p_rivet": {
+      "tool": "create_map_object",
+      "gen": 32,
+      "fit": 16,
+      "view": "side",
+      "prompt": "a short thick steel rivet, blunt cylindrical body, LAID PERFECTLY HORIZONTAL across the frame, pointing RIGHT, tip touching the right edge, tail at the left edge, level, not tilted, not diagonal, not vertical"
     }
   },
   "items": {
@@ -1396,6 +1438,68 @@
       "outline": "lineless",
       "shading": "flat shading",
       "detail": "low detail"
+    }
+  },
+  "fx": {
+    "fx_slash": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "a single narrow crescent arc sweeping left to right, thick at the middle and tapering to points at both ends, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
+    },
+    "fx_slash_wide": {
+      "tool": "create_map_object",
+      "gen": 144,
+      "fit": 72,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "a broad wide crescent arc covering almost a half circle, sweeping and tapering at both ends, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
+    },
+    "fx_thrust": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "a straight sharp streak pointing right, widest at the left and narrowing to a point at the right, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
+    },
+    "fx_lash": {
+      "tool": "create_map_object",
+      "gen": 144,
+      "fit": 72,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "a long thin S-curved whip trail snapping through the air, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
+    },
+    "fx_claw": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "three parallel curved slash marks side by side, like a claw rake, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
+    },
+    "fx_impact": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail",
+      "prompt": "an expanding shockwave ring with short radial spikes bursting outward from the centre, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
     }
   }
 }

@@ -8,7 +8,12 @@ import { weaponCooldown, weaponRange, weaponDamage, critChance } from './stats.j
 export function makeSlot() {
   // targetIdx + targetUid — пара «индекс и поколение»: индекс даёт O(1) доступ,
   // uid проверяет, что по этому индексу всё ещё тот же враг (пул делает swap-remove).
-  return { id: null, cfg: null, cd: 0, targetIdx: -1, targetUid: -1, retargetT: 0, lastAngle: 0, flash: 0 };
+  // swingT — остаток анимации удара. Считает ВРЕМЯ, а не кадры: рендер берёт из
+  // него прогресс 0..1 и получает позу из engine/weapon_anim.js.
+  return {
+    id: null, cfg: null, cd: 0, targetIdx: -1, targetUid: -1, retargetT: 0,
+    lastAngle: 0, flash: 0, swingT: 0, swingLen: 0,
+  };
 }
 
 export function equip(slot, weaponId, config) {
@@ -56,6 +61,7 @@ export function stepWeapons(player, dt, deps) {
     const w = slot.cfg;
 
     if (slot.flash > 0) slot.flash -= dt;
+    if (slot.swingT > 0) slot.swingT -= dt;
     slot.cd -= dt;
     if (slot.cd > 0) continue;
 
@@ -88,8 +94,13 @@ export function stepWeapons(player, dt, deps) {
     const ny = dy / dist;
 
     slot.lastAngle = Math.atan2(dy, dx);
-    slot.cd = weaponCooldown(config, w, stats);
+    const cd = weaponCooldown(config, w, stats);
+    slot.cd = cd;
     slot.flash = FLASH_TIME;
+    // Замах не должен длиться дольше кулдауна, иначе быстрое оружие анимируется
+    // внахлёст само на себя и поза дёргается назад посреди движения.
+    slot.swingLen = Math.min(w.shape.anim_time || DEFAULT_SWING, cd);
+    slot.swingT = slot.swingLen;
 
     const dmg = weaponDamage(w, stats);
     const shape = w.shape;
@@ -149,7 +160,9 @@ function fireShots(player, w, shape, nx, ny, dmg, deps) {
     p.size = shape.size || DEFAULT_PROJECTILE_SIZE;
     p.hostile = false;
     p.texture = shape.texture || null;
+    p.spin = shape.spin || null;
     p.color = w.color || null;
+    p.age = 0;
     p.ownerId = player.id;
     p.knockback = w.knockback + player.stats.knockback;
     p.hitCount = 0;
@@ -157,4 +170,5 @@ function fireShots(player, w, shape, nx, ny, dmg, deps) {
 }
 
 const FLASH_TIME = 0.08;                 // подсветка иконки оружия в HUD после удара
+const DEFAULT_SWING = 0.22;              // длительность замаха, если её нет в конфиге
 const DEFAULT_PROJECTILE_SIZE = 4;

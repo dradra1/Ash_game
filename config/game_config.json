@@ -1,5 +1,5 @@
 {
-  "content_version": 15,
+  "content_version": 17,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -79,7 +79,21 @@
     "ash_color": "#c8a35a",
     "ash_size": 8,
     "projectile_size_min": 3,
-    "anim_fps": 8
+    "anim_fps": 8,
+    "weapon_size": 26,
+    "weapon_reach": 0.95,
+    "fx_alpha": 0.85,
+    "fx_scale": 1.7,
+    "impact": {
+      "count": 4,
+      "count_crit": 9,
+      "color": "#c9a06a",
+      "color_crit": "#e0a03a",
+      "speed": 90,
+      "life": 0.22,
+      "size": 2
+    },
+    "projectile_scale": 3.2
   },
   "arena": {
     "size": [
@@ -1141,7 +1155,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 80
+        "angle": 80,
+        "anim": "sweep",
+        "anim_time": 0.2,
+        "fx": "fx_slash"
       },
       "price": 12,
       "next_tier": "w_cleaver_2",
@@ -1169,7 +1186,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 80
+        "angle": 80,
+        "anim": "sweep",
+        "anim_time": 0.2,
+        "fx": "fx_slash"
       },
       "price": 28,
       "next_tier": "w_cleaver_3",
@@ -1197,7 +1217,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 80
+        "angle": 80,
+        "anim": "sweep",
+        "anim_time": 0.2,
+        "fx": "fx_slash"
       },
       "price": 54,
       "next_tier": "w_cleaver_4",
@@ -1225,7 +1248,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 80
+        "angle": 80,
+        "anim": "sweep",
+        "anim_time": 0.2,
+        "fx": "fx_slash"
       },
       "price": 96,
       "unlock": {
@@ -1252,7 +1278,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 95
+        "angle": 95,
+        "anim": "saw",
+        "anim_time": 0.22,
+        "fx": "fx_slash"
       },
       "price": 24,
       "next_tier": "w_chainblade_2",
@@ -1281,7 +1310,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 95
+        "angle": 95,
+        "anim": "saw",
+        "anim_time": 0.22,
+        "fx": "fx_slash"
       },
       "price": 55,
       "next_tier": "w_chainblade_3",
@@ -1310,7 +1342,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 95
+        "angle": 95,
+        "anim": "saw",
+        "anim_time": 0.22,
+        "fx": "fx_slash"
       },
       "price": 108,
       "next_tier": "w_chainblade_4",
@@ -1339,7 +1374,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 95
+        "angle": 95,
+        "anim": "saw",
+        "anim_time": 0.22,
+        "fx": "fx_slash"
       },
       "price": 192,
       "unlock": {
@@ -1367,7 +1405,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 110
+        "angle": 110,
+        "anim": "slam",
+        "anim_time": 0.34,
+        "fx": "fx_impact"
       },
       "price": 25,
       "next_tier": "w_hammer_2",
@@ -1395,7 +1436,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 110
+        "angle": 110,
+        "anim": "slam",
+        "anim_time": 0.34,
+        "fx": "fx_impact"
       },
       "price": 57,
       "next_tier": "w_hammer_3",
@@ -1423,7 +1467,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 110
+        "angle": 110,
+        "anim": "slam",
+        "anim_time": 0.34,
+        "fx": "fx_impact"
       },
       "price": 112,
       "next_tier": "w_hammer_4",
@@ -1451,7 +1498,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 110
+        "angle": 110,
+        "anim": "slam",
+        "anim_time": 0.34,
+        "fx": "fx_impact"
       },
       "price": 200,
       "unlock": {
@@ -1478,7 +1528,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 120
+        "angle": 120,
+        "anim": "slam",
+        "anim_time": 0.3,
+        "fx": "fx_slash_wide"
       },
       "price": 15,
       "next_tier": "w_censer_2",
@@ -1506,7 +1559,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 120
+        "angle": 120,
+        "anim": "slam",
+        "anim_time": 0.3,
+        "fx": "fx_slash_wide"
       },
       "price": 34,
       "next_tier": "w_censer_3",
@@ -1534,7 +1590,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 120
+        "angle": 120,
+        "anim": "slam",
+        "anim_time": 0.3,
+        "fx": "fx_slash_wide"
       },
       "price": 68,
       "next_tier": "w_censer_4",
@@ -1562,7 +1621,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 120
+        "angle": 120,
+        "anim": "slam",
+        "anim_time": 0.3,
+        "fx": "fx_slash_wide"
       },
       "price": 120,
       "unlock": {
@@ -1589,7 +1651,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 50
+        "angle": 50,
+        "anim": "lash",
+        "anim_time": 0.26,
+        "fx": "fx_lash"
       },
       "price": 20,
       "next_tier": "w_scourge_2",
@@ -1618,7 +1683,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 50
+        "angle": 50,
+        "anim": "lash",
+        "anim_time": 0.26,
+        "fx": "fx_lash"
       },
       "price": 46,
       "next_tier": "w_scourge_3",
@@ -1647,7 +1715,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 50
+        "angle": 50,
+        "anim": "lash",
+        "anim_time": 0.26,
+        "fx": "fx_lash"
       },
       "price": 90,
       "next_tier": "w_scourge_4",
@@ -1676,7 +1747,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 50
+        "angle": 50,
+        "anim": "lash",
+        "anim_time": 0.26,
+        "fx": "fx_lash"
       },
       "price": 160,
       "unlock": {
@@ -1704,7 +1778,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 60
+        "angle": 60,
+        "anim": "rip",
+        "anim_time": 0.18,
+        "fx": "fx_claw"
       },
       "price": 14,
       "next_tier": "w_claws_2",
@@ -1732,7 +1809,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 60
+        "angle": 60,
+        "anim": "rip",
+        "anim_time": 0.18,
+        "fx": "fx_claw"
       },
       "price": 32,
       "next_tier": "w_claws_3",
@@ -1760,7 +1840,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 60
+        "angle": 60,
+        "anim": "rip",
+        "anim_time": 0.18,
+        "fx": "fx_claw"
       },
       "price": 63,
       "next_tier": "w_claws_4",
@@ -1788,7 +1871,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 60
+        "angle": 60,
+        "anim": "rip",
+        "anim_time": 0.18,
+        "fx": "fx_claw"
       },
       "price": 112,
       "unlock": {
@@ -1815,7 +1901,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 160
+        "angle": 160,
+        "anim": "sweep",
+        "anim_time": 0.24,
+        "fx": "fx_slash_wide"
       },
       "price": 22,
       "next_tier": "w_sickle_2",
@@ -1844,7 +1933,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 160
+        "angle": 160,
+        "anim": "sweep",
+        "anim_time": 0.24,
+        "fx": "fx_slash_wide"
       },
       "price": 51,
       "next_tier": "w_sickle_3",
@@ -1873,7 +1965,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 160
+        "angle": 160,
+        "anim": "sweep",
+        "anim_time": 0.24,
+        "fx": "fx_slash_wide"
       },
       "price": 99,
       "next_tier": "w_sickle_4",
@@ -1902,7 +1997,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 160
+        "angle": 160,
+        "anim": "sweep",
+        "anim_time": 0.24,
+        "fx": "fx_slash_wide"
       },
       "price": 176,
       "unlock": {
@@ -1930,7 +2028,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 35
+        "angle": 35,
+        "anim": "thrust",
+        "anim_time": 0.18,
+        "fx": "fx_thrust"
       },
       "price": 18,
       "next_tier": "w_pike_2",
@@ -1958,7 +2059,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 35
+        "angle": 35,
+        "anim": "thrust",
+        "anim_time": 0.18,
+        "fx": "fx_thrust"
       },
       "price": 41,
       "next_tier": "w_pike_3",
@@ -1986,7 +2090,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 35
+        "angle": 35,
+        "anim": "thrust",
+        "anim_time": 0.18,
+        "fx": "fx_thrust"
       },
       "price": 81,
       "next_tier": "w_pike_4",
@@ -2014,7 +2121,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 35
+        "angle": 35,
+        "anim": "thrust",
+        "anim_time": 0.18,
+        "fx": "fx_thrust"
       },
       "price": 144,
       "unlock": {
@@ -2041,7 +2151,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 55
+        "angle": 55,
+        "anim": "thrust",
+        "anim_time": 0.14,
+        "fx": "fx_thrust"
       },
       "price": 26,
       "next_tier": "w_stilettos_2",
@@ -2070,7 +2183,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 55
+        "angle": 55,
+        "anim": "thrust",
+        "anim_time": 0.14,
+        "fx": "fx_thrust"
       },
       "price": 60,
       "next_tier": "w_stilettos_3",
@@ -2099,7 +2215,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 55
+        "angle": 55,
+        "anim": "thrust",
+        "anim_time": 0.14,
+        "fx": "fx_thrust"
       },
       "price": 117,
       "next_tier": "w_stilettos_4",
@@ -2128,7 +2247,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 55
+        "angle": 55,
+        "anim": "thrust",
+        "anim_time": 0.14,
+        "fx": "fx_thrust"
       },
       "price": 208,
       "unlock": {
@@ -2163,13 +2285,15 @@
         "pierce": 0,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_nail"
+        "texture": "p_nail",
+        "spin": "heading"
       },
       "price": 14,
       "next_tier": "w_nailer_2",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#b9b2a2"
     },
     "w_nailer_2": {
       "name": "Точёный гвоздомёт",
@@ -2198,13 +2322,15 @@
         "pierce": 0,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_nail"
+        "texture": "p_nail",
+        "spin": "heading"
       },
       "price": 32,
       "next_tier": "w_nailer_3",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#b9b2a2"
     },
     "w_nailer_3": {
       "name": "Освящённый гвоздомёт",
@@ -2233,13 +2359,15 @@
         "pierce": 0,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_nail"
+        "texture": "p_nail",
+        "spin": "heading"
       },
       "price": 63,
       "next_tier": "w_nailer_4",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#b9b2a2"
     },
     "w_nailer_4": {
       "name": "Заклятый гвоздомёт",
@@ -2268,12 +2396,14 @@
         "pierce": 0,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_nail"
+        "texture": "p_nail",
+        "spin": "heading"
       },
       "price": 112,
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#b9b2a2"
     },
     "w_spiker_1": {
       "name": "Шпилевик",
@@ -2301,14 +2431,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_spike",
+        "spin": "heading"
       },
       "price": 19,
       "next_tier": "w_spiker_2",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_spiker_2": {
       "name": "Точёный шпилевик",
@@ -2336,14 +2468,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_spike",
+        "spin": "heading"
       },
       "price": 44,
       "next_tier": "w_spiker_3",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_spiker_3": {
       "name": "Освящённый шпилевик",
@@ -2371,14 +2505,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_spike",
+        "spin": "heading"
       },
       "price": 86,
       "next_tier": "w_spiker_4",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_spiker_4": {
       "name": "Заклятый шпилевик",
@@ -2406,13 +2542,15 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_spike",
+        "spin": "heading"
       },
       "price": 152,
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_shotgun_1": {
       "name": "Обрез",
@@ -2441,13 +2579,15 @@
         "pierce": 0,
         "ttl": 0.55,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_grape",
+        "spin": "none"
       },
       "price": 22,
       "next_tier": "w_shotgun_2",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_shotgun_2": {
       "name": "Точёный обрез",
@@ -2476,13 +2616,15 @@
         "pierce": 0,
         "ttl": 0.55,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_grape",
+        "spin": "none"
       },
       "price": 51,
       "next_tier": "w_shotgun_3",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_shotgun_3": {
       "name": "Освящённый обрез",
@@ -2511,13 +2653,15 @@
         "pierce": 0,
         "ttl": 0.55,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_grape",
+        "spin": "none"
       },
       "price": 99,
       "next_tier": "w_shotgun_4",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_shotgun_4": {
       "name": "Заклятый обрез",
@@ -2546,12 +2690,14 @@
         "pierce": 0,
         "ttl": 0.55,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_grape",
+        "spin": "none"
       },
       "price": 176,
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_autocannon_1": {
       "name": "Автопушка",
@@ -2579,14 +2725,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shell",
+        "spin": "heading"
       },
       "price": 28,
       "next_tier": "w_autocannon_2",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#c98f4a"
     },
     "w_autocannon_2": {
       "name": "Точёная автопушка",
@@ -2614,14 +2762,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shell",
+        "spin": "heading"
       },
       "price": 64,
       "next_tier": "w_autocannon_3",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#c98f4a"
     },
     "w_autocannon_3": {
       "name": "Освящённая автопушка",
@@ -2649,14 +2799,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shell",
+        "spin": "heading"
       },
       "price": 126,
       "next_tier": "w_autocannon_4",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#c98f4a"
     },
     "w_autocannon_4": {
       "name": "Заклятая автопушка",
@@ -2684,13 +2836,15 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shell",
+        "spin": "heading"
       },
       "price": 224,
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#c98f4a"
     },
     "w_carbine_1": {
       "name": "Лучевой карабин",
@@ -2718,13 +2872,15 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_bolt",
+        "spin": "heading"
       },
       "price": 20,
       "next_tier": "w_carbine_2",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_carbine_2": {
       "name": "Точёный лучевой карабин",
@@ -2752,13 +2908,15 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_bolt",
+        "spin": "heading"
       },
       "price": 46,
       "next_tier": "w_carbine_3",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_carbine_3": {
       "name": "Освящённый лучевой карабин",
@@ -2786,13 +2944,15 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_bolt",
+        "spin": "heading"
       },
       "price": 90,
       "next_tier": "w_carbine_4",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_carbine_4": {
       "name": "Заклятый лучевой карабин",
@@ -2820,12 +2980,14 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_bolt",
+        "spin": "heading"
       },
       "price": 160,
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_longbarrel_1": {
       "name": "Длинноствол",
@@ -2854,14 +3016,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_slug",
+        "spin": "heading"
       },
       "price": 38,
       "next_tier": "w_longbarrel_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d8cba8"
     },
     "w_longbarrel_2": {
       "name": "Точёный длинноствол",
@@ -2890,14 +3054,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_slug",
+        "spin": "heading"
       },
       "price": 87,
       "next_tier": "w_longbarrel_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d8cba8"
     },
     "w_longbarrel_3": {
       "name": "Освящённый длинноствол",
@@ -2926,14 +3092,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_slug",
+        "spin": "heading"
       },
       "price": 171,
       "next_tier": "w_longbarrel_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d8cba8"
     },
     "w_longbarrel_4": {
       "name": "Заклятый длинноствол",
@@ -2962,13 +3130,15 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_slug",
+        "spin": "heading"
       },
       "price": 304,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d8cba8"
     },
     "w_lance_1": {
       "name": "Гарпунный арбалет",
@@ -2996,14 +3166,16 @@
         "pierce": 3,
         "ttl": 1.2,
         "size": 4,
-        "texture": "p_harpoon"
+        "texture": "p_harpoon",
+        "spin": "heading"
       },
       "price": 34,
       "next_tier": "w_lance_2",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#a8b8c8"
     },
     "w_lance_2": {
       "name": "Точёный гарпунный арбалет",
@@ -3031,14 +3203,16 @@
         "pierce": 3,
         "ttl": 1.2,
         "size": 4,
-        "texture": "p_harpoon"
+        "texture": "p_harpoon",
+        "spin": "heading"
       },
       "price": 78,
       "next_tier": "w_lance_3",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#a8b8c8"
     },
     "w_lance_3": {
       "name": "Освящённый гарпунный арбалет",
@@ -3066,14 +3240,16 @@
         "pierce": 3,
         "ttl": 1.2,
         "size": 4,
-        "texture": "p_harpoon"
+        "texture": "p_harpoon",
+        "spin": "heading"
       },
       "price": 153,
       "next_tier": "w_lance_4",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#a8b8c8"
     },
     "w_lance_4": {
       "name": "Заклятый гарпунный арбалет",
@@ -3101,13 +3277,15 @@
         "pierce": 3,
         "ttl": 1.2,
         "size": 4,
-        "texture": "p_harpoon"
+        "texture": "p_harpoon",
+        "spin": "heading"
       },
       "price": 272,
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#a8b8c8"
     },
     "w_needler_1": {
       "name": "Игломёт",
@@ -3136,14 +3314,16 @@
         "pierce": 0,
         "ttl": 0.7,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_needle",
+        "spin": "heading"
       },
       "price": 30,
       "next_tier": "w_needler_2",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#cfe0ec"
     },
     "w_needler_2": {
       "name": "Точёный игломёт",
@@ -3172,14 +3352,16 @@
         "pierce": 0,
         "ttl": 0.7,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_needle",
+        "spin": "heading"
       },
       "price": 69,
       "next_tier": "w_needler_3",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#cfe0ec"
     },
     "w_needler_3": {
       "name": "Освящённый игломёт",
@@ -3208,14 +3390,16 @@
         "pierce": 0,
         "ttl": 0.7,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_needle",
+        "spin": "heading"
       },
       "price": 135,
       "next_tier": "w_needler_4",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#cfe0ec"
     },
     "w_needler_4": {
       "name": "Заклятый игломёт",
@@ -3244,13 +3428,15 @@
         "pierce": 0,
         "ttl": 0.7,
         "size": 4,
-        "texture": "p_spike"
+        "texture": "p_needle",
+        "spin": "heading"
       },
       "price": 240,
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#cfe0ec"
     },
     "w_grapeshot_1": {
       "name": "Картечница",
@@ -3279,14 +3465,16 @@
         "pierce": 0,
         "ttl": 0.6,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shard",
+        "spin": "heading"
       },
       "price": 36,
       "next_tier": "w_grapeshot_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_grapeshot_2": {
       "name": "Точёная картечница",
@@ -3315,14 +3503,16 @@
         "pierce": 0,
         "ttl": 0.6,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shard",
+        "spin": "heading"
       },
       "price": 83,
       "next_tier": "w_grapeshot_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_grapeshot_3": {
       "name": "Освящённая картечница",
@@ -3351,14 +3541,16 @@
         "pierce": 0,
         "ttl": 0.6,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shard",
+        "spin": "heading"
       },
       "price": 162,
       "next_tier": "w_grapeshot_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_grapeshot_4": {
       "name": "Заклятая картечница",
@@ -3387,13 +3579,15 @@
         "pierce": 0,
         "ttl": 0.6,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_shard",
+        "spin": "heading"
       },
       "price": 288,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#d0a25c"
     },
     "w_plasmacutter_1": {
       "name": "Плазменный резак",
@@ -3421,14 +3615,16 @@
         "pierce": 4,
         "ttl": 0.8,
         "size": 7,
-        "texture": "p_plasma"
+        "texture": "p_plasma",
+        "spin": "none"
       },
       "price": 30,
       "next_tier": "w_plasmacutter_2",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#d8a8ff"
     },
     "w_plasmacutter_2": {
       "name": "Точёный плазменный резак",
@@ -3456,14 +3652,16 @@
         "pierce": 4,
         "ttl": 0.8,
         "size": 7,
-        "texture": "p_plasma"
+        "texture": "p_plasma",
+        "spin": "none"
       },
       "price": 69,
       "next_tier": "w_plasmacutter_3",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#d8a8ff"
     },
     "w_plasmacutter_3": {
       "name": "Освящённый плазменный резак",
@@ -3491,14 +3689,16 @@
         "pierce": 4,
         "ttl": 0.8,
         "size": 7,
-        "texture": "p_plasma"
+        "texture": "p_plasma",
+        "spin": "none"
       },
       "price": 135,
       "next_tier": "w_plasmacutter_4",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#d8a8ff"
     },
     "w_plasmacutter_4": {
       "name": "Заклятый плазменный резак",
@@ -3526,13 +3726,15 @@
         "pierce": 4,
         "ttl": 0.8,
         "size": 7,
-        "texture": "p_plasma"
+        "texture": "p_plasma",
+        "spin": "none"
       },
       "price": 240,
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#d8a8ff"
     },
     "w_rod_1": {
       "name": "Жезл разлома",
@@ -3560,13 +3762,15 @@
         "pierce": 2,
         "ttl": 1.4,
         "size": 6,
-        "texture": "p_warp"
+        "texture": "p_warp",
+        "spin": "spin"
       },
       "price": 26,
       "next_tier": "w_rod_2",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#a86ad0"
     },
     "w_rod_2": {
       "name": "Точёный жезл разлома",
@@ -3594,13 +3798,15 @@
         "pierce": 2,
         "ttl": 1.4,
         "size": 6,
-        "texture": "p_warp"
+        "texture": "p_warp",
+        "spin": "spin"
       },
       "price": 60,
       "next_tier": "w_rod_3",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#a86ad0"
     },
     "w_rod_3": {
       "name": "Освящённый жезл разлома",
@@ -3628,13 +3834,15 @@
         "pierce": 2,
         "ttl": 1.4,
         "size": 6,
-        "texture": "p_warp"
+        "texture": "p_warp",
+        "spin": "spin"
       },
       "price": 117,
       "next_tier": "w_rod_4",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#a86ad0"
     },
     "w_rod_4": {
       "name": "Заклятый жезл разлома",
@@ -3662,12 +3870,14 @@
         "pierce": 2,
         "ttl": 1.4,
         "size": 6,
-        "texture": "p_warp"
+        "texture": "p_warp",
+        "spin": "spin"
       },
       "price": 208,
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#a86ad0"
     },
     "w_venomsprayer_1": {
       "name": "Ядо-распылитель",
@@ -3695,14 +3905,16 @@
         "pierce": 0,
         "ttl": 0.65,
         "size": 6,
-        "texture": "p_venom"
+        "texture": "p_venom",
+        "spin": "none"
       },
       "price": 27,
       "next_tier": "w_venomsprayer_2",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#8fd06a"
     },
     "w_venomsprayer_2": {
       "name": "Точёный ядо-распылитель",
@@ -3730,14 +3942,16 @@
         "pierce": 0,
         "ttl": 0.65,
         "size": 6,
-        "texture": "p_venom"
+        "texture": "p_venom",
+        "spin": "none"
       },
       "price": 62,
       "next_tier": "w_venomsprayer_3",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#8fd06a"
     },
     "w_venomsprayer_3": {
       "name": "Освящённый ядо-распылитель",
@@ -3765,14 +3979,16 @@
         "pierce": 0,
         "ttl": 0.65,
         "size": 6,
-        "texture": "p_venom"
+        "texture": "p_venom",
+        "spin": "none"
       },
       "price": 122,
       "next_tier": "w_venomsprayer_4",
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#8fd06a"
     },
     "w_venomsprayer_4": {
       "name": "Заклятый ядо-распылитель",
@@ -3800,13 +4016,15 @@
         "pierce": 0,
         "ttl": 0.65,
         "size": 6,
-        "texture": "p_venom"
+        "texture": "p_venom",
+        "spin": "none"
       },
       "price": 216,
       "unlock": {
         "type": "relics",
         "tier": 2
-      }
+      },
+      "color": "#8fd06a"
     },
     "w_stormcaster_1": {
       "name": "Грозорассеиватель",
@@ -3834,14 +4052,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 5,
-        "texture": "p_spark"
+        "texture": "p_spark",
+        "spin": "none"
       },
       "price": 32,
       "next_tier": "w_stormcaster_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#7fc0f0"
     },
     "w_stormcaster_2": {
       "name": "Точёный грозорассеиватель",
@@ -3869,14 +4089,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 5,
-        "texture": "p_spark"
+        "texture": "p_spark",
+        "spin": "none"
       },
       "price": 74,
       "next_tier": "w_stormcaster_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#7fc0f0"
     },
     "w_stormcaster_3": {
       "name": "Освящённый грозорассеиватель",
@@ -3904,14 +4126,16 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 5,
-        "texture": "p_spark"
+        "texture": "p_spark",
+        "spin": "none"
       },
       "price": 144,
       "next_tier": "w_stormcaster_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#7fc0f0"
     },
     "w_stormcaster_4": {
       "name": "Заклятый грозорассеиватель",
@@ -3939,13 +4163,15 @@
         "pierce": 0,
         "ttl": 0.9,
         "size": 5,
-        "texture": "p_spark"
+        "texture": "p_spark",
+        "spin": "none"
       },
       "price": 256,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#7fc0f0"
     },
     "w_sporegun_1": {
       "name": "Споровая пушка",
@@ -3974,14 +4200,16 @@
         "pierce": 2,
         "ttl": 1.3,
         "size": 9,
-        "texture": "p_spore"
+        "texture": "p_spore",
+        "spin": "none"
       },
       "price": 33,
       "next_tier": "w_sporegun_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8c07a"
     },
     "w_sporegun_2": {
       "name": "Точёная споровая пушка",
@@ -4010,14 +4238,16 @@
         "pierce": 2,
         "ttl": 1.3,
         "size": 9,
-        "texture": "p_spore"
+        "texture": "p_spore",
+        "spin": "none"
       },
       "price": 76,
       "next_tier": "w_sporegun_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8c07a"
     },
     "w_sporegun_3": {
       "name": "Освящённая споровая пушка",
@@ -4046,14 +4276,16 @@
         "pierce": 2,
         "ttl": 1.3,
         "size": 9,
-        "texture": "p_spore"
+        "texture": "p_spore",
+        "spin": "none"
       },
       "price": 148,
       "next_tier": "w_sporegun_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8c07a"
     },
     "w_sporegun_4": {
       "name": "Заклятая споровая пушка",
@@ -4082,13 +4314,15 @@
         "pierce": 2,
         "ttl": 1.3,
         "size": 9,
-        "texture": "p_spore"
+        "texture": "p_spore",
+        "spin": "none"
       },
       "price": 264,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8c07a"
     },
     "w_flamer_1": {
       "name": "Огнемёт",
@@ -4116,14 +4350,16 @@
         "pierce": 1,
         "ttl": 0.55,
         "size": 7,
-        "texture": "p_flame"
+        "texture": "p_flame",
+        "spin": "none"
       },
       "price": 30,
       "next_tier": "w_flamer_2",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#f0a03a"
     },
     "w_flamer_2": {
       "name": "Точёный огнемёт",
@@ -4151,14 +4387,16 @@
         "pierce": 1,
         "ttl": 0.55,
         "size": 7,
-        "texture": "p_flame"
+        "texture": "p_flame",
+        "spin": "none"
       },
       "price": 69,
       "next_tier": "w_flamer_3",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#f0a03a"
     },
     "w_flamer_3": {
       "name": "Освящённый огнемёт",
@@ -4186,14 +4424,16 @@
         "pierce": 1,
         "ttl": 0.55,
         "size": 7,
-        "texture": "p_flame"
+        "texture": "p_flame",
+        "spin": "none"
       },
       "price": 135,
       "next_tier": "w_flamer_4",
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#f0a03a"
     },
     "w_flamer_4": {
       "name": "Заклятый огнемёт",
@@ -4221,13 +4461,15 @@
         "pierce": 1,
         "ttl": 0.55,
         "size": 7,
-        "texture": "p_flame"
+        "texture": "p_flame",
+        "spin": "none"
       },
       "price": 240,
       "unlock": {
         "type": "relics",
         "tier": 1
-      }
+      },
+      "color": "#f0a03a"
     },
     "w_icelens_1": {
       "name": "Ледяная линза",
@@ -4255,14 +4497,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 6,
-        "texture": "p_ice"
+        "texture": "p_ice",
+        "spin": "none"
       },
       "price": 35,
       "next_tier": "w_icelens_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8dcf0"
     },
     "w_icelens_2": {
       "name": "Точёная ледяная линза",
@@ -4290,14 +4534,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 6,
-        "texture": "p_ice"
+        "texture": "p_ice",
+        "spin": "none"
       },
       "price": 80,
       "next_tier": "w_icelens_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8dcf0"
     },
     "w_icelens_3": {
       "name": "Освящённая ледяная линза",
@@ -4325,14 +4571,16 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 6,
-        "texture": "p_ice"
+        "texture": "p_ice",
+        "spin": "none"
       },
       "price": 158,
       "next_tier": "w_icelens_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8dcf0"
     },
     "w_icelens_4": {
       "name": "Заклятая ледяная линза",
@@ -4360,13 +4608,15 @@
         "pierce": 2,
         "ttl": 1.1,
         "size": 6,
-        "texture": "p_ice"
+        "texture": "p_ice",
+        "spin": "none"
       },
       "price": 280,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#a8dcf0"
     },
     "w_turret_1": {
       "name": "Автотурель",
@@ -4394,13 +4644,15 @@
         "pierce": 0,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_rivet",
+        "spin": "heading"
       },
       "price": 24,
       "next_tier": "w_turret_2",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_turret_2": {
       "name": "Точёная автотурель",
@@ -4428,13 +4680,15 @@
         "pierce": 0,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_rivet",
+        "spin": "heading"
       },
       "price": 55,
       "next_tier": "w_turret_3",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_turret_3": {
       "name": "Освящённая автотурель",
@@ -4462,13 +4716,15 @@
         "pierce": 0,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_rivet",
+        "spin": "heading"
       },
       "price": 108,
       "next_tier": "w_turret_4",
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_turret_4": {
       "name": "Заклятая автотурель",
@@ -4496,12 +4752,14 @@
         "pierce": 0,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_slug"
+        "texture": "p_rivet",
+        "spin": "heading"
       },
       "price": 192,
       "unlock": {
         "type": "default"
-      }
+      },
+      "color": "#c2b8a4"
     },
     "w_bonemine_1": {
       "name": "Костяная мина",
@@ -4523,7 +4781,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 360
+        "angle": 360,
+        "anim": "spin",
+        "anim_time": 0.4,
+        "fx": "fx_slash_wide"
       },
       "price": 29,
       "next_tier": "w_bonemine_2",
@@ -4552,7 +4813,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 360
+        "angle": 360,
+        "anim": "spin",
+        "anim_time": 0.4,
+        "fx": "fx_slash_wide"
       },
       "price": 67,
       "next_tier": "w_bonemine_3",
@@ -4581,7 +4845,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 360
+        "angle": 360,
+        "anim": "spin",
+        "anim_time": 0.4,
+        "fx": "fx_slash_wide"
       },
       "price": 130,
       "next_tier": "w_bonemine_4",
@@ -4610,7 +4877,10 @@
       },
       "shape": {
         "type": "arc",
-        "angle": 360
+        "angle": 360,
+        "anim": "spin",
+        "anim_time": 0.4,
+        "fx": "fx_slash_wide"
       },
       "price": 232,
       "unlock": {
@@ -4644,14 +4914,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_beam",
+        "spin": "heading"
       },
       "price": 31,
       "next_tier": "w_forgedrone_2",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_forgedrone_2": {
       "name": "Точёный литейный дрон",
@@ -4679,14 +4951,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_beam",
+        "spin": "heading"
       },
       "price": 71,
       "next_tier": "w_forgedrone_3",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_forgedrone_3": {
       "name": "Освящённый литейный дрон",
@@ -4714,14 +4988,16 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_beam",
+        "spin": "heading"
       },
       "price": 140,
       "next_tier": "w_forgedrone_4",
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#8fd0e0"
     },
     "w_forgedrone_4": {
       "name": "Заклятый литейный дрон",
@@ -4749,13 +5025,15 @@
         "pierce": 1,
         "ttl": 1.0,
         "size": 4,
-        "texture": "p_beam"
+        "texture": "p_beam",
+        "spin": "heading"
       },
       "price": 248,
       "unlock": {
         "type": "relics",
         "tier": 3
-      }
+      },
+      "color": "#8fd0e0"
     }
   },
   "items": {

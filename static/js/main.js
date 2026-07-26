@@ -10,6 +10,7 @@ import { createRenderer } from './engine/render.js';
 import { createLocalTransport, createSocketTransport, CH } from './net/transport.js';
 import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP } from './sim/run.js';
 import { buildArenaLayout, createPropIndex } from './sim/arena.js';
+import { swingPose, trailAlpha, makePose } from './engine/weapon_anim.js';
 import { createHost } from './net/host.js';
 import { createNetClient } from './net/client.js';
 import { createLobby, roomFromUrl } from './net/lobby.js';
@@ -25,6 +26,7 @@ import { createResultUi } from './ui/result_ui.js';
 import { createPauseUi } from './ui/pause_ui.js';
 import { createAdminUi } from './ui/admin_ui.js';
 import { createParticles } from './engine/particles.js';
+import { createRng } from './engine/rng.js';
 import { createAudio } from './engine/audio.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
@@ -77,6 +79,18 @@ async function boot() {
   const pauseUi = createPauseUi(uiRoot, config, t);
   const audio = createAudio(config);
   const particles = createParticles(config);
+  // Отдельный ГПСЧ для косметики. Тянуть искры из rng забега нельзя: тогда забег
+  // в браузере и тот же сид в tools/playtest.js разошлись бы, а сервер валидирует
+  // результат именно по сиду.
+  const fxRng = createRng(FX_SEED);
+
+  // Искры в точке попадания. Один колбэк на все источники урона: его дёргает
+  // damageEnemy, а симуляция про партиклы по-прежнему ничего не знает.
+  function onImpact(x, y, crit) {
+    const fx = config.render.impact;
+    particles.burst(x, y, crit ? fx.count_crit : fx.count, crit ? fx.color_crit : fx.color,
+      fxRng, fx.speed, fx.life, fx.size);
+  }
   doc.addEventListener('pointerdown', () => audio.unlock(), { once: true });
   doc.addEventListener('keydown', () => audio.unlock(), { once: true });
   const metaUi = createMetaUi(uiRoot, config, t, {
@@ -122,6 +136,7 @@ async function boot() {
   let socket = null;
   let arenaId = null;
   let arenaLayout = null;
+  const pose = makePose();       // одна на весь рендер: поза считается десятки раз за кадр
   let runId = null;
   let finished = false;
   let myIndex = 0;
@@ -134,6 +149,7 @@ async function boot() {
   const ashColor = config.render.ash_color;
   const ashSize = config.render.ash_size;
   const animFps = config.render.anim_fps;
+  const projScale = config.render.projectile_scale;
   const WALK = '_walk';
 
   let shopSnap = null;
@@ -432,6 +448,40 @@ async function boot() {
     });
   }
 
+  // Оружие в руке и замах. До этого оружие в мире не рисовалось вовсе: slot.lastAngle
+  // считался на каждый удар и не читался никем, а swingArc наносил урон молча.
+  //
+  // Спрайт оружия — один, в боковой проекции (ASSETS.md §5): позиция и поворот
+  // берутся из позы, а при прицеливании влево спрайт отражается по вертикали,
+  // иначе клинок висит рукоятью вперёд.
+  function drawWeapons(p, size) {
+    const slots = p.slots;
+    if (!slots) return;                       // у кооп-клиента слотов нет
+    const reach = size * config.render.weapon_reach;
+    for (let s = 0; s < slots.length; s++) {
+      const slot = slots[s];
+      if (!slot.cfg || slot.swingT <= 0) continue;
+      const w = slot.cfg;
+      const k = 1 - slot.swingT / slot.swingLen;
+      const half = ((w.shape.angle || 90) * Math.PI) / 360;
+      swingPose(w.shape.anim, k, half, pose);
+
+      const a = slot.lastAngle + pose.angle;
+      const x = p.x + Math.cos(a) * pose.dist * reach;
+      const y = p.y + Math.sin(a) * pose.dist * reach;
+      const left = Math.cos(slot.lastAngle) < 0;
+
+      if (w.shape.fx) {
+        renderer.ctx.globalAlpha = trailAlpha(k) * config.render.fx_alpha;
+        renderer.drawSprite(w.shape.fx, x, y, size * config.render.fx_scale,
+          a + pose.tilt, left);
+        renderer.ctx.globalAlpha = 1;
+      }
+      renderer.drawSprite(w.texture, x, y,
+        config.render.weapon_size * pose.scale, a + pose.tilt, left);
+    }
+  }
+
   function render() {
     const st = world();
     const me = myPlayer();
@@ -471,6 +521,7 @@ async function boot() {
       const moving = p.vx !== 0 || p.vy !== 0;
       renderer.drawEntity(chCfg.texture, p.dir, (p.animT * animFps) | 0,
         p.x, p.y, size, chCfg.color, moving ? chCfg.texture + WALK : null);
+      drawWeapons(p, size);
       if (config.render.nameplate && players.length > 1) {
         renderer.drawText(p.name || '', p.x, p.y - config.render.nameplate_offset,
           chCfg.color, 'center');
@@ -484,7 +535,15 @@ async function boot() {
       for (let i = 0; i < projs.count; i++) {
         const pr = projs.items[i];
         const r = Math.max(config.render.projectile_size_min, pr.size);
-        renderer.drawDot(pr.x, pr.y, r, pr.color || ashColor);
+        // Поворот только там, где он виден: у круглых (плазма, спора, лёд)
+        // spin='none', и они идут быстрым путём drawSprite без трансформа —
+        // на 600 снарядах это разница в бюджете рендера, а не придирка.
+        let angle = 0;
+        if (pr.spin === 'heading') angle = Math.atan2(pr.vy, pr.vx);
+        else if (pr.spin === 'spin') angle = pr.age * PROJ_SPIN_RATE;
+        if (!renderer.drawSprite(pr.texture, pr.x, pr.y, r * projScale, angle, false)) {
+          renderer.drawDot(pr.x, pr.y, r, pr.color || ashColor);
+        }
       }
     }
 
@@ -568,7 +627,7 @@ async function boot() {
     run = createRun({
       config, seed: data.seed, transport,
       players: [{ id: transport.id, name: playerName, character }],
-      arena: arenaId, danger, unlocked: unlockedWeapons, curses,
+      arena: arenaId, danger, unlocked: unlockedWeapons, curses, onImpact,
     });
     debugExtra.seed = data.seed;
     arenaLayout = run.layout;
@@ -658,7 +717,7 @@ async function boot() {
         id: i, name: p.name, character: p.character || fallbackChar,
       }));
       run = createRun({ config, seed: msg.seed, transport, players,
-        arena: arenaId, danger, unlocked: unlockedWeapons, curses });
+        arena: arenaId, danger, unlocked: unlockedWeapons, curses, onImpact });
       hostNet = createHost(run, transport, config);
       arenaLayout = run.layout;
       bootEngine([run.arenaW, run.arenaH]);
@@ -735,5 +794,9 @@ async function boot() {
 }
 
 const PING_INTERVAL_MS = 2000;
+// Сид генератора косметики. Фиксированный и свой: искры не имеют права влиять на
+// случайность забега, которую сервер сверяет при валидации результата.
+const FX_SEED = 0x5eed1;
+const PROJ_SPIN_RATE = 14;      // рад/с для снарядов со spin='spin'
 
 boot();

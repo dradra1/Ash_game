@@ -28,7 +28,7 @@ export const PHASE_OVER = 'over';
 
 // unlocked — что открыто метапрогрессией у ХОЗЯИНА забега: пул лавки ограничен
 // им (ТЗ §3.9). В коопе это открытия хоста: мир один, и ассортимент общий.
-export function createRun({ config, seed, transport, players, arena, danger, unlocked, curses }) {
+export function createRun({ config, seed, transport, players, arena, danger, unlocked, curses, onImpact }) {
   const rng = createRng(seed);
   const arenaId = arena || firstKey(config.arenas);
   const curseFx = resolveCurseFx(config, curses || []);
@@ -139,6 +139,10 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     const e = enemyPool.items[idx];
     if (!e.alive) return;
     e.hp -= amount;
+    // Частицы — клиентская косметика, симуляция про них знать не должна: колбэк
+    // приходит снаружи, как транспорт. В коопе он есть только у хоста, клиенты
+    // рисуют свои искры по событиям спавна.
+    if (onImpact) onImpact(e.x, e.y, crit, nx, ny);
     if (knockback > 0) {
       const k = knockback * (1 - e.kbResist) * config.sim.knockback_scale;
       e.kbX += nx * k;
@@ -259,7 +263,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   };
   const projDeps = {
     config, players: state.players, enemyPool, enemyGrid: shifted, queryBuf,
-    maxEnemySize, damageEnemy, hitPlayer,
+    maxEnemySize, damageEnemy, hitPlayer, arenaW, arenaH,
   };
   const pickupDeps = { config, players: state.players, onCollect };
   const spawnDeps = {

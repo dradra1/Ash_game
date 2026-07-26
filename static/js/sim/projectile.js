@@ -5,7 +5,8 @@ export function makeProjectile() {
   return {
     x: 0, y: 0, vx: 0, vy: 0,
     ttl: 0, dmg: 0, pierce: 0, size: 0,
-    hostile: false, crit: false, texture: null, color: null,
+    // spin — как рендер поворачивает спрайт: heading | none | spin (см. конфиг)
+    hostile: false, crit: false, texture: null, color: null, spin: null, age: 0,
     ownerId: -1, knockback: 0,
     hitCount: 0, hitIds: null,
     alive: false,
@@ -14,6 +15,7 @@ export function makeProjectile() {
 
 export function resetProjectile(p) {
   p.alive = false;
+  p.age = 0;
   p.hitCount = 0;
   p.crit = false;
   if (!p.hitIds) p.hitIds = new Int32Array(8);
@@ -37,8 +39,10 @@ function markHit(p, id) {
 // deps: {config, enemyPool, enemyGrid, queryBuf, players, damageEnemy, hitPlayer}
 export function stepProjectiles(pool, dt, deps) {
   const config = deps.config;
-  const w = config.arena.size[0];
-  const h = config.arena.size[1];
+  // Размер арены — из забега, а не из конфига: в коопе он масштабируется числом
+  // игроков, и по конфигу снаряды гасли на 40% пути до дальнего края.
+  const w = deps.arenaW || config.arena.size[0];
+  const h = deps.arenaH || config.arena.size[1];
   const margin = config.arena.spawn_margin * 2;
 
   for (let i = pool.count - 1; i >= 0; i--) {
@@ -46,6 +50,7 @@ export function stepProjectiles(pool, dt, deps) {
     p.x += p.vx * dt;
     p.y += p.vy * dt;
     p.ttl -= dt;
+    p.age += dt;
 
     let dead = p.ttl <= 0
       || p.x < -margin || p.x > w + margin
