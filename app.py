@@ -85,11 +85,11 @@ def _copy_config_if_needed():
     """Сид + промоут: volume data/ переживает rebuild и иначе остаётся на старой версии."""
     _ensure_data_dir()
     if not REPO_CONFIG.exists():
-        return
+        return False
     repo = json.loads(REPO_CONFIG.read_text(encoding="utf-8"))
     if not LIVE_CONFIG.exists():
         _write_live_config(repo)
-        return
+        return True
 
     live = json.loads(LIVE_CONFIG.read_text(encoding="utf-8"))
     repo_ver = int(repo.get("content_version") or 0)
@@ -97,9 +97,11 @@ def _copy_config_if_needed():
     if repo_ver > live_ver:
         # Репо впереди (после деплоя патчей) — вливаем сид в живой конфиг.
         _write_live_config(repo)
-        return
+        return True
     if _merge_missing_i18n(live, repo):
         _write_live_config(live)
+        return True
+    return False
 
 
 def load_config() -> dict:
@@ -115,6 +117,32 @@ def reload_config() -> dict:
 
 def get_config() -> dict:
     return _loaded_config
+
+
+def _config_for_client() -> dict:
+    """Живой конфиг + недостающие i18n из репо (на случай отстающего volume)."""
+    if _copy_config_if_needed():
+        load_config()
+    cfg = dict(get_config())
+    if not REPO_CONFIG.exists():
+        return cfg
+    repo = json.loads(REPO_CONFIG.read_text(encoding="utf-8"))
+    repo_ver = int(repo.get("content_version") or 0)
+    live_ver = int(cfg.get("content_version") or 0)
+    # Volume отстал от образа — отдаём репо целиком (и пишем его в live выше).
+    if repo_ver > live_ver:
+        return repo
+    # Версии равны, но ключи i18n могли не доехать — доливаем из репо.
+    live_i18n = cfg.get("i18n") or {}
+    repo_i18n = repo.get("i18n") or {}
+    i18n = {}
+    for lang in set(live_i18n) | set(repo_i18n):
+        base = dict(repo_i18n.get(lang) or {})
+        base.update(live_i18n.get(lang) or {})
+        i18n[lang] = base
+    if i18n:
+        cfg["i18n"] = i18n
+    return cfg
 
 
 load_config()
@@ -260,14 +288,14 @@ def logout():
 
 @app.route("/api/config")
 def api_config():
-    cfg = get_config()
+    cfg = _config_for_client()
     etag = f'"v{cfg.get("content_version", 0)}"'
     if request.headers.get("If-None-Match") == etag:
         return Response(status=304)
     return Response(
         json.dumps(cfg, ensure_ascii=False),
         mimetype="application/json",
-        headers={"ETag": etag},
+        headers={"ETag": etag, "Cache-Control": "no-store"},
     )
 
 
