@@ -1,9 +1,10 @@
-// Ввод: клавиатура (WASD + стрелки) и виртуальный джойстик на touch.
+// Ввод: клавиатура (WASD + стрелки), виртуальный джойстик на touch и геймпад.
 // move — переиспользуемый объект, новый на кадр не создаётся.
 
 // Радиус виртуального джойстика, px. Значение по умолчанию; createInput принимает
 // config и берёт config.render.joystick_radius, если тот передан.
 const JOYSTICK_RADIUS_DEFAULT = 48;
+const DEADZONE_DEFAULT = 0.25;
 
 // Коды клавиш направления → вектор
 const DIRS = {
@@ -18,9 +19,29 @@ const PREVENT = {
   Space: 1, F3: 1, Escape: 1, F4: 1,
 };
 
+// Символические коды для edge-detect кнопок геймпада (consumePressed)
+const PAD_ACTION_CODES = {
+  buy: 'GamepadBuy',
+  lock: 'GamepadLock',
+  merge: 'GamepadMerge',
+  reroll: 'GamepadReroll',
+  ready: 'GamepadReady',
+  focus_prev: 'GamepadFocusPrev',
+  focus_next: 'GamepadFocusNext',
+};
+
+const DEFAULT_PAD_BUTTONS = {
+  buy: 0, lock: 2, merge: 3, reroll: 4, ready: 9,
+  focus_prev: 14, focus_next: 15,
+};
+
 export function createInput(canvas, config) {
   const JOYSTICK_RADIUS =
     (config && config.render && config.render.joystick_radius) || JOYSTICK_RADIUS_DEFAULT;
+  const deadzone = (config && config.input && config.input.gamepad_deadzone) || DEADZONE_DEFAULT;
+  const padButtons = (config && config.input && config.input.gamepad_buttons)
+    || DEFAULT_PAD_BUTTONS;
+
   const move = { x: 0, y: 0 };
   const held = Object.create(null);    // code → true, удерживаемые
   const framePressed = Object.create(null); // code → true, нажатые с прошлого consume
@@ -29,6 +50,10 @@ export function createInput(canvas, config) {
   let joyId = -1;
   let joyOx = 0;
   let joyOy = 0;
+  let padMoveActive = false;
+  const padBtnPrev = Object.create(null); // action → wasPressed
+  let axisLeftHeld = false;
+  let axisRightHeld = false;
 
   function recomputeFromKeys() {
     let x = 0;
@@ -53,20 +78,20 @@ export function createInput(canvas, config) {
     if (!e.repeat) framePressed[e.code] = true;
     if (!held[e.code]) {
       held[e.code] = true;
-      if (joyId < 0) recomputeFromKeys();
+      if (joyId < 0 && !padMoveActive) recomputeFromKeys();
     }
   }
 
   function onKeyUp(e) {
     if (held[e.code]) {
       held[e.code] = false;
-      if (joyId < 0) recomputeFromKeys();
+      if (joyId < 0 && !padMoveActive) recomputeFromKeys();
     }
   }
 
   function onBlur() {
     for (const code in held) held[code] = false;
-    if (joyId < 0) recomputeFromKeys();
+    if (joyId < 0 && !padMoveActive) recomputeFromKeys();
   }
 
   // Левая половина экрана — джойстик, правая — тап
@@ -83,6 +108,7 @@ export function createInput(canvas, config) {
           touch.y = joyOy;
           move.x = 0;
           move.y = 0;
+          padMoveActive = false;
         }
       } else {
         touch.tap = true;
@@ -122,6 +148,75 @@ export function createInput(canvas, config) {
     }
   }
 
+  function edgePadAction(action, pressed) {
+    const prev = !!padBtnPrev[action];
+    padBtnPrev[action] = pressed;
+    if (pressed && !prev) {
+      const code = PAD_ACTION_CODES[action];
+      if (code) framePressed[code] = true;
+    }
+  }
+
+  function pollGamepad() {
+    const nav = globalThis.navigator;
+    if (!nav || typeof nav.getGamepads !== 'function') return;
+    const pads = nav.getGamepads();
+    let pad = null;
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i] && pads[i].connected) {
+        pad = pads[i];
+        break;
+      }
+    }
+    if (!pad) {
+      if (padMoveActive && joyId < 0) {
+        padMoveActive = false;
+        recomputeFromKeys();
+      }
+      axisLeftHeld = false;
+      axisRightHeld = false;
+      for (const action in PAD_ACTION_CODES) padBtnPrev[action] = false;
+      return;
+    }
+
+    // Кнопки: edge → framePressed
+    const btns = pad.buttons;
+    for (const action in padButtons) {
+      const idx = padButtons[action];
+      const b = btns[idx];
+      const pressed = !!(b && (b.pressed || b.value > 0.5));
+      edgePadAction(action, pressed);
+    }
+
+    // Стик влево/вправо → фокус слотов лавки (edge по выходу из deadzone)
+    const ax = pad.axes[0] || 0;
+    const leftNow = ax < -deadzone;
+    const rightNow = ax > deadzone;
+    if (leftNow && !axisLeftHeld) framePressed.GamepadFocusPrev = true;
+    if (rightNow && !axisRightHeld) framePressed.GamepadFocusNext = true;
+    axisLeftHeld = leftNow;
+    axisRightHeld = rightNow;
+
+    // Движение: тач > геймпад > клавиатура
+    if (joyId >= 0) return;
+
+    let dx = pad.axes[0] || 0;
+    let dy = pad.axes[1] || 0;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > deadzone) {
+      const scale = len > 1 ? 1 / len : 1;
+      // Мягкий выход из deadzone: нормализуем остаток
+      const t = (len - deadzone) / (1 - deadzone);
+      const mag = t > 1 ? 1 : t;
+      move.x = dx * scale * mag;
+      move.y = dy * scale * mag;
+      padMoveActive = true;
+    } else if (padMoveActive) {
+      padMoveActive = false;
+      recomputeFromKeys();
+    }
+  }
+
   const win = globalThis;
   win.addEventListener('keydown', onKeyDown);
   win.addEventListener('keyup', onKeyUp);
@@ -134,6 +229,10 @@ export function createInput(canvas, config) {
   return {
     move,
     touch,
+
+    poll() {
+      pollGamepad();
+    },
 
     down(code) {
       return !!held[code];

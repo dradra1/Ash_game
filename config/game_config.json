@@ -1,5 +1,5 @@
 {
-  "content_version": 9,
+  "content_version": 10,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -7113,6 +7113,18 @@
         "tithe": 1,
         "reward_mult": 1.25
       }
+    }
+  },
+  "input": {
+    "gamepad_deadzone": 0.25,
+    "gamepad_buttons": {
+      "buy": 0,
+      "lock": 2,
+      "merge": 3,
+      "reroll": 4,
+      "ready": 9,
+      "focus_prev": 14,
+      "focus_next": 15
     }
   }
 }

@@ -237,6 +237,11 @@ html, body {
 .card.sold { opacity: 0.35; cursor: default; }
 .card.empty { cursor: default; }
 .card.locked { box-shadow: inset 0 0 0 1px #c8a35a; }
+.card.focused {
+    outline: 2px solid #c8a35a;
+    outline-offset: 1px;
+    background: #22262f;
+}
 .card.warn::after {
     content: attr(data-msg);
     position: absolute;

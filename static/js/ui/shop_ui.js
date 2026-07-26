@@ -1,8 +1,8 @@
 // Лавка между волнами: 4 карточки, реролл, лок, инвентарь оружия со слиянием
 // и продажей, сетка предметов, панель статов, кнопка «Готов».
+// Геймпад: фокус слота + buy/lock/merge/reroll/ready через input.consumePressed.
 
-import { buy, sell, merge, mergeable, rerollCost } from '../sim/shop.js';
-import { refreshStats } from '../sim/player.js';
+import { mergeable } from '../sim/shop.js';
 import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createShopUi(root, config, t, tip) {
@@ -44,6 +44,23 @@ export function createShopUi(root, config, t, tip) {
   // Адаптер: UI не знает, своя это лавка или чужая, полученная по сети.
   // У хоста и в соло действия применяются сразу, у клиента — уезжают событием.
   let ctx = null;   // {slots, player, wave, rerollCost, act(kind, a, b)}
+  let focusSlot = 0;
+
+  function slotCount() {
+    if (!ctx) return 0;
+    const slots = ctx.slots();
+    return slots ? slots.length : 0;
+  }
+
+  function clampFocus() {
+    const n = slotCount();
+    if (n <= 0) {
+      focusSlot = 0;
+      return;
+    }
+    if (focusSlot < 0) focusSlot = 0;
+    if (focusSlot >= n) focusSlot = n - 1;
+  }
 
   function tierColor(tier) {
     return config.shop.tier_color[tier - 1] || '#9aa0a8';
@@ -65,10 +82,14 @@ export function createShopUi(root, config, t, tip) {
   function renderSlots() {
     slotsEl.innerHTML = '';
     const slots = ctx.slots();
+    clampFocus();
     for (let i = 0; i < slots.length; i++) {
       const s = slots[i];
       const card = doc.createElement('div');
-      card.className = 'card' + (s.sold ? ' sold' : '') + (s.locked ? ' locked' : '');
+      card.className = 'card'
+        + (s.sold ? ' sold' : '')
+        + (s.locked ? ' locked' : '')
+        + (i === focusSlot ? ' focused' : '');
       if (!s.cfg) {
         card.classList.add('empty');
         slotsEl.appendChild(card);
@@ -85,6 +106,7 @@ export function createShopUi(root, config, t, tip) {
       lockBtn.textContent = s.locked ? '■' : '□';
       lockBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        focusSlot = i;
         ctx.act('lock', i);
         renderSlots();
       });
@@ -93,6 +115,7 @@ export function createShopUi(root, config, t, tip) {
       if (!s.sold) {
         const idx = i;
         card.addEventListener('click', () => {
+          focusSlot = idx;
           const res = ctx.act('buy', idx);
           if (res === 'poor') flash(card, t('ui.shop.cant_afford'));
           else if (res === 'full') flash(card, t('ui.shop.slots_full'));
@@ -114,6 +137,48 @@ export function createShopUi(root, config, t, tip) {
       node.classList.remove('warn');
       if (old === null) node.removeAttribute('data-msg');
     }, 900);
+  }
+
+  function focusedCard() {
+    return slotsEl.children[focusSlot] || null;
+  }
+
+  function doBuy() {
+    const slots = ctx.slots();
+    const s = slots[focusSlot];
+    if (!s || s.sold || !s.cfg) return;
+    const res = ctx.act('buy', focusSlot);
+    const card = focusedCard();
+    if (res === 'poor' && card) flash(card, t('ui.shop.cant_afford'));
+    else if (res === 'full' && card) flash(card, t('ui.shop.slots_full'));
+    else renderAll();
+  }
+
+  function doLock() {
+    const slots = ctx.slots();
+    const s = slots[focusSlot];
+    if (!s || !s.cfg) return;
+    ctx.act('lock', focusSlot);
+    renderSlots();
+  }
+
+  function doMerge() {
+    const p = ctx.player();
+    const id = mergeable(p, config);
+    if (!id) return;
+    ctx.act('merge', id);
+    renderAll();
+  }
+
+  function doReroll() {
+    ctx.act('reroll');
+    renderAll();
+  }
+
+  function doReady() {
+    tip.hide();
+    panel.style.display = 'none';
+    ctx.act('ready');
   }
 
   function renderInventory() {
@@ -216,19 +281,17 @@ export function createShopUi(root, config, t, tip) {
 
   rerollBtn.addEventListener('click', () => {
     if (!ctx) return;
-    ctx.act('reroll');
-    renderAll();
+    doReroll();
   });
   goBtn.addEventListener('click', () => {
     if (!ctx) return;
-    tip.hide();
-    panel.style.display = 'none';
-    ctx.act('ready');
+    doReady();
   });
 
   return {
     show(adapter) {
       ctx = adapter;
+      focusSlot = 0;
       renderAll();
       panel.style.display = '';
     },
@@ -240,5 +303,23 @@ export function createShopUi(root, config, t, tip) {
       return panel.style.display !== 'none';
     },
     refresh: renderAll,
+
+    handleInput(input) {
+      if (!ctx || panel.style.display === 'none') return;
+      const n = slotCount();
+      if (input.consumePressed('GamepadFocusPrev') && n > 0) {
+        focusSlot = (focusSlot - 1 + n) % n;
+        renderSlots();
+      }
+      if (input.consumePressed('GamepadFocusNext') && n > 0) {
+        focusSlot = (focusSlot + 1) % n;
+        renderSlots();
+      }
+      if (input.consumePressed('GamepadBuy')) doBuy();
+      if (input.consumePressed('GamepadLock')) doLock();
+      if (input.consumePressed('GamepadMerge')) doMerge();
+      if (input.consumePressed('GamepadReroll')) doReroll();
+      if (input.consumePressed('GamepadReady')) doReady();
+    },
   };
 }

@@ -57,6 +57,13 @@ export function createScreens(root, config, t) {
   joinRow.appendChild(joinBtn);
   panel.appendChild(joinRow);
 
+  const logoutBtn = doc.createElement('button');
+  logoutBtn.type = 'button';
+  logoutBtn.id = 'btn-logout';
+  logoutBtn.className = 'btn';
+  logoutBtn.textContent = t('ui.menu.logout');
+  panel.appendChild(logoutBtn);
+
   const errEl = doc.createElement('div');
   errEl.className = 'error';
   panel.appendChild(errEl);
@@ -69,6 +76,7 @@ export function createScreens(root, config, t) {
   coopBtn.addEventListener('click', () => handlers.onCoop && handlers.onCoop());
   metaBtn.addEventListener('click', () => handlers.onMeta && handlers.onMeta());
   adminBtn.addEventListener('click', () => handlers.onAdmin && handlers.onAdmin());
+  logoutBtn.addEventListener('click', () => handlers.onLogout && handlers.onLogout());
   joinBtn.addEventListener('click', async () => {
     if (!handlers.onJoin) return;
     errEl.textContent = '';

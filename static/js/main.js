@@ -251,6 +251,8 @@ async function boot() {
 
   // --- цикл ---------------------------------------------------------------
   function update(dt) {
+    if (input) input.poll();
+
     if (input.consumePressed('F3')) debug.toggle();
     if (input.consumePressed('Escape')) handleEsc();
     if (isAdmin && input.consumePressed('F4') && isHost() && run) {
@@ -284,6 +286,7 @@ async function boot() {
       } else if (shopUi.visible && netClient.state.phase !== PHASE_SHOP) {
         shopUi.hide();
       }
+      if (shopUi.visible) shopUi.handleInput(input);
       return;
     }
 
@@ -302,6 +305,7 @@ async function boot() {
         shopUi.show(localAdapter(run, me, run.shopFor(me.id), config,
           () => run.readyUp(me.id)));
       }
+      if (shopUi.visible) shopUi.handleInput(input);
       if (!run.coop) return;
     } else if (shopUi.visible) {
       shopUi.hide();
@@ -693,6 +697,14 @@ async function boot() {
   });
 
   const invited = roomFromUrl();
+
+  async function doLogout() {
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+    } catch (e) { /* всё равно на логин */ }
+    globalThis.location.href = '/login';
+  }
+
   function showMenu() {
     setupUi.hide();
     screens.show('menu', {
@@ -701,6 +713,7 @@ async function boot() {
       onJoin: coopJoin,
       onMeta: () => metaUi.show(showMenu),
       onAdmin: isAdmin && adminUi ? () => adminUi.show(showMenu) : null,
+      onLogout: doLogout,
       invited,
     });
   }
