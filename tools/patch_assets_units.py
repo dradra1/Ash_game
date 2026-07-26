@@ -79,12 +79,15 @@ ENEMIES = {
         "attack": "releasing the sling forward",
     },
     "e_ashhound": {
-        "accent": "#7a7060", "size": 64, "fit": 48,
+        # mode=pro: standard рисует четвероногих заметно грубее и мимо гаммы —
+        # первый заход дал белёсую личинку вместо пса. v3 их не умеет вовсе.
+        "accent": "#7a7060", "size": 64, "fit": 48, "mode": "pro",
         "body_type": "quadruped", "template": "dog",
         "silhouette": "поджарый четвероногий с клетчатым намордником",
-        "prompt": "lean ash-grey war hound, ribs showing through singed hide, an iron "
-                  "muzzle-cage riveted to the skull, spiked collar of scrap plate, docked "
-                  "ears, accent color #7a7060",
+        "prompt": "lean war hound standing on four legs, dark soot-stained hide stretched "
+                  "over visible ribs, an iron muzzle-cage riveted over the snout, spiked "
+                  "scrap collar, docked ears, dark grey and black tones only, no white, "
+                  "accent color #7a7060",
         "attack": "leaping forward, jaws wide",
     },
     "e_chainganger": {
@@ -123,11 +126,14 @@ ENEMIES = {
         "attack": "extending the manipulator arms forward",
     },
     "e_swarmlet": {
-        "accent": "#4d8f6b", "size": 64, "fit": 48,
+        # mode=pro по той же причине, что у пса: в standard вышел бледно-кремовым
+        # и выпал из гаммы — на тёмном полу такой силуэт кричит громче боссов.
+        "accent": "#4d8f6b", "size": 64, "fit": 48, "mode": "pro",
         "body_type": "quadruped", "template": "cat",
         "silhouette": "плоский и длинный, ниже всех, клиновидная безглазая голова",
-        "prompt": "small low segmented chitin crawler, sickle legs, flat wedge head with no "
-                  "eyes, dull green-brown plates with faint bioluminescence in the joints, "
+        "prompt": "small low segmented chitin crawler, dark green-brown plates almost black, "
+                  "sickle legs, flat wedge head with no eyes, faint bioluminescence only in "
+                  "the plate joints, dark tones only, no cream, no pale yellow, "
                   "accent color #4d8f6b",
         "attack": "striking forward with the wedge head",
     },

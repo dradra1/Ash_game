@@ -29,7 +29,7 @@ STATE = os.path.join(ROOT, "scratch", "gen_units_state.json")
 TEXDIR = os.path.join(ROOT, "static", "textures")
 DIRS = ["south", "east", "north", "west"]
 SECTIONS = ("enemies", "elites", "bosses")
-POLL = 40
+POLL = 20
 DEADLINE = 6 * 3600
 
 
