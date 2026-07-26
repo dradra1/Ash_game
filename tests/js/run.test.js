@@ -77,10 +77,79 @@ test('три волны проходятся, номер волны растёт
   while (run.state.wave < 4 && guard < 200000) {
     run.step(config.sim.dt);
     p.hp = 1e9;
+    // Лавка ждёт игрока: без «готов» забег стоит, это и есть задуманное поведение
+    if (run.state.phase === 'shop') run.readyUp(p.id);
     guard++;
   }
   assert.ok(run.state.wave >= 4, `дошли только до волны ${run.state.wave}`);
   assert.notEqual(run.state.phase, PHASE_OVER);
+});
+
+test('лавка открывается между волнами и ждёт готовности', () => {
+  const run = newRun({ danger: 0 });
+  const p = run.state.players[0];
+  const stop = 200000;
+  let guard = 0;
+  while (run.state.phase !== 'shop' && guard < stop) {
+    run.step(config.sim.dt);
+    p.hp = 1e9;
+    guard++;
+  }
+  assert.equal(run.state.phase, 'shop', 'лавка должна открыться после первой волны');
+  assert.ok(run.state.shopOpen);
+
+  // без readyUp волна не стартует, сколько ни жди
+  const waveBefore = run.state.wave;
+  for (let i = 0; i < 5000; i++) run.step(config.sim.dt);
+  assert.equal(run.state.wave, waveBefore, 'соло-лавка не должна стартовать по таймеру');
+
+  const shop = run.shopFor(p.id);
+  assert.equal(shop.slots.length, config.shop.slots);
+  let filled = 0;
+  for (const s of shop.slots) if (s.cfg) filled++;
+  assert.ok(filled > 0, 'ассортимент должен быть непустым');
+
+  run.readyUp(p.id);
+  run.step(config.sim.dt);
+  assert.equal(run.state.wave, waveBefore + 1);
+});
+
+test('на волне 10 появляется мид-босс и считается при смерти', () => {
+  const run = newRun({ danger: 0 });
+  const p = run.state.players[0];
+  run.startWave(10);
+  for (let i = 0; i < Math.round((config.run.wave_intro_sec + 0.5) / config.sim.dt); i++) {
+    run.step(config.sim.dt);
+    p.hp = 1e9;
+  }
+  assert.ok(run.state.bossUid >= 0, 'босс должен появиться на волне 10');
+  let boss = null;
+  for (let i = 0; i < run.enemyPool.count; i++) {
+    if (run.enemyPool.items[i].uid === run.state.bossUid) boss = run.enemyPool.items[i];
+  }
+  assert.ok(boss, 'босс должен быть в пуле');
+  assert.ok(boss.boss === true);
+  assert.ok(boss.maxHp > config.enemies.e_cultist.hp * 10, 'у босса должно быть много HP');
+});
+
+test('босс меняет фазу при падении HP ниже порога', () => {
+  const run = newRun({ danger: 0 });
+  const p = run.state.players[0];
+  run.startWave(10);
+  for (let i = 0; i < Math.round((config.run.wave_intro_sec + 0.5) / config.sim.dt); i++) {
+    run.step(config.sim.dt);
+    p.hp = 1e9;
+  }
+  let boss = null;
+  for (let i = 0; i < run.enemyPool.count; i++) {
+    if (run.enemyPool.items[i].uid === run.state.bossUid) boss = run.enemyPool.items[i];
+  }
+  const phase0 = boss.phase;
+  const speed0 = boss.speed;
+  boss.hp = boss.maxHp * 0.5;            // ниже порога второй фазы (0.6)
+  run.step(config.sim.dt);
+  assert.notEqual(boss.phase, phase0, 'фаза должна смениться');
+  assert.ok(boss.speed > speed0, 'вторая фаза ускоряет босса');
 });
 
 test('смерть всех игроков завершает забег', () => {
@@ -109,8 +178,11 @@ test('симуляция детерминирована по сиду', () => {
 test('разные сиды дают разный ход забега', () => {
   const a = newRun({ seed: 1 });
   const b = newRun({ seed: 2 });
-  advance(a, 25);
-  advance(b, 25);
+  // Сравниваем В СЕРЕДИНЕ волны: после её конца враги вычищаются, и оба забега
+  // одинаково пусты независимо от сида.
+  advance(a, 15);
+  advance(b, 15);
+  assert.ok(a.enemyPool.count > 0 && b.enemyPool.count > 0, 'должны быть живые враги');
   let differs = false;
   for (let i = 0; i < Math.min(a.enemyPool.count, b.enemyPool.count); i++) {
     if (Math.abs(a.enemyPool.items[i].x - b.enemyPool.items[i].x) > 1e-6) { differs = true; break; }

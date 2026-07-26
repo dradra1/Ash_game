@@ -7,9 +7,16 @@ export const AI_SHOOTER = 1;
 
 const AI_CODE = { chase: AI_CHASE, shooter: AI_SHOOTER };
 
+// Запись врага может лежать и в config.enemies, и в config.bosses — боссы это те же
+// сущности с фазами и своим дропом, а не отдельная ветка кода.
+export function enemyCfg(config, id) {
+  return config.enemies[id] || config.bosses[id];
+}
+
 export function makeEnemy() {
   return {
     uid: 0,                 // стабильный идентификатор: индексы пула переиспользуются
+    boss: false, phase: 0, baseSpeed: 0, baseDmg: 0, baseCd: 1,
     type: null, cfg: null, ai: AI_CHASE,
     x: 0, y: 0, vx: 0, vy: 0,
     hp: 0, maxHp: 0, dmg: 0, speed: 0, size: 0, sprite: 0,
@@ -52,7 +59,7 @@ export function scaleSpeed(config, cfg, wave) {
 let nextUid = 1;
 
 export function initEnemy(e, config, typeId, wave, danger, players) {
-  const cfg = config.enemies[typeId];
+  const cfg = enemyCfg(config, typeId);
   e.uid = nextUid++;
   e.type = typeId;
   e.cfg = cfg;
@@ -67,8 +74,33 @@ export function initEnemy(e, config, typeId, wave, danger, players) {
   e.ash = cfg.ash;
   e.xp = cfg.xp;
   e.score = cfg.score;
+  e.boss = !!cfg.boss;
+  e.phase = 0;
+  e.baseSpeed = e.speed;
+  e.baseDmg = e.dmg;
+  e.baseCd = cfg.attack ? cfg.attack.cooldown : 1;
   e.alive = true;
   return e;
+}
+
+// Переход босса в следующую фазу при падении HP ниже её порога.
+// Мутация меняет паттерн и разгоняет — по ТЗ это происходит один раз на 60% HP.
+export function updatePhase(e) {
+  const phases = e.cfg.phases;
+  if (!phases) return false;
+  const frac = e.maxHp > 0 ? e.hp / e.maxHp : 0;
+  let want = 0;
+  for (let i = 0; i < phases.length; i++) {
+    if (frac <= phases[i].hp_pct) want = i;
+  }
+  if (want === e.phase) return false;
+  e.phase = want;
+  const ph = phases[want];
+  e.speed = e.baseSpeed * (ph.speed_mult || 1);
+  e.dmg = e.baseDmg * (ph.damage_mult || 1);
+  if (ph.pattern === 'shooter' || ph.pattern === 'spiral') e.ai = AI_SHOOTER;
+  else e.ai = AI_CHASE;
+  return true;
 }
 
 // Шаг всех врагов. Возвращает число живых.

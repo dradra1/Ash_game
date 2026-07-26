@@ -78,8 +78,13 @@ export function createHud(config, t) {
     const right = view.w - pad;
     label(ctx, t('ui.hud.wave') + ' ' + state.wave + ' / ' + config.run.waves,
       right, pad, h.text, 'right', FONT_BIG);
-    const left = state.phaseTime > 0 ? state.phaseTime : 0;
-    label(ctx, formatTime(left), right, pad + 20, h.dim, 'right', FONT_BIG);
+    // В соло лавка ждёт игрока бесконечно — вместо таймера пишем, что идёт лавка
+    if (isFinite(state.phaseTime)) {
+      const left = state.phaseTime > 0 ? state.phaseTime : 0;
+      label(ctx, formatTime(left), right, pad + 20, h.dim, 'right', FONT_BIG);
+    } else {
+      label(ctx, t('ui.hud.shop'), right, pad + 20, h.dim, 'right', FONT_BIG);
+    }
 
     // --- правый верх ниже: прах
     label(ctx, t('ui.hud.ash') + ' ' + Math.floor(me.ash), right, pad + 44, h.ash, 'right');

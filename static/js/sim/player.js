@@ -6,8 +6,10 @@ import { makeSlot, equip } from './weapon.js';
 export function createPlayer(config, id, name, characterId, x, y) {
   const chCfg = config.characters[characterId];
   const stats = createStats(config);
-  // M2 добавит сюда предметы и левелапы — источники модификаторов уже списком
-  const sources = [chCfg.stats];
+  // Источники модификаторов по порядку: персонаж, копилка левелапов, дальше предметы.
+  // levelMods — один объект, который растёт: левелапов за забег десятки.
+  const levelMods = {};
+  const sources = [chCfg.stats, levelMods];
   resolveStats(stats, config, sources);
 
   const slots = new Array(config.run.weapon_slots);
@@ -39,6 +41,8 @@ export function createPlayer(config, id, name, characterId, x, y) {
     pendingLevels: 0,
     stats,
     sources,
+    levelMods,
+    items: [],
     slots,
     alive: true,
     input: { x: 0, y: 0 },
@@ -59,6 +63,14 @@ export function refreshStats(player, config) {
 export function xpToNext(config, level) {
   const f = config.level.xp_formula;
   return Math.round(f.base + f.k * Math.pow(level, f.pow));
+}
+
+// Применить выбранное на левелапе улучшение
+export function applyLevelChoice(player, config, choice) {
+  const key = choice.stat;
+  player.levelMods[key] = (player.levelMods[key] || 0) + choice.value;
+  if (player.pendingLevels > 0) player.pendingLevels -= 1;
+  refreshStats(player, config);
 }
 
 export function addXp(player, config, amount) {

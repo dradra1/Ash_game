@@ -5,8 +5,12 @@ import { createLoop } from './engine/loop.js';
 import { createInput } from './engine/input.js';
 import { createRenderer } from './engine/render.js';
 import { createLocalTransport, CH } from './net/transport.js';
-import { createRun, PHASE_OVER } from './sim/run.js';
+import { createRun, PHASE_OVER, PHASE_SHOP } from './sim/run.js';
+import { applyLevelChoice } from './sim/player.js';
 import { createHud } from './ui/hud.js';
+import { createTooltip } from './ui/tooltip.js';
+import { createLevelUpUi } from './ui/levelup_ui.js';
+import { createShopUi } from './ui/shop_ui.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
 
@@ -47,6 +51,9 @@ async function boot() {
 
   const screens = createScreens(uiRoot, config, t);
   const hud = createHud(config, t);
+  const tip = createTooltip(uiRoot);
+  const levelUi = createLevelUpUi(uiRoot, config, t);
+  const shopUi = createShopUi(uiRoot, config, t, tip);
 
   let transport = null;
   let run = null;
@@ -74,8 +81,40 @@ async function boot() {
     return players[0];
   }
 
+  // В соло левелап ставит игру на паузу, в коопе — нет (ТЗ §5): модалка висит
+  // поверх боя, персонаж продолжает управляться, выбор можно отложить.
+  function maybeLevelUp() {
+    const me = myPlayer();
+    if (me.pendingLevels <= 0) {
+      if (levelUi.visible) levelUi.hide();
+      return false;
+    }
+    if (!levelUi.visible) {
+      const choices = run.levelUp.roll(me, run.rng);
+      levelUi.show(me, choices, (idx) => {
+        applyLevelChoice(me, config, choices[idx]);
+        levelUi.hide();
+      });
+    }
+    return !run.coop;          // пауза только в соло
+  }
+
   function update(dt) {
     if (input.consumePressed('F3')) debug.toggle();
+
+    const paused = maybeLevelUp();
+    if (run.state.phase === PHASE_SHOP) {
+      if (!shopUi.visible) {
+        shopUi.show(run, myPlayer(), run.shopFor(transport.id), () => {
+          run.readyUp(transport.id);
+        });
+      }
+      if (!run.coop) return;   // в соло мир стоит, пока игрок закупается
+    } else if (shopUi.visible) {
+      shopUi.hide();
+    }
+    if (paused) return;
+
     inputPayload.id = transport.id;
     inputPayload.x = input.move.x;
     inputPayload.y = input.move.y;
@@ -84,6 +123,8 @@ async function boot() {
 
     if (run.state.phase === PHASE_OVER && !finished) {
       finished = true;
+      levelUi.hide();
+      shopUi.hide();
       reportRun();
     }
   }

@@ -24,9 +24,14 @@ def main():
     ap.add_argument("--seconds", type=float, default=6.0)
     ap.add_argument("--shot", default="scratch/smoke.png")
     ap.add_argument("--min-fps", type=float, default=50.0)
+    ap.add_argument("--autoplay", action="store_true",
+                    help="прокликивать левелапы и лавку, чтобы забег шёл дальше")
+    ap.add_argument("--expect-ui", default="",
+                    help="через запятую: какие панели обязаны показаться (choice, shop)")
     a = ap.parse_args()
 
     errors, problems, bad_responses = [], [], []
+    seen_ui = set()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--no-sandbox"])
@@ -91,7 +96,25 @@ def main():
         before = pos()
         page.keyboard.down("KeyD")
         page.keyboard.down("KeyS")
-        page.wait_for_timeout(int(a.seconds * 1000))
+        if a.autoplay:
+            # Прокликиваем левелапы и лавку: без этого соло-игра встаёт на паузе
+            # и до лавки прогон не доходит.
+            deadline = a.seconds * 1000
+            step = 250
+            waited = 0
+            while waited < deadline:
+                page.wait_for_timeout(step)
+                waited += step
+                for sel in (".choice", "#shop .btn.go"):
+                    try:
+                        node = page.locator(sel).first
+                        if node.is_visible():
+                            node.click(timeout=800)
+                            seen_ui.add(sel)
+                    except Exception:
+                        pass
+        else:
+            page.wait_for_timeout(int(a.seconds * 1000))
         page.keyboard.up("KeyD")
         page.keyboard.up("KeyS")
         after = pos()
@@ -128,6 +151,12 @@ def main():
         problems.append("запросы с ошибкой: "
                         + " | ".join(f"{s} {u}" for s, u in real_bad[:5]))
 
+    expect = [x.strip() for x in a.expect_ui.split(",") if x.strip()]
+    alias = {"choice": ".choice", "shop": "#shop .btn.go"}
+    for name in expect:
+        if alias.get(name, name) not in seen_ui:
+            problems.append(f"панель «{name}» так и не показалась за прогон")
+
     real_errors = [e for e in errors if "favicon" not in e.lower()]
     if real_errors:
         problems.append("ошибки в консоли: " + " | ".join(real_errors[:5]))
@@ -136,6 +165,8 @@ def main():
     print(f"fps: {fps if fps is None else round(fps, 1)}   "
           f"sim: {sim_ms if sim_ms is None else round(sim_ms, 3)} мс")
     print(f"скриншот: {a.shot}")
+    if seen_ui:
+        print(f"панели показались: {', '.join(sorted(seen_ui))}")
     if missing_textures:
         print(f"нет текстур (рисуются плейсхолдеры): {', '.join(missing_textures)}")
     if problems:

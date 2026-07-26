@@ -8,11 +8,13 @@ import { createPool } from '../engine/pool.js';
 import { createGrid } from '../engine/grid.js';
 import { CH } from '../net/transport.js';
 import { createPlayer, stepPlayers, hurtPlayer, addXp } from './player.js';
-import { makeEnemy, resetEnemy, stepEnemies } from './enemy.js';
+import { makeEnemy, resetEnemy, stepEnemies, initEnemy, updatePhase, enemyCfg } from './enemy.js';
 import { makeProjectile, resetProjectile, stepProjectiles } from './projectile.js';
 import { makePickup, resetPickup, dropAsh, stepPickups } from './pickup.js';
 import { stepWeapons } from './weapon.js';
-import { createSpawner } from './spawn.js';
+import { createSpawner, spawnPoint } from './spawn.js';
+import { createShop } from './shop.js';
+import { createLevelUp } from './level.js';
 
 export const PHASE_INTRO = 'intro';
 export const PHASE_WAVE = 'wave';
@@ -42,6 +44,8 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     score: 0,
     bosses: 0,
     win: false,
+    bossUid: -1,        // кто сейчас босс: HUD рисует его полосу HP
+    shopOpen: false,
   };
 
   for (let i = 0; i < players.length; i++) {
@@ -82,6 +86,14 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     query(x, y, r, out) { return enemyGrid.query(x + margin, y + margin, r, out); },
   };
 
+  const coop = state.players.length > 1;
+  const shops = {};                     // у каждого игрока свой ассортимент и рероллы
+  const levelUp = createLevelUp(config);
+  for (let i = 0; i < state.players.length; i++) {
+    shops[state.players[i].id] = createShop(config, null);
+  }
+  const ready = {};
+
   const events = [];        // очередь событий для UI/сети, разбирается снаружи
 
   function pushEvent(type, a, b) {
@@ -100,6 +112,16 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     if (e.hp <= 0) {
       e.alive = false;
       state.kills += 1;
+      if (e.uid === state.bossUid) {
+        state.bosses += 1;
+        state.bossUid = -1;
+        pushEvent('boss_down', e.type);
+        // Финальный босс мёртв — забег выигран немедленно, дожидаться таймера
+        // волны незачем: иначе убийство босса ничего не меняет.
+        if (state.wave >= config.run.waves) {
+          bossSlain = true;
+        }
+      }
       state.score += e.score;
       const owner = findPlayer(ownerId);
       if (owner) {
@@ -207,6 +229,34 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     }
   }
 
+  // Босс волны n, если он прописан в арене. Ставится не «за краем», а на
+  // безопасном отдалении — иначе он появляется вплотную к игроку.
+  function spawnBoss(n) {
+    const arenaCfg = config.arenas[arenaId];
+    const bossId = n >= config.run.waves ? arenaCfg.boss_final
+      : (n === BOSS_MID_WAVE ? arenaCfg.boss_mid : null);
+    if (!bossId || !config.bosses[bossId]) return;
+    const e = enemyPool.spawn();
+    if (!e) return;
+    initEnemy(e, config, bossId, n, dangerCfg, state.players.length);
+    // Босс в коопе крепче по своей формуле, а не по общей
+    e.maxHp = config.bosses[bossId].hp
+      * (1 + config.waves.hp_growth * (n - 1)) * dangerCfg.hp_mult
+      * (1 + config.coop.boss_hp_per_player * (state.players.length - 1));
+    e.hp = e.maxHp;
+    if (!spawnPoint(config, rng, state.players, bossPoint)) {
+      bossPoint.x = arenaW / 2;
+      bossPoint.y = config.arena.spawn_margin;
+    }
+    e.x = bossPoint.x;
+    e.y = bossPoint.y;
+    state.bossUid = e.uid;
+    pushEvent('boss_spawn', bossId);
+  }
+
+  const bossPoint = { x: 0, y: 0 };
+  let bossSlain = false;
+
   function startWave(n) {
     state.wave = n;
     state.waveLen = waveLength(config, n);
@@ -214,6 +264,9 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     state.phaseTime = config.run.wave_intro_sec;
     spawner.reset();
     spawnDeps.wave = n;
+    state.bossUid = -1;
+    state.shopOpen = false;
+    for (const k in ready) delete ready[k];
     pushEvent('wave_start', n);
   }
 
@@ -223,6 +276,39 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     state.phaseTime = 0;
     clearEnemies();
     pushEvent('run_over', win ? 1 : 0);
+  }
+
+  // Лавка между волнами. В соло ждём игрока сколько угодно; в коопе — до
+  // coop.shop_timer, потом волна стартует сама (иначе один AFK держит комнату).
+  function openShop() {
+    state.phase = PHASE_SHOP;
+    state.shopOpen = true;
+    state.phaseTime = coop ? config.coop.shop_timer : Infinity;
+    for (const k in ready) delete ready[k];
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      // Выбывшие возвращаются в строй к следующей волне
+      if (!p.alive) {
+        p.alive = true;
+        p.hp = Math.max(1, Math.round(p.maxHp * config.coop.revive_hp_pct));
+      }
+      shops[p.id].open(p, state.wave + 1, dangerCfg, rng, coop);
+    }
+    pushEvent('shop_open', state.wave + 1);
+  }
+
+  function readyUp(playerId) {
+    if (state.phase !== PHASE_SHOP) return false;
+    ready[playerId] = true;
+    for (let i = 0; i < state.players.length; i++) {
+      if (!ready[state.players[i].id]) return false;
+    }
+    startWave(state.wave + 1);
+    return true;
+  }
+
+  function shopFor(playerId) {
+    return shops[playerId];
   }
 
   function step(dt) {
@@ -252,6 +338,17 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
     stepProjectiles(projPool, dt, projDeps);
     stepPickups(pickupPool, dt, pickupDeps, state.phase === PHASE_COLLECT);
 
+    // Мутация босса при падении HP ниже порога фазы
+    if (state.bossUid >= 0) {
+      for (let i = 0; i < enemyPool.count; i++) {
+        const e = enemyPool.items[i];
+        if (e.uid === state.bossUid) {
+          if (updatePhase(e)) pushEvent('boss_phase', e.phase);
+          break;
+        }
+      }
+    }
+
     // Уборка мёртвых врагов: swap-remove с конца, чтобы индексы не поехали
     for (let i = enemyPool.count - 1; i >= 0; i--) {
       if (!enemyPool.items[i].alive) {
@@ -260,8 +357,18 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
       }
     }
 
+    if (bossSlain && state.phase !== PHASE_OVER) {
+      endRun(true);
+      return;
+    }
+
     if (!anyoneAlive() && state.phase !== PHASE_OVER) {
       endRun(false);
+      return;
+    }
+
+    if (state.phase === PHASE_SHOP && state.phaseTime <= 0) {
+      startWave(state.wave + 1);
       return;
     }
 
@@ -269,6 +376,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
       if (state.phase === PHASE_INTRO) {
         state.phase = PHASE_WAVE;
         state.phaseTime = state.waveLen;
+        spawnBoss(state.wave);
       } else if (state.phase === PHASE_WAVE) {
         // Конец волны: живые враги исчезают, прах собирается автоматически
         clearEnemies();
@@ -277,12 +385,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
         pushEvent('wave_end', state.wave);
       } else if (state.phase === PHASE_COLLECT) {
         if (state.wave >= config.run.waves) endRun(true);
-        else {
-          state.phase = PHASE_SHOP;
-          state.phaseTime = 0;                 // M2 повесит сюда лавку
-        }
-      } else if (state.phase === PHASE_SHOP) {
-        startWave(state.wave + 1);
+        else openShop();
       }
     }
   }
@@ -310,7 +413,8 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   return {
     state, step, applyInput, snapshot, stats, refreshStats, events,
     enemyPool, projPool, pickupPool, rng,
-    startWave, endRun,
+    startWave, endRun, openShop, readyUp, shopFor, levelUp, coop,
+    danger: dangerCfg,
   };
 }
 
@@ -329,3 +433,4 @@ function firstKey(obj) {
 }
 
 const MAX_EVENTS = 64;
+const BOSS_MID_WAVE = 10;
