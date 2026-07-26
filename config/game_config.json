@@ -6733,7 +6733,18 @@
       "ui.hud.shop": "Лавка",
       "ui.error.no_room": "Ты не в комнате",
       "ui.error.not_host": "Только хост может это сделать",
-      "ui.error.auth_required": "Нужно войти"
+      "ui.error.auth_required": "Нужно войти",
+      "ui.meta.factions": "Фракции",
+      "ui.meta.upgrades": "Улучшения",
+      "ui.meta.achievements": "Ачивки",
+      "ui.meta.rank": "Ранг",
+      "ui.error.already_owned": "Уже открыто",
+      "ui.error.not_enough_relics": "Не хватает реликвий",
+      "ui.error.faction_locked": "Сначала откройте фракцию",
+      "ui.error.max_rank": "Максимальный ранг",
+      "ui.error.not_unlockable": "Это не открывается",
+      "ui.error.bad_kind": "Неизвестный тип",
+      "ui.error.bad_id": "Неизвестный идентификатор"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -6801,7 +6812,18 @@
       "ui.hud.shop": "Shop",
       "ui.error.no_room": "You are not in a room",
       "ui.error.not_host": "Host only",
-      "ui.error.auth_required": "Log in first"
+      "ui.error.auth_required": "Log in first",
+      "ui.meta.factions": "Factions",
+      "ui.meta.upgrades": "Upgrades",
+      "ui.meta.achievements": "Achievements",
+      "ui.meta.rank": "Rank",
+      "ui.error.already_owned": "Already owned",
+      "ui.error.not_enough_relics": "Not enough relics",
+      "ui.error.faction_locked": "Unlock the faction first",
+      "ui.error.max_rank": "Max rank",
+      "ui.error.not_unlockable": "Not unlockable",
+      "ui.error.bad_kind": "Unknown kind",
+      "ui.error.bad_id": "Unknown id"
     }
   }
 }

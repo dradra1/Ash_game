@@ -23,7 +23,9 @@ export const PHASE_COLLECT = 'collect';
 export const PHASE_SHOP = 'shop';
 export const PHASE_OVER = 'over';
 
-export function createRun({ config, seed, transport, players, arena, danger }) {
+// unlocked — что открыто метапрогрессией у ХОЗЯИНА забега: пул лавки ограничен
+// им (ТЗ §3.9). В коопе это открытия хоста: мир один, и ассортимент общий.
+export function createRun({ config, seed, transport, players, arena, danger, unlocked }) {
   const rng = createRng(seed);
   const arenaId = arena || firstKey(config.arenas);
   const dangerCfg = config.danger[danger || 0];
@@ -98,7 +100,7 @@ export function createRun({ config, seed, transport, players, arena, danger }) {
   const shops = {};                     // у каждого игрока свой ассортимент и рероллы
   const levelUp = createLevelUp(config);
   for (let i = 0; i < state.players.length; i++) {
-    shops[state.players[i].id] = createShop(config, null);
+    shops[state.players[i].id] = createShop(config, unlocked || null);
   }
   const ready = {};
 

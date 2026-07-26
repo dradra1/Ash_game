@@ -19,6 +19,7 @@ from flask_socketio import SocketIO, join_room, leave_room
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import db
+import meta
 from rooms import Rooms
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -226,11 +227,6 @@ def run_start():
     )
 
 
-def award_relics(run: db.sqlite3.Row) -> int:
-    # M6: формула начисления реликвий будет реализована позже.
-    return 0
-
-
 @app.route("/api/run/finish", methods=["POST"])
 @login_required
 def run_finish():
@@ -250,19 +246,96 @@ def run_finish():
     if run["finished_at"] is not None:
         return jsonify({"error": "already_finished"}), 409
 
-    wave = int(data.get("wave", 0))
+    wave = max(0, int(data.get("wave", 0)))
     win = 1 if data.get("win") else 0
-    bosses = int(data.get("bosses", 0))
-    time_sec = float(data.get("time_sec", 0))
-    kills = int(data.get("kills", 0))
-    score = int(data.get("score", 0))
+    bosses = max(0, int(data.get("bosses", 0)))
+    time_sec = max(0.0, float(data.get("time_sec", 0)))
+    kills = max(0, int(data.get("kills", 0)))
+    score = max(0, int(data.get("score", 0)))
+    players = run["players"] or 1
 
-    relics_gained = award_relics(run)
-    db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics_gained)
-    if relics_gained:
-        db.add_relics(user["id"], relics_gained)
+    cfg = get_config()
+    # Ресимуляции нет — есть плаузибилити-проверки. Всё, что не могло случиться,
+    # помечается флагом: реликвий не даёт и в лидерборд не идёт (ТЗ §2).
+    reasons = meta.check_run(cfg, run, wave, win, bosses, time_sec, kills, score, players)
+    if reasons:
+        db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, 0)
+        db.flag_run(run_id, ",".join(reasons))
+        return jsonify({"relics_gained": 0, "unlocks": [], "achievements": [],
+                        "flagged": reasons})
 
-    return jsonify({"relics_gained": relics_gained, "unlocks": [], "achievements": []})
+    relics = meta.award_relics(cfg, run, wave, win, bosses, players)
+    db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics)
+
+    conn = db.get_db()
+    try:
+        run_after = conn.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+        relics += meta.first_clear_bonus(cfg, conn, user["id"], run_after, win)
+        fresh = meta.check_achievements(cfg, conn, user["id"])
+    finally:
+        conn.close()
+
+    if relics:
+        db.add_relics(user["id"], relics)
+    for aid in fresh:
+        db.add_achievement(user["id"], aid)
+
+    return jsonify({"relics_gained": relics, "unlocks": [], "achievements": fresh})
+
+
+@app.route("/api/meta/unlock", methods=["POST"])
+@login_required
+def api_meta_unlock():
+    """Покупка открытия. Баланс и цена проверяются ТОЛЬКО здесь: клиент лишь
+    отображает то, что ему разрешил сервер."""
+    user = current_user()
+    if user is None:
+        session.clear()
+        return jsonify({"error": "auth_required"}), 401
+
+    data = request.get_json(silent=True) or {}
+    kind = data.get("kind")
+    item_id = data.get("id")
+    if kind not in ("faction", "character", "weapon", "arena", "upgrade"):
+        return jsonify({"error": "bad_kind"}), 400
+    if not item_id:
+        return jsonify({"error": "bad_id"}), 400
+
+    cfg = get_config()
+    uid = user["id"]
+
+    if kind == "upgrade":
+        ranks = db.get_user_upgrades(uid)
+        rank = ranks.get(item_id, 0)
+        price, up = meta.upgrade_price(cfg, item_id, rank)
+        if up is None:
+            return jsonify({"error": "bad_id"}), 400
+        if price is None:
+            return jsonify({"error": "max_rank"}), 409
+        if not db.spend_relics(uid, price):
+            return jsonify({"error": "not_enough_relics"}), 402
+        db.set_upgrade_rank(uid, item_id, rank + 1)
+        return jsonify({"ok": True, "kind": kind, "id": item_id,
+                        "rank": rank + 1, "spent": price,
+                        "relics": user["relics"] - price})
+
+    if db.has_unlock(uid, kind, item_id):
+        return jsonify({"error": "already_owned"}), 409
+
+    earned = {a["id"] for a in db.get_user_achievements(uid)}
+    price, need_ach = meta.unlock_price(cfg, kind, item_id, lambda a: a in earned)
+    if price is None:
+        return jsonify({"error": "not_unlockable"}), 400
+
+    unlocks = db.get_user_unlocks(uid)
+    if not meta.requirements_met(cfg, kind, item_id, unlocks):
+        return jsonify({"error": "faction_locked"}), 409
+
+    if not db.spend_relics(uid, price):
+        return jsonify({"error": "not_enough_relics"}), 402
+    db.add_unlock(uid, kind, item_id)
+    return jsonify({"ok": True, "kind": kind, "id": item_id, "spent": price,
+                    "relics": user["relics"] - price})
 
 
 @app.route("/api/board")

@@ -19,6 +19,7 @@ import { createLevelUpUi } from './ui/levelup_ui.js';
 import { createShopUi } from './ui/shop_ui.js';
 import { localAdapter, remoteAdapter } from './ui/shop_adapter.js';
 import { createLobbyUi } from './ui/lobby_ui.js';
+import { createMetaUi } from './ui/meta_ui.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
 
@@ -56,6 +57,8 @@ async function boot() {
 
   const bootInfo = globalThis.__BOOT__ || {};
   const playerName = bootInfo.name || (profile && profile.name) || 'player';
+  // Открытое метапрогрессией оружие: пул лавки ограничен им
+  const unlockedWeapons = (profile && profile.unlocks && profile.unlocks.weapon) || [];
 
   const screens = createScreens(uiRoot, config, t);
   const hud = createHud(config, t);
@@ -63,6 +66,26 @@ async function boot() {
   const levelUi = createLevelUpUi(uiRoot, config, t);
   const shopUi = createShopUi(uiRoot, config, t, tip);
   const lobbyUi = createLobbyUi(uiRoot, config, t);
+  const metaUi = createMetaUi(uiRoot, config, t, {
+    profile: () => fetchJson('/api/profile'),
+    async unlock(kind, id) {
+      try {
+        return await fetchJson('/api/meta/unlock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, id }),
+        });
+      } catch (e) {
+        // fetchJson бросает на не-2xx; вытаскиваем код ошибки из тела
+        const res = await fetch('/api/meta/unlock', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, id }),
+        });
+        return res.json().catch(() => ({ error: 'unknown' }));
+      }
+    },
+  });
 
   // --- состояние сессии ----------------------------------------------------
   let transport = null;
@@ -297,7 +320,7 @@ async function boot() {
     run = createRun({
       config, seed: data.seed, transport,
       players: [{ id: transport.id, name: playerName, character }],
-      arena: arenaId, danger,
+      arena: arenaId, danger, unlocked: unlockedWeapons,
     });
     debugExtra.seed = data.seed;
     bootEngine([run.arenaW, run.arenaH]);
@@ -354,7 +377,8 @@ async function boot() {
       const players = room.players.map((p, i) => ({
         id: i, name: p.name, character: p.character || fallbackChar,
       }));
-      run = createRun({ config, seed: msg.seed, transport, players, arena: arenaId, danger });
+      run = createRun({ config, seed: msg.seed, transport, players,
+        arena: arenaId, danger, unlocked: unlockedWeapons });
       hostNet = createHost(run, transport, config);
       bootEngine([run.arenaW, run.arenaH]);
     } else {
@@ -396,12 +420,16 @@ async function boot() {
 
   // Ссылка-приглашение сразу открывает лобби нужной комнаты
   const invited = roomFromUrl();
-  screens.show('menu', {
-    onPlay: startSolo,
-    onCoop: coopCreate,
-    onJoin: coopJoin,
-    invited,
-  });
+  function showMenu() {
+    screens.show('menu', {
+      onPlay: startSolo,
+      onCoop: coopCreate,
+      onJoin: coopJoin,
+      onMeta: () => metaUi.show(showMenu),
+      invited,
+    });
+  }
+  showMenu();
   if (invited) coopJoin(invited);
 
   // Для сквозного кооп-теста: открыть комнату и войти в неё программно

@@ -27,6 +27,13 @@ export function createScreens(root, config, t) {
   coopBtn.textContent = t('ui.menu.coop');
   panel.appendChild(coopBtn);
 
+  const metaBtn = doc.createElement('button');
+  metaBtn.type = 'button';
+  metaBtn.id = 'btn-meta';
+  metaBtn.className = 'btn';
+  metaBtn.textContent = t('ui.menu.reliquary');
+  panel.appendChild(metaBtn);
+
   const joinRow = doc.createElement('div');
   joinRow.className = 'join-row';
   const codeInput = doc.createElement('input');
@@ -52,6 +59,7 @@ export function createScreens(root, config, t) {
 
   playBtn.addEventListener('click', () => handlers.onPlay && handlers.onPlay());
   coopBtn.addEventListener('click', () => handlers.onCoop && handlers.onCoop());
+  metaBtn.addEventListener('click', () => handlers.onMeta && handlers.onMeta());
   joinBtn.addEventListener('click', async () => {
     if (!handlers.onJoin) return;
     errEl.textContent = '';
@@ -66,6 +74,7 @@ export function createScreens(root, config, t) {
       screens.current = name;
       if (name === 'menu') {
         panel.style.display = '';
+        errEl.textContent = '';
         if (data) handlers = data;
         if (data && data.invited) codeInput.value = data.invited;
       } else {

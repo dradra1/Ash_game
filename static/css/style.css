@@ -323,3 +323,35 @@ html, body {
     box-sizing: border-box;
 }
 .lobby-setup .inv-cell:disabled { cursor: default; opacity: 0.5; }
+
+/* ---- Реликварий -------------------------------------------------------- */
+
+.meta-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.btn.tab { padding: 5px 12px; font-size: 12px; }
+.btn.tab.active { border-color: #c8a35a; color: #c8a35a; }
+
+.meta-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.meta-card {
+    position: relative;
+    border: 1px solid #3a3f4a;
+    background: #181b22;
+    padding: 10px 12px 30px;
+    font-size: 12px;
+}
+.meta-card.owned { opacity: 0.75; }
+.meta-card.locked-out { opacity: 0.35; }
+.meta-name { font-size: 13px; margin-bottom: 3px; }
+.meta-sub { color: #7a7568; font-style: italic; margin-bottom: 6px; }
+.meta-line { color: #9a9488; }
+.meta-line.done { color: #a8d07a; }
+.meta-foot { position: absolute; left: 12px; bottom: 8px; }
+.meta-foot .price { color: #c8a35a; }
+.owned-tag { color: #a8d07a; }
+.mini.buy { position: absolute; right: 10px; bottom: 6px; }

@@ -210,6 +210,82 @@ def finish_run(
         conn.close()
 
 
+def flag_run(run_id: str, reasons: str):
+    """Пометить подозрительный забег: в лидерборд он не попадёт (ТЗ §2)."""
+    conn = get_db()
+    try:
+        conn.execute("UPDATE runs SET flagged = 1 WHERE run_id = ?", (run_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def add_unlock(user_id: int, kind: str, item_id: str) -> bool:
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO unlocks (user_id, kind, item_id, at) VALUES (?, ?, ?, ?)",
+            (user_id, kind, item_id, time.time()),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def has_unlock(user_id: int, kind: str, item_id: str) -> bool:
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM unlocks WHERE user_id = ? AND kind = ? AND item_id = ?",
+            (user_id, kind, item_id),
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def set_upgrade_rank(user_id: int, upgrade_id: str, rank: int):
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO upgrades (user_id, upgrade_id, rank) VALUES (?, ?, ?) "
+            "ON CONFLICT(user_id, upgrade_id) DO UPDATE SET rank = excluded.rank",
+            (user_id, upgrade_id, rank),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def add_achievement(user_id: int, ach_id: str) -> bool:
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO achievements (user_id, ach_id, at) VALUES (?, ?, ?)",
+            (user_id, ach_id, time.time()),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def spend_relics(user_id: int, amount: int) -> bool:
+    """Атомарное списание: условие в самом UPDATE, чтобы два запроса подряд
+    не увели баланс в минус."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "UPDATE users SET relics = relics - ? WHERE id = ? AND relics >= ?",
+            (amount, user_id, amount),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
 def add_relics(user_id: int, amount: int):
     conn = get_db()
     try:
