@@ -22,7 +22,7 @@ WEAPONS = {
     "w_scourge":      "a flail whip: a short wooden handle with THREE separate long leather cords hanging loose from it, each cord knotted with iron barbs and ending in a spiked iron tip, the cords spread apart and clearly separate",
     "w_claws":        "a fist harness of four long curved bone claws, sinew bindings and iron rivets",
     "w_sickle":       "a blade curved like a crescent moon, its concave inner edge lined with saw teeth, joined to a short straight wooden handle at one horn of the crescent. ONE BLADE ONLY. NOT double-headed. NOT a pickaxe. NOT an anchor",
-    "w_pike":         "a long spear with a broad polished steel leaf-shaped head and a crossbar beneath it, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark",
+    "w_pike":         "a spear laid diagonally corner to corner across the frame, filling it: a broad polished steel leaf-shaped head with a crossbar beneath, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark",
     "w_stilettos":    "a matched pair of thin needle-point stilettos laid crossed, wire-wound grips",
     "w_spiker":       "a compact spike-driving pistol with a heavy piston head and a pressure hose",
     "w_shotgun":      "a sawn-off double-barrelled shotgun, cut stock, scarred wood and blued steel",

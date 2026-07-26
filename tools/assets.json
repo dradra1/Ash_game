@@ -404,7 +404,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a long spear with a broad polished steel leaf-shaped head and a crossbar beneath it, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark"
+      "prompt": "a spear laid diagonally corner to corner across the frame, filling it: a broad polished steel leaf-shaped head with a crossbar beneath, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark"
     },
     "w_stilettos": {
       "tool": "create_map_object",
