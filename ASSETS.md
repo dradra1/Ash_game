@@ -173,28 +173,28 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 | texture | персонаж | фракция | px | статус |
 |---|---|---|---|---|
-| `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle 48px + walk |
-| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle 48px |
-| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle 48px |
-| `ch_conductor` | Хормейстер | cov | 32 | ✅ idle 48px |
-| `ch_brute` | Громила | scrap | 64 | ✅ idle 48px |
+| `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle + walk |
+| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle |
+| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle |
+| `ch_conductor` | Хормейстер | cov | 32 | ✅ idle |
+| `ch_brute` | Громила | scrap | 64 | ✅ idle |
 | `ch_scavenger` | Падальщик | scrap | 32 | ⬜ |
-| `ch_artificer` | Артифекс | forge | 32 | ✅ idle 48px |
-| `ch_censor` | Цензор | forge | 48 | ✅ idle 48px |
-| `ch_thrall` | Невольник | chit | 32 | ✅ idle 48px |
-| `ch_broodmate` | Выводковый | chit | 32 | ✅ idle 48px |
-| `ch_hierophant` | Иерофант | rift | 32 | ✅ idle 48px |
-| `ch_hollow` | Полый | rift | 32 | ✅ idle 48px |
-| `ch_warden` | Хранитель Гробниц | tomb | 64 | ⬜ |
-| `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ✅ idle 48px |
+| `ch_artificer` | Артифекс | forge | 32 | ✅ idle |
+| `ch_censor` | Цензор | forge | 48 | ✅ idle |
+| `ch_thrall` | Невольник | chit | 32 | ✅ idle |
+| `ch_broodmate` | Выводковый | chit | 32 | ✅ idle |
+| `ch_hierophant` | Иерофант | rift | 32 | ✅ idle |
+| `ch_hollow` | Полый | rift | 32 | ✅ idle |
+| `ch_warden` | Хранитель Гробниц | tomb | 64 | ✅ idle |
+| `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ✅ idle |
 
 ### Враги, элиты, боссы
 
 | texture | враг | арена | px | статус |
 |---|---|---|---|---|
-| `e_cultist` | Культист | ar_hive | 48 | ✅ idle 48px + walk |
-| `e_flesh` | Ком плоти | ar_hive | 48 | ✅ idle 48px |
-| `e_spitter` | Плевальщик | ar_hive | 48 | ✅ idle 48px |
+| `e_cultist` | Культист | ar_hive | 48 | ✅ idle + walk |
+| `e_flesh` | Ком плоти | ar_hive | 48 | ✅ idle |
+| `e_spitter` | Плевальщик | ar_hive | 48 | ✅ idle |
 
 Остальные 15 обычных, 6 элит и 6 боссов заводятся на этапе M4 вместе с их записями в
 конфиге — реестр пополняется тогда же.
@@ -203,3 +203,24 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 Заполняется по мере генерации (M5). Оружие — `w_*`, снаряды — `p_*`, предметы — `it_*`,
 иконки статов — `st_*`, мета-улучшения — `mu_*`, тайлы пола — `gr_*`, декор — `dc_*`.
+
+---
+
+## 8. Состояние на конец первой итерации
+
+Готово и в игре: **13 из 14 персонажей** (падальщик перегенерируется — первая
+попытка упала на стороне pixellab), **3 врага улья**, **4 оружия**. Ходьба снята
+у пилигрима и культиста, остальным нужна догенерация (`animate_character`
+шаблоном `walking-4-frames`, 4 джоба на персонажа).
+
+Осталось по приоритету:
+1. Ходьба остальным персонажам и врагам — без неё они скользят по арене.
+2. 15 врагов двух других арен + 6 элит + 6 боссов (боссы генерятся в 128–192).
+3. 24 оружия и 64 иконки предметов — `create_map_object`, боковая проекция.
+4. Тайлы полов трёх арен — `create_tiles_pro`, `square_topdown`, 32 px.
+5. Иконки 17 статов и мета-улучшений.
+
+Расход: около 60 генераций из 3369. Полный комплект по оценке — ещё 600–700,
+бюджета хватает с запасом. Пайплайн автоматизирован: `tools/pxl.py sheets <id>
+<texture>` сам разбирает ответ API и собирает листы, промпты лежат в
+`tools/assets.json`.
