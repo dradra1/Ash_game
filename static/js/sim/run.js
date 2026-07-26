@@ -131,6 +131,22 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
 
   const events = [];        // очередь событий для UI/сети, разбирается снаружи
 
+  // Очередь событий спавна снарядов для рассылки клиентам. Копируем поля, а не
+  // держим ссылку на снаряд: между накоплением (60 Гц) и отправкой (20 Гц) он
+  // может умереть и уйти обратно в пул под другой выстрел.
+  // `on` включает хост: в соло слушателя нет, и копить незачем.
+  const spawns = { on: false, count: 0, items: [] };
+  for (let i = 0; i < config.sim.max_projectiles; i++) {
+    spawns.items.push({ x: 0, y: 0, vx: 0, vy: 0, ttl: 0, size: 0, texture: null, hostile: false });
+  }
+
+  function noteSpawn(p) {
+    if (!spawns.on || spawns.count >= spawns.items.length) return;
+    const s = spawns.items[spawns.count++];
+    s.x = p.x; s.y = p.y; s.vx = p.vx; s.vy = p.vy;
+    s.ttl = p.ttl; s.size = p.size; s.texture = p.texture; s.hostile = p.hostile;
+  }
+
   function pushEvent(type, a, b) {
     if (events.length < MAX_EVENTS) events.push({ type, a, b });
   }
@@ -239,6 +255,9 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     p.ownerId = -1;
     p.knockback = 0;
     p.hitCount = 0;
+    p.spin = pr.spin || null;
+    p.age = 0;
+    noteSpawn(p);
   }
 
   function onCollect(player, amount, xp) {
@@ -260,6 +279,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   };
   const weaponDeps = {
     config, rng, enemyPool, enemyGrid: shifted, queryBuf, projPool, damageEnemy,
+    noteSpawn,
   };
   const projDeps = {
     config, players: state.players, enemyPool, enemyGrid: shifted, queryBuf,
@@ -672,7 +692,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   }
 
   return {
-    state, step, applyInput, snapshot, stats, refreshStats, events,
+    state, step, applyInput, snapshot, stats, refreshStats, events, spawns,
     enemyPool, projPool, pickupPool, rng,
     startWave, endRun, openShop, openLevelUp, readyUp, shopFor, levelUp, coop,
     economy, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,

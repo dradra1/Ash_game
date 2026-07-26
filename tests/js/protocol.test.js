@@ -3,7 +3,9 @@ import assert from 'node:assert';
 import { loadConfig, stubTransport, makePlayers } from './fixture.js';
 import { createRun } from '../../static/js/sim/run.js';
 import {
-  createInputCodec, createSnapshotCodec, buildTypeIndex, PHASE_CODE, PHASE_NAME,
+  createInputCodec, createSnapshotCodec, createSpawnCodec,
+  buildTypeIndex, buildWeaponIndex, buildProjectileIndex,
+  PHASE_CODE, PHASE_NAME,
 } from '../../static/js/net/protocol.js';
 
 const config = loadConfig();
@@ -107,4 +109,99 @@ test('таблица типов покрывает и врагов, и босс�
   for (const id in config.bosses) assert.ok(toIdx[id] !== undefined, id);
   for (const id in toIdx) assert.equal(toId[toIdx[id]], id);
   assert.ok(toId.length < 256, 'индекс типа занимает один байт');
+});
+
+// --- пульс удара и события спавна ------------------------------------------
+
+test('пульс удара переживает round-trip и находит нужное оружие', () => {
+  const codec = createSnapshotCodec(config);
+  const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const wid = Object.keys(config.weapons).find((k) => config.weapons[k].shape.type === 'arc');
+
+  const run = runWith(1);
+  run.state.players[0].slots = [{
+    id: wid, cfg: config.weapons[wid], swingT: 0.1, lastAngle: Math.PI / 2,
+  }];
+  const dec = codec.decode(codec.encode(run, 0, 0, 1, types.toIdx, weapons));
+  const p = dec.players[0];
+  assert.equal(weapons.toId[p.swingWeapon], wid);
+  assert.ok(Math.abs(p.swingAngle - Math.PI / 2) < 0.05, `угол ${p.swingAngle}`);
+});
+
+test('без замаха пульс пуст', () => {
+  const codec = createSnapshotCodec(config);
+  const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const run = runWith(1);
+  run.state.players[0].slots = [{ id: null, cfg: null, swingT: 0, lastAngle: 0 }];
+  const dec = codec.decode(codec.encode(run, 0, 0, 1, types.toIdx, weapons));
+  assert.equal(dec.players[0].swingWeapon, -1);
+});
+
+test('слоты обходятся по кругу: одно оружие не занимает эфир навсегда', () => {
+  const codec = createSnapshotCodec(config);
+  const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const ids = Object.keys(config.weapons).filter((k) => config.weapons[k].shape.type === 'arc');
+  const run = runWith(1);
+  run.state.players[0].slots = [
+    { id: ids[0], cfg: config.weapons[ids[0]], swingT: 0.1, lastAngle: 0 },
+    { id: ids[1], cfg: config.weapons[ids[1]], swingT: 0.1, lastAngle: 0 },
+  ];
+  const seen = new Set();
+  for (let i = 0; i < 4; i++) {
+    const dec = codec.decode(codec.encode(run, 0, 0, i, types.toIdx, weapons));
+    seen.add(weapons.toId[dec.players[0].swingWeapon]);
+  }
+  assert.equal(seen.size, 2, 'второй слот так и не получил эфир');
+});
+
+test('события спавна снарядов переживают round-trip', () => {
+  const codec = createSpawnCodec(config);
+  const tex = buildProjectileIndex(config);
+  const texId = tex.toId[0];
+  const list = [
+    { x: 300, y: -120, vx: 400, vy: 0, ttl: 1.0, size: 6, texture: texId, hostile: false },
+    { x: -50, y: 700, vx: 0, vy: -260, ttl: 0.5, size: 4, texture: texId, hostile: true },
+  ];
+  const dec = codec.decode(codec.encode(list, list.length, tex.toIdx));
+  assert.equal(dec.count, 2);
+  for (let i = 0; i < 2; i++) {
+    const a = list[i];
+    const b = dec.items[i];
+    assert.equal(b.x, a.x);
+    assert.equal(b.y, a.y);
+    assert.ok(Math.abs(b.vx - a.vx) < 12, `vx ${b.vx} против ${a.vx}`);
+    assert.ok(Math.abs(b.vy - a.vy) < 12, `vy ${b.vy} против ${a.vy}`);
+    assert.ok(Math.abs(b.ttl - a.ttl) < 0.03, `ttl ${b.ttl}`);
+    assert.equal(b.size, a.size);
+    assert.equal(tex.toId[b.texture], a.texture);
+    assert.equal(b.hostile, a.hostile);
+  }
+});
+
+test('снапшот и событие спавна различимы по первому байту', () => {
+  const snap = createSnapshotCodec(config);
+  const spawn = createSpawnCodec(config);
+  const types = buildTypeIndex(config);
+  const tex = buildProjectileIndex(config);
+  const run = runWith(1);
+  const a = snap.encode(run, 0, 0, 1, types.toIdx, buildWeaponIndex(config));
+  const b = spawn.encode([{ x: 0, y: 0, vx: 1, vy: 0, ttl: 1, size: 4, texture: tex.toId[0], hostile: false }], 1, tex.toIdx);
+  assert.notEqual(a[0], b[0]);
+  // Декодер чужого типа обязан вернуть null, а не мусор
+  assert.equal(spawn.decode(a.slice()), null);
+  assert.equal(snap.decode(b.slice()), null);
+});
+
+test('бюджет трафика: пульс удара стоит два байта на игрока', () => {
+  const codec = createSnapshotCodec(config);
+  const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const run = runWith(2);
+  for (const p of run.state.players) p.slots = [];
+  const bytes = codec.encode(run, 0, 0, 1, types.toIdx, weapons).byteLength;
+  // 10 байт заголовка + 11 на игрока, врагов нет
+  assert.equal(bytes, 10 + 2 * 11);
 });

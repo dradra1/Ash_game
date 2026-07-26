@@ -53,8 +53,13 @@ export function createInputCodec() {
 // --- Снапшот хост → клиент (20 Гц) -----------------------------------------
 // Заголовок: тип, seq, волна, фаза, время фазы (дец. сек), число игроков, число врагов.
 const SNAP_HEADER = 10;
-const SNAP_PLAYER = 9;
+// 11-й и 12-й байты игрока — «пульс удара»: индекс оружия и угол последнего
+// замаха. Два байта на игрока × 8 × 20 Гц = 320 Б/с при бюджете 30 КБ/с.
+// Индекс оружия, а не номер слота, делает пульс самодостаточным: клиенту не надо
+// знать лоадаут соседа и не нужно отдельного надёжного сообщения об экипировке.
+const SNAP_PLAYER = 11;
 const SNAP_ENEMY = 8;
+const NO_WEAPON = 0xff;
 
 export function createSnapshotCodec(config) {
   const maxEntities = config.net.max_entities_per_snapshot;
@@ -72,6 +77,7 @@ export function createSnapshotCodec(config) {
   for (let i = 0; i < maxPlayers; i++) {
     decoded.players.push({
       idx: 0, x: 0, y: 0, hpPct: 0, dir: 0, level: 1, alive: true, pendingLevels: 0,
+      swingWeapon: -1, swingAngle: 0, swingSeq: 0,
     });
   }
   for (let i = 0; i < maxEntities; i++) {
@@ -83,7 +89,26 @@ export function createSnapshotCodec(config) {
   const order = new Int32Array(config.sim.max_enemies_cap);
   const dist = new Float64Array(config.sim.max_enemies_cap);
 
-  function encode(run, viewX, viewY, seq, typeIndex) {
+  // Что показать из ударов игрока за такт. Слотов шесть, а байт один, поэтому
+  // слоты обходятся по кругу: за пару тактов эфир получают все, и ни один вид
+  // оружия не оказывается вечно невидимым для соседей.
+  function pickSwing(p) {
+    const slots = p.slots;
+    if (!slots) return -1;
+    const n = slots.length;
+    const start = (p._swingCursor || 0) % n;
+    for (let i = 0; i < n; i++) {
+      const k = (start + i) % n;
+      const slot = slots[k];
+      if (slot.cfg && slot.swingT > 0) {
+        p._swingCursor = k + 1;
+        return k;
+      }
+    }
+    return -1;
+  }
+
+  function encode(run, viewX, viewY, seq, typeIndex, weaponIndex) {
     const state = run.state;
     view.setUint8(0, MSG_SNAPSHOT);
     view.setUint16(1, seq & 0xffff);
@@ -105,6 +130,16 @@ export function createSnapshotCodec(config) {
       view.setUint8(o + 6, (p.dir & 3) | (p.alive ? 4 : 0));
       view.setUint8(o + 7, Math.min(255, p.level));
       view.setUint8(o + 8, Math.min(255, p.pendingLevels || 0));
+      const sw = pickSwing(p);
+      if (sw >= 0) {
+        const slot = p.slots[sw];
+        view.setUint8(o + 9, weaponIndex ? (weaponIndex.toIdx[slot.id] & 0xff) : NO_WEAPON);
+        // Угол в uint8: шаг 1.4°, для замаха избыточно точно
+        view.setUint8(o + 10, Math.round(normAngle(slot.lastAngle) / TAU * 255) & 0xff);
+      } else {
+        view.setUint8(o + 9, NO_WEAPON);
+        view.setUint8(o + 10, 0);
+      }
       o += SNAP_PLAYER;
     }
 
@@ -166,6 +201,16 @@ export function createSnapshotCodec(config) {
       p.alive = (d & 4) !== 0;
       p.level = v.getUint8(o + 7);
       p.pendingLevels = v.getUint8(o + 8);
+      const wIdx = v.getUint8(o + 9);
+      if (wIdx === NO_WEAPON) {
+        p.swingWeapon = -1;
+      } else {
+        // swingSeq растёт на каждый новый удар: клиент по нему понимает, что это
+        // именно новый замах, а не тот же самый в следующем снапшоте.
+        if (p.swingWeapon !== wIdx) p.swingSeq++;
+        p.swingWeapon = wIdx;
+        p.swingAngle = (v.getUint8(o + 10) / 255) * TAU;
+      }
       o += SNAP_PLAYER;
     }
     for (let k = 0; k < decoded.enemyCount; k++) {
@@ -216,6 +261,116 @@ export const PHASE_PAUSE_BIT = 0x80;
 
 // Таблица «id типа врага → индекс» строится один раз из конфига: гонять строки
 // по сети на 20 Гц незачем.
+// --- События спавна снарядов, хост → клиент --------------------------------
+// Снаряды НЕ синхронизируются покадрово (CLAUDE.md §4): шлётся только факт
+// рождения, дальше клиент ведёт полёт сам по прямой. Урон считает только хост,
+// клиентские снаряды — чистая косметика, и расхождение в пару пикселей на них
+// никак не сказывается.
+//
+// 11 байт на снаряд. При плотной стрельбе ~60 снарядов/с это ~0.7 КБ/с — на
+// порядок дешевле покадровой рассылки тех же снарядов в снапшоте.
+const SPAWN_HEADER = 4;
+const SPAWN_ITEM = 11;
+
+export function createSpawnCodec(config) {
+  const max = config.sim.max_projectiles;
+  const buf = new ArrayBuffer(SPAWN_HEADER + max * SPAWN_ITEM);
+  const view = new DataView(buf);
+  const decoded = { count: 0, items: [] };
+  for (let i = 0; i < max; i++) {
+    decoded.items.push({
+      x: 0, y: 0, vx: 0, vy: 0, ttl: 0, size: 0, texture: 0, hostile: false,
+    });
+  }
+
+  function encode(list, n, texIndex) {
+    view.setUint8(0, MSG_SPAWN);
+    const count = Math.min(n, max);
+    view.setUint16(1, count);
+    let o = SPAWN_HEADER;
+    for (let i = 0; i < count; i++) {
+      const s = list[i];
+      view.setInt16(o, clampI16(s.x));
+      view.setInt16(o + 2, clampI16(s.y));
+      view.setUint8(o + 4, Math.round(normAngle(Math.atan2(s.vy, s.vx)) / TAU * 255) & 0xff);
+      // Скорость до 2550 px/с с шагом 10 — быстрее в конфиге ничего нет
+      view.setUint8(o + 5, Math.min(255, Math.round(Math.hypot(s.vx, s.vy) / 10)));
+      view.setUint8(o + 6, Math.min(255, Math.round(s.ttl * 50)));   // до 5.1 с
+      view.setUint8(o + 7, Math.min(255, s.size));
+      view.setUint8(o + 8, texIndex[s.texture] === undefined ? 0xff : texIndex[s.texture]);
+      view.setUint8(o + 9, s.hostile ? 1 : 0);
+      view.setUint8(o + 10, 0);
+      o += SPAWN_ITEM;
+    }
+    return new Uint8Array(buf, 0, o);
+  }
+
+  function decode(data) {
+    const v = data instanceof DataView ? data : new DataView(toBuffer(data));
+    if (v.getUint8(0) !== MSG_SPAWN) return null;
+    const count = Math.min(v.getUint16(1), max);
+    let o = SPAWN_HEADER;
+    for (let i = 0; i < count; i++) {
+      const s = decoded.items[i];
+      s.x = v.getInt16(o);
+      s.y = v.getInt16(o + 2);
+      const a = (v.getUint8(o + 4) / 255) * TAU;
+      const speed = v.getUint8(o + 5) * 10;
+      s.vx = Math.cos(a) * speed;
+      s.vy = Math.sin(a) * speed;
+      s.ttl = v.getUint8(o + 6) / 50;
+      s.size = v.getUint8(o + 7);
+      s.texture = v.getUint8(o + 8);
+      s.hostile = v.getUint8(o + 9) === 1;
+      o += SPAWN_ITEM;
+    }
+    decoded.count = count;
+    return decoded;
+  }
+
+  return { encode, decode, maxBytes: buf.byteLength };
+}
+
+// Таблица «texture-id снаряда → индекс»: те же соображения, что у врагов и оружия
+export function buildProjectileIndex(config) {
+  const toIdx = {};
+  const toId = [];
+  const add = (tex) => {
+    if (!tex || toIdx[tex] !== undefined) return;
+    toIdx[tex] = toId.length;
+    toId.push(tex);
+  };
+  for (const id in config.weapons) add(config.weapons[id].shape.texture);
+  for (const id in config.enemies) {
+    const atk = config.enemies[id].attack;
+    if (atk && atk.projectile) add(atk.projectile.texture);
+  }
+  for (const id in config.bosses) {
+    const atk = config.bosses[id].attack;
+    if (atk && atk.projectile) add(atk.projectile.texture);
+  }
+  return { toIdx, toId };
+}
+
+const TAU = Math.PI * 2;
+
+function normAngle(a) {
+  const r = a % TAU;
+  return r < 0 ? r + TAU : r;
+}
+
+// Таблица «id оружия → индекс» для пульса удара. 112 оружий влезают в байт;
+// строку по сети на 20 Гц гонять незачем — ровно та же причина, что у врагов.
+export function buildWeaponIndex(config) {
+  const toIdx = {};
+  const toId = [];
+  for (const id in config.weapons) {
+    toIdx[id] = toId.length;
+    toId.push(id);
+  }
+  return { toIdx, toId };
+}
+
 export function buildTypeIndex(config) {
   const toIdx = {};
   const toId = [];

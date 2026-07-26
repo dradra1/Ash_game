@@ -170,14 +170,23 @@ def main():
                         kbs: n && n.stats ? n.stats.kbs : 0,
                         snaps: n && n.stats ? n.stats.snaps : 0,
                         lost: n && n.stats ? n.stats.lost : 0,
+                        projSeen: n && n.projSeen ? n.projSeen : 0,
+                        swingSeen: n && n.swingSeen ? n.swingSeen : 0,
                         fps: globalThis.__LOOP__.stats.fps};
             }""")
             print(f"игрок {i}: волна {cs['wave']}, врагов {cs['enemies']}, "
                   f"снапшотов {cs['snaps']} (потеряно {cs['lost']}), "
                   f"{cs['kbs']:.1f} КБ/с, {cs['fps']:.0f} fps")
 
+            print(f"          снарядов увидено {cs['projSeen']}, замахов {cs['swingSeen']}")
             if cs["snaps"] == 0:
                 problems.append(f"игрок {i} не получил ни одного снапшота")
+            # Снаряды и удары приходят отдельно от снапшота: без них клиент видит
+            # немой бой, как было до реализации MSG_SPAWN и пульса удара.
+            if cs["projSeen"] == 0:
+                problems.append(f"игрок {i} не увидел ни одного снаряда")
+            if cs["swingSeen"] == 0:
+                problems.append(f"игрок {i} не увидел ни одного замаха")
             if cs["wave"] != host_state["wave"]:
                 problems.append(f"игрок {i}: волна {cs['wave']} против {host_state['wave']} у хоста")
             if cs["fps"] < 50:
@@ -196,6 +205,8 @@ def main():
             problems.append(f"расхождение {max_drift:.0f} px — предсказание не сходится")
 
         host.screenshot(path=a.shot)
+        for i, page in enumerate(pages[1:], start=1):
+            page.screenshot(path=a.shot.replace('.png', f'_client{i}.png'))
         browser.close()
 
     return report(problems, errors, a.shot)

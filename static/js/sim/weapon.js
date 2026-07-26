@@ -166,6 +166,7 @@ function fireShots(player, w, shape, nx, ny, dmg, deps) {
     p.ownerId = player.id;
     p.knockback = w.knockback + player.stats.knockback;
     p.hitCount = 0;
+    if (deps.noteSpawn) deps.noteSpawn(p);
   }
 }
 

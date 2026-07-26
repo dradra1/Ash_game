@@ -454,31 +454,42 @@ async function boot() {
   // Спрайт оружия — один, в боковой проекции (ASSETS.md §5): позиция и поворот
   // берутся из позы, а при прицеливании влево спрайт отражается по вертикали,
   // иначе клинок висит рукоятью вперёд.
-  function drawWeapons(p, size) {
-    const slots = p.slots;
-    if (!slots) return;                       // у кооп-клиента слотов нет
+  function drawSwing(p, size, w, angle, k) {
     const reach = size * config.render.weapon_reach;
-    for (let s = 0; s < slots.length; s++) {
-      const slot = slots[s];
-      if (!slot.cfg || slot.swingT <= 0) continue;
-      const w = slot.cfg;
-      const k = 1 - slot.swingT / slot.swingLen;
-      const half = ((w.shape.angle || 90) * Math.PI) / 360;
-      swingPose(w.shape.anim, k, half, pose);
+    const half = ((w.shape.angle || 90) * Math.PI) / 360;
+    swingPose(w.shape.anim, k, half, pose);
 
-      const a = slot.lastAngle + pose.angle;
-      const x = p.x + Math.cos(a) * pose.dist * reach;
-      const y = p.y + Math.sin(a) * pose.dist * reach;
-      const left = Math.cos(slot.lastAngle) < 0;
+    const a = angle + pose.angle;
+    const x = p.x + Math.cos(a) * pose.dist * reach;
+    const y = p.y + Math.sin(a) * pose.dist * reach;
+    const left = Math.cos(angle) < 0;
 
-      if (w.shape.fx) {
-        renderer.ctx.globalAlpha = trailAlpha(k) * config.render.fx_alpha;
-        renderer.drawSprite(w.shape.fx, x, y, size * config.render.fx_scale,
-          a + pose.tilt, left);
-        renderer.ctx.globalAlpha = 1;
+    if (w.shape.fx) {
+      renderer.ctx.globalAlpha = trailAlpha(k) * config.render.fx_alpha;
+      renderer.drawSprite(w.shape.fx, x, y, size * config.render.fx_scale,
+        a + pose.tilt, left);
+      renderer.ctx.globalAlpha = 1;
+    }
+    renderer.drawSprite(w.texture, x, y,
+      config.render.weapon_size * pose.scale, a + pose.tilt, left);
+  }
+
+  function drawWeapons(p, size) {
+    // Хост знает слоты целиком и рисует все замахи сразу. Клиенту слоты соседей
+    // неизвестны: до него доходит пульс из снапшота — одно оружие и один угол.
+    if (p.slots && p.slots.length) {
+      for (let s = 0; s < p.slots.length; s++) {
+        const slot = p.slots[s];
+        if (!slot.cfg || slot.swingT <= 0 || slot.cfg.shape.type !== 'arc') continue;
+        drawSwing(p, size, slot.cfg, slot.lastAngle, 1 - slot.swingT / slot.swingLen);
       }
-      renderer.drawSprite(w.texture, x, y,
-        config.render.weapon_size * pose.scale, a + pose.tilt, left);
+      return;
+    }
+    if (p.swingT > 0 && p.swingId) {
+      const w = config.weapons[p.swingId];
+      if (w && w.shape.type === 'arc') {
+        drawSwing(p, size, w, p.swingAngle, 1 - p.swingT / p.swingLen);
+      }
     }
   }
 
@@ -530,8 +541,11 @@ async function boot() {
 
     particles.draw(renderer.ctx);
 
-    if (run) {
-      const projs = run.projPool;
+    // У хоста снаряды из симуляции, у клиента — свои, рождённые по событиям
+    // спавна и летящие по прямой. Раньше здесь стояло `if (run)`, и клиент не
+    // видел ни одного выстрела за всю игру.
+    {
+      const projs = netClient ? netClient.projectiles : run.projPool;
       for (let i = 0; i < projs.count; i++) {
         const pr = projs.items[i];
         const r = Math.max(config.render.projectile_size_min, pr.size);

@@ -7,7 +7,11 @@
 // больше net.teleport_threshold, это уже не рассинхрон, а телепорт — ставим жёстко.
 
 import { CH } from './transport.js';
-import { createInputCodec, createSnapshotCodec, buildTypeIndex, PHASE_NAME } from './protocol.js';
+import {
+  createInputCodec, createSnapshotCodec, createSpawnCodec,
+  buildTypeIndex, buildWeaponIndex, buildProjectileIndex,
+  PHASE_NAME, MSG_SNAPSHOT, MSG_SPAWN,
+} from './protocol.js';
 import { separateFromProps } from '../sim/arena.js';
 
 // propIndex — препятствия арены. Клиент не симулирует мир, но своего персонажа
@@ -17,6 +21,55 @@ export function createNetClient(transport, config, myIndex, propIndex) {
   const inputCodec = createInputCodec();
   const snapCodec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const projTex = buildProjectileIndex(config);
+  const spawnCodec = createSpawnCodec(config);
+
+  // Снаряды у клиента — чистая косметика: урон считает хост, сюда приходит только
+  // факт рождения, дальше полёт ведётся по прямой. Пул фиксированный, лишнее
+  // просто не рождается (деградация, а не рост — CLAUDE.md §4).
+  const projectiles = { items: [], count: 0 };
+  for (let i = 0; i < config.sim.max_projectiles; i++) {
+    projectiles.items.push({
+      x: 0, y: 0, vx: 0, vy: 0, ttl: 0, size: 0, texture: null, spin: null,
+      color: null, age: 0,
+    });
+  }
+
+  // Быстрый доступ «индекс снаряда → как его вращать»: считается один раз
+  const spinByTex = [];
+  for (const id in config.weapons) {
+    const sh = config.weapons[id].shape;
+    if (sh.texture) spinByTex[projTex.toIdx[sh.texture]] = sh.spin || null;
+  }
+
+  function spawnProjectiles(dec) {
+    for (let i = 0; i < dec.count; i++) {
+      if (projectiles.count >= projectiles.items.length) return;
+      const s = dec.items[i];
+      const p = projectiles.items[projectiles.count++];
+      p.x = s.x; p.y = s.y; p.vx = s.vx; p.vy = s.vy;
+      p.ttl = s.ttl; p.size = s.size; p.age = 0;
+      p.texture = projTex.toId[s.texture] || null;
+      p.spin = spinByTex[s.texture] || null;
+    }
+  }
+
+  function stepProjectiles(dt) {
+    for (let i = projectiles.count - 1; i >= 0; i--) {
+      const p = projectiles.items[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.ttl -= dt;
+      p.age += dt;
+      if (p.ttl > 0) continue;
+      // swap-remove: порядок снарядов не важен, а сдвиг массива — аллокация
+      const last = projectiles.items[projectiles.count - 1];
+      projectiles.items[projectiles.count - 1] = p;
+      projectiles.items[i] = last;
+      projectiles.count--;
+    }
+  }
   const inputPeriod = 1 / config.net.input_hz;
   const snapPeriod = 1 / config.net.snapshot_hz;
   const teleport = config.net.teleport_threshold;
@@ -38,6 +91,9 @@ export function createNetClient(transport, config, myIndex, propIndex) {
   }
 
   const stats = { bytesIn: 0, kbs: 0, snaps: 0, lastSeq: -1, lost: 0 };
+  // Счётчики для приёмки коопа: без снарядов и замахов клиент видит немой бой
+  let projSeen = 0;
+  let swingSeen = 0;
   let window = 0;
   let windowBytes = 0;
   let sinceSnap = 0;
@@ -54,11 +110,24 @@ export function createNetClient(transport, config, myIndex, propIndex) {
         hp: 1, maxHp: 1, alive: true, level: 1, ash: 0,
         slots: [], items: [], stats: {}, input: { x: 0, y: 0 },
         pendingLevels: 0, xp: 0, xpNext: 1,
+        swingSeq: -1, swingId: null, swingAngle: 0, swingT: 0, swingLen: 0.22,
       });
     }
   }
 
   function onSnapshot(payload) {
+    const kind = messageType(payload);
+    if (kind === MSG_SPAWN) {
+      const sp = spawnCodec.decode(payload);
+      if (sp) {
+        spawnProjectiles(sp);
+        projSeen += sp.count;
+        stats.bytesIn += byteLength(payload);
+        windowBytes += byteLength(payload);
+      }
+      return;
+    }
+    if (kind !== MSG_SNAPSHOT) return;
     const dec = snapCodec.decode(payload);
     if (!dec) return;
     stats.bytesIn += byteLength(payload);
@@ -91,6 +160,17 @@ export function createNetClient(transport, config, myIndex, propIndex) {
       p.pendingLevels = src.pendingLevels || 0;
       p.maxHp = 100;
       p.hp = src.hpPct * 100;
+      // Пульс удара: новый замах виден по выросшему swingSeq. Слоты соседа
+      // клиенту неизвестны, поэтому оружие приходит индексом, а не номером слота.
+      if (src.swingWeapon >= 0 && src.swingSeq !== p.swingSeq) {
+        p.swingSeq = src.swingSeq;
+        p.swingId = weapons.toId[src.swingWeapon] || null;
+        p.swingAngle = src.swingAngle;
+        const cfg = p.swingId ? config.weapons[p.swingId] : null;
+        p.swingLen = cfg && cfg.shape.anim_time ? cfg.shape.anim_time : 0.22;
+        p.swingT = p.swingLen;
+        swingSeen++;
+      }
       if (i === myIndex) {
         // Свой персонаж: мягко подтягиваем предсказанную позицию к авторитетной
         const dx = src.x - p.x;
@@ -162,6 +242,12 @@ export function createNetClient(transport, config, myIndex, propIndex) {
       transport.send(CH.INPUT, inputCodec.encode(myIndex, seq, input.x, input.y, 0).slice(0));
     }
 
+    stepProjectiles(dt);
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      if (p.swingT > 0) p.swingT -= dt;
+    }
+
     const k = Math.min(1, sinceSnap / snapPeriod);
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
@@ -218,11 +304,21 @@ export function createNetClient(transport, config, myIndex, propIndex) {
   }
 
   return {
-    state, enemies, step, stats, close,
+    state, enemies, projectiles, step, stats, close,
+    get projSeen() { return projSeen; },
+    get swingSeen() { return swingSeen; },
     get ready() { return ready; },
     get lastRunOver() { return lastRunOver; },
     clearRunOver() { lastRunOver = null; },
   };
+}
+
+// Снапшот и события спавна идут одним каналом и различаются первым байтом
+function messageType(data) {
+  if (data instanceof DataView) return data.getUint8(0);
+  if (data instanceof ArrayBuffer) return new Uint8Array(data)[0];
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, 1)[0];
+  return -1;
 }
 
 function byteLength(p) {

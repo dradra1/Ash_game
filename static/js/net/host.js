@@ -5,14 +5,23 @@
 // покадрово — на их спавн шлётся событие, клиент экстраполирует полёт сам.
 
 import { CH } from './transport.js';
-import { createInputCodec, createSnapshotCodec, buildTypeIndex, MSG_EVENT } from './protocol.js';
+import {
+  createInputCodec, createSnapshotCodec, createSpawnCodec,
+  buildTypeIndex, buildWeaponIndex, buildProjectileIndex, MSG_EVENT,
+} from './protocol.js';
 import { shopSnapshot, localAdapter } from '../ui/shop_adapter.js';
 
 export function createHost(run, transport, config) {
   const inputCodec = createInputCodec();
   const snapCodec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const projTex = buildProjectileIndex(config);
+  const spawnCodec = createSpawnCodec(config);
   const period = 1 / config.net.snapshot_hz;
+
+  // Копить события спавна имеет смысл только когда есть кому их слать
+  run.spawns.on = true;
 
   let acc = 0;
   let seq = 0;
@@ -106,12 +115,23 @@ export function createHost(run, transport, config) {
     const players = run.state.players;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
-      const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx);
+      const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx, weapons);
       const copy = packed.slice();
       transport.send(CH.SNAPSHOT, copy);
       stats.bytesOut += copy.byteLength;
       windowBytes += copy.byteLength;
       stats.sent++;
+    }
+
+    // Снаряды: только факт рождения, дальше клиент ведёт полёт сам
+    const spawns = run.spawns;
+    if (spawns.count > 0) {
+      const packed = spawnCodec.encode(spawns.items, spawns.count, projTex.toIdx);
+      const copy = packed.slice();
+      transport.send(CH.SNAPSHOT, copy);
+      stats.bytesOut += copy.byteLength;
+      windowBytes += copy.byteLength;
+      spawns.count = 0;
     }
 
     const events = run.events;
@@ -128,9 +148,10 @@ export function createHost(run, transport, config) {
   }
 
   function close() {
+    run.spawns.on = false;
     transport.off(CH.INPUT, onInput);
     transport.off(CH.EVENT, onClientEvent);
   }
 
-  return { step, stats, close, types, broadcastLevelUps, sendLevelUpTo };
+  return { step, stats, close, types, weapons, projTex, broadcastLevelUps, sendLevelUpTo };
 }
