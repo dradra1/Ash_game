@@ -1,7 +1,7 @@
 // Рендер на одном canvas: камера с запаздыванием, целочисленный масштаб,
 // devicePixelRatio, никаких shadowBlur/filter в горячем пути.
 
-import { drawSheet } from './sprites.js';
+import { drawSheet, getSprite } from './sprites.js';
 
 const TEXT_FONT = '12px monospace';
 
@@ -73,10 +73,28 @@ export function createRenderer(canvas, config, arenaSize) {
     return out;
   }
 
+  // Кэш паттернов пола: texture-id → готовый CanvasPattern. Создаётся один раз,
+  // когда спрайт впервые готов; createPattern на кадр — это аллокация в горячем цикле.
+  const groundPatterns = {};
+
   function drawArena(arena) {
     ctx.fillStyle = WALL_COLOR;
     ctx.fillRect(-wallPad, -wallPad, arenaW + wallPad * 2, arenaH + wallPad * 2);
-    ctx.fillStyle = arena.ground_color;
+    let pattern = null;
+    // Берём только первый тайл списка ground: вариации пришлось бы рисовать
+    // по-тайлово drawImage'ами (тысячи вызовов на кадр) — за бюджетом рендера.
+    const groundId = arena.ground && arena.ground.length ? arena.ground[0] : null;
+    if (groundId) {
+      pattern = groundPatterns[groundId] || null;
+      if (!pattern) {
+        const s = getSprite(groundId);
+        if (s && s.ready && !s.failed) {
+          pattern = ctx.createPattern(s.img, 'repeat');
+          if (pattern) groundPatterns[groundId] = pattern;
+        }
+      }
+    }
+    ctx.fillStyle = pattern || arena.ground_color;
     ctx.fillRect(0, 0, arenaW, arenaH);
   }
 
