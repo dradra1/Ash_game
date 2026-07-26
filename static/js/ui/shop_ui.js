@@ -41,7 +41,9 @@ export function createShopUi(root, config, t, tip) {
   cols[1].textContent = t('ui.shop.items');
   cols[2].textContent = t('ui.shop.stats');
 
-  let ctx = null;      // {run, player, shop, onReady}
+  // Адаптер: UI не знает, своя это лавка или чужая, полученная по сети.
+  // У хоста и в соло действия применяются сразу, у клиента — уезжают событием.
+  let ctx = null;   // {slots, player, wave, rerollCost, act(kind, a, b)}
 
   function tierColor(tier) {
     return config.shop.tier_color[tier - 1] || '#9aa0a8';
@@ -61,9 +63,9 @@ export function createShopUi(root, config, t, tip) {
 
   function renderSlots() {
     slotsEl.innerHTML = '';
-    const shop = ctx.shop;
-    for (let i = 0; i < shop.slots.length; i++) {
-      const s = shop.slots[i];
+    const slots = ctx.slots();
+    for (let i = 0; i < slots.length; i++) {
+      const s = slots[i];
       const card = doc.createElement('div');
       card.className = 'card' + (s.sold ? ' sold' : '') + (s.locked ? ' locked' : '');
       if (!s.cfg) {
@@ -82,7 +84,7 @@ export function createShopUi(root, config, t, tip) {
       lockBtn.textContent = s.locked ? '■' : '□';
       lockBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        s.locked = !s.locked;
+        ctx.act('lock', i);
         renderSlots();
       });
       card.appendChild(lockBtn);
@@ -90,9 +92,7 @@ export function createShopUi(root, config, t, tip) {
       if (!s.sold) {
         const idx = i;
         card.addEventListener('click', () => {
-          const res = buy(ctx.player, ctx.shop, idx, config, () => {
-            refreshStats(ctx.player, config);
-          });
+          const res = ctx.act('buy', idx);
           if (res === 'poor') flash(card, t('ui.shop.cant_afford'));
           else if (res === 'full') flash(card, t('ui.shop.slots_full'));
           else renderAll();
@@ -116,7 +116,7 @@ export function createShopUi(root, config, t, tip) {
   }
 
   function renderInventory() {
-    const p = ctx.player;
+    const p = ctx.player();
     weaponsEl.innerHTML = '';
     const canMerge = mergeable(p, config);
     for (let i = 0; i < p.slots.length; i++) {
@@ -132,8 +132,7 @@ export function createShopUi(root, config, t, tip) {
         sellBtn.textContent = t('ui.shop.sell');
         const idx = i;
         sellBtn.addEventListener('click', () => {
-          sell(p, 'weapon', idx, config, ctx.run.state.wave, ctx.run.danger,
-            () => refreshStats(p, config));
+          ctx.act('sell_weapon', idx);
           renderAll();
         });
         cell.appendChild(sellBtn);
@@ -143,7 +142,7 @@ export function createShopUi(root, config, t, tip) {
           mergeBtn.className = 'mini merge';
           mergeBtn.textContent = t('ui.shop.merge');
           mergeBtn.addEventListener('click', () => {
-            merge(p, s.id, config, () => refreshStats(p, config));
+            ctx.act('merge', s.id);
             renderAll();
           });
           cell.appendChild(mergeBtn);
@@ -166,8 +165,7 @@ export function createShopUi(root, config, t, tip) {
       sellBtn.className = 'mini';
       sellBtn.textContent = t('ui.shop.sell');
       sellBtn.addEventListener('click', () => {
-        sell(p, 'item', idx, config, ctx.run.state.wave, ctx.run.danger,
-          () => refreshStats(p, config));
+        ctx.act('sell_item', idx);
         renderAll();
       });
       cell.appendChild(sellBtn);
@@ -177,7 +175,7 @@ export function createShopUi(root, config, t, tip) {
   }
 
   function renderStats() {
-    const p = ctx.player;
+    const p = ctx.player();
     let html = '';
     const order = config.stats.order;
     for (let i = 0; i < order.length; i++) {
@@ -193,11 +191,10 @@ export function createShopUi(root, config, t, tip) {
   }
 
   function renderTop() {
-    const p = ctx.player;
-    titleEl.textContent = t('ui.shop.title') + ' — '
-      + t('ui.hud.wave') + ' ' + (ctx.run.state.wave + 1);
+    const p = ctx.player();
+    titleEl.textContent = t('ui.shop.title') + ' — ' + t('ui.hud.wave') + ' ' + ctx.wave();
     ashEl.textContent = t('ui.hud.ash') + ': ' + Math.floor(p.ash);
-    const cost = rerollCost(config, ctx.shop.state.rerolls);
+    const cost = ctx.rerollCost();
     rerollBtn.textContent = t('ui.shop.reroll') + ' (' + cost + ')';
     rerollBtn.disabled = p.ash < cost;
     goBtn.textContent = t('ui.shop.go');
@@ -213,18 +210,19 @@ export function createShopUi(root, config, t, tip) {
 
   rerollBtn.addEventListener('click', () => {
     if (!ctx) return;
-    if (ctx.shop.reroll(ctx.player, ctx.run.danger, ctx.run.rng) > 0) renderAll();
+    ctx.act('reroll');
+    renderAll();
   });
   goBtn.addEventListener('click', () => {
     if (!ctx) return;
     tip.hide();
     panel.style.display = 'none';
-    ctx.onReady();
+    ctx.act('ready');
   });
 
   return {
-    show(run, player, shop, onReady) {
-      ctx = { run, player, shop, onReady };
+    show(adapter) {
+      ctx = adapter;
       renderAll();
       panel.style.display = '';
     },

@@ -17,6 +17,7 @@ import { createHud } from './ui/hud.js';
 import { createTooltip } from './ui/tooltip.js';
 import { createLevelUpUi } from './ui/levelup_ui.js';
 import { createShopUi } from './ui/shop_ui.js';
+import { localAdapter, remoteAdapter } from './ui/shop_adapter.js';
 import { createLobbyUi } from './ui/lobby_ui.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
@@ -86,6 +87,9 @@ async function boot() {
   const animFps = config.render.anim_fps;
   const WALK = '_walk';
 
+  let shopSnap = null;       // последний снимок лавки, присланный хостом
+  let remoteShop = null;     // адаптер лавки клиента
+
   const isHost = () => !netClient;
   const world = () => (netClient ? netClient.state : run.state);
 
@@ -102,6 +106,13 @@ async function boot() {
       // Не-хост: шлём ввод, крутим интерполяцию и предсказание своего движения
       const me = myPlayer();
       netClient.step(dt, input.move, (me && me.speed) || config.player.move_speed);
+
+      // Лавка клиента приходит снимком от хоста; действия уезжают обратно
+      if (netClient.state.phase === PHASE_SHOP && remoteShop) {
+        if (!shopUi.visible) shopUi.show(remoteShop);
+      } else if (shopUi.visible) {
+        shopUi.hide();
+      }
       return;
     }
 
@@ -109,7 +120,8 @@ async function boot() {
     if (run.state.phase === PHASE_SHOP) {
       if (!shopUi.visible) {
         const me = myPlayer();
-        shopUi.show(run, me, run.shopFor(me.id), () => run.readyUp(me.id));
+        shopUi.show(localAdapter(run, me, run.shopFor(me.id), config,
+          () => run.readyUp(me.id)));
       }
       if (!run.coop) return;         // в соло мир стоит, пока игрок закупается
     } else if (shopUi.visible) {
@@ -347,6 +359,16 @@ async function boot() {
       bootEngine([run.arenaW, run.arenaH]);
     } else {
       netClient = createNetClient(transport, config, myIndex);
+      // Хост присылает снимок лавки адресно; действия уходят обратно событием
+      transport.on(CH.EVENT, (msg) => {
+        if (msg && msg.t === 'shop' && msg.p === myIndex) {
+          shopSnap = msg.snap;
+          if (shopUi.visible) shopUi.refresh();
+        }
+      });
+      remoteShop = remoteAdapter(() => shopSnap, (kind, a) => {
+        transport.send(CH.EVENT, { t: 'shop_act', p: myIndex, kind, a });
+      });
       // Клиенту нужен тот же размер арены, что посчитал хост
       const scale = 1 + config.coop.arena_per_player * (room.players.length - 1);
       const w = Math.round(config.arena.size[0] * scale);

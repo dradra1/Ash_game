@@ -43,6 +43,8 @@ def main():
     ap.add_argument("--latency", type=float, default=80, help="односторонняя задержка, мс")
     ap.add_argument("--shot", default="scratch/coop.png")
     ap.add_argument("--password", default="pepel123")
+    ap.add_argument("--god", action="store_true",
+                    help="держать игроков живыми: проверяем синхрон, а не выживаемость")
     a = ap.parse_args()
 
     problems = []
@@ -119,6 +121,15 @@ def main():
         while waited < a.seconds * 1000:
             host.wait_for_timeout(step)
             waited += step
+            if a.god:
+                # Хост авторитетен — правим HP только у него
+                host.evaluate("""() => {
+                    const r = globalThis.__RUN__;
+                    if (!r || !r.state) return;
+                    for (const p of r.state.players) {
+                        p.hp = p.maxHp; p.alive = true;
+                    }
+                }""")
             for page in pages:
                 try:
                     node = page.locator(".choice").first

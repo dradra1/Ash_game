@@ -1,5 +1,5 @@
 {
-  "content_version": 2,
+  "content_version": 3,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -93,7 +93,7 @@
     "move_speed": 130,
     "radius": 10,
     "pickup_radius": 22,
-    "iframes": 0.35,
+    "iframes": 0.5,
     "knockback_resist": 0.5,
     "base": {
       "max_hp": 25,
@@ -646,10 +646,11 @@
   "characters": {
     "ch_pilgrim": {
       "name": "Пилигрим",
-      "desc": "Странник без особых даров. Ровные статы — чистый холст для любого билда.",
+      "desc": "Странник без особых даров. Ровные статы — чистый холст.",
       "faction": "cov",
       "texture": "ch_pilgrim",
       "color": "#c8a35a",
+      "sprite": 48,
       "start_weapons": [
         "w_cleaver_1"
       ],
@@ -658,8 +659,7 @@
       "unique": null,
       "unlock": {
         "type": "default"
-      },
-      "sprite": 48
+      }
     },
     "ch_zealot": {
       "name": "Ревнитель",
@@ -667,6 +667,7 @@
       "faction": "cov",
       "texture": "ch_zealot",
       "color": "#d8b36a",
+      "sprite": 48,
       "start_weapons": [
         "w_censer_1"
       ],
@@ -687,15 +688,155 @@
       "unlock": {
         "type": "relics",
         "cost": 150
+      }
+    },
+    "ch_flagellant": {
+      "name": "Флагеллант",
+      "desc": "Режет себя, чтобы бить сильнее. Считает это сделкой.",
+      "faction": "cov",
+      "texture": "ch_flagellant",
+      "color": "#b08a4a",
+      "sprite": 48,
+      "start_weapons": [
+        "w_scourge_1"
+      ],
+      "stats": {
+        "damage_pct": 40,
+        "armor": -1,
+        "max_hp_pct": -15
       },
-      "sprite": 48
+      "levelup_weights": {
+        "damage_pct": 2.0,
+        "armor": 0.2
+      },
+      "unique": {
+        "type": "self_harm_stack",
+        "per_sec": 1,
+        "value": 2
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 400,
+        "achievement": "ac_wave10"
+      }
+    },
+    "ch_conductor": {
+      "name": "Хормейстер",
+      "desc": "Сам бьёт слабо, зато рядом с ним бьют все.",
+      "faction": "cov",
+      "texture": "ch_conductor",
+      "color": "#e0c07a",
+      "sprite": 48,
+      "start_weapons": [
+        "w_censer_1"
+      ],
+      "stats": {
+        "damage_pct": -20
+      },
+      "levelup_weights": {
+        "max_hp": 1.5,
+        "armor": 1.5
+      },
+      "unique": {
+        "type": "ally_aura",
+        "radius": 300,
+        "damage_pct": 10,
+        "armor": 1
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 800,
+        "achievement": "ac_coop4"
+      }
+    },
+    "ch_brute": {
+      "name": "Громила",
+      "desc": "Чем больше врагов, тем ему веселее.",
+      "faction": "scrap",
+      "texture": "ch_brute",
+      "color": "#6d8f3a",
+      "sprite": 64,
+      "start_weapons": [
+        "w_hammer_1"
+      ],
+      "stats": {
+        "max_hp_pct": 30,
+        "move_speed_pct": -20
+      },
+      "levelup_weights": {
+        "melee_dmg": 2.0,
+        "max_hp": 1.5,
+        "ranged_dmg": 0.0
+      },
+      "unique": {
+        "type": "damage_per_enemy",
+        "value": 1
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 200
+      }
+    },
+    "ch_scavenger": {
+      "name": "Падальщик",
+      "desc": "Бьёт слабее, зато уходит богаче.",
+      "faction": "scrap",
+      "texture": "ch_scavenger",
+      "color": "#8aa84a",
+      "sprite": 48,
+      "start_weapons": [
+        "w_nailer_1"
+      ],
+      "stats": {
+        "tithe": 4,
+        "damage_pct": -10
+      },
+      "levelup_weights": {
+        "tithe": 2.0,
+        "luck": 1.8
+      },
+      "unique": {
+        "type": "crate_chance",
+        "value": 2.0
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 350
+      }
+    },
+    "ch_artificer": {
+      "name": "Артифекс",
+      "desc": "Воюет чужими руками — точнее, манипуляторами.",
+      "faction": "forge",
+      "texture": "ch_artificer",
+      "color": "#a83a2a",
+      "sprite": 48,
+      "start_weapons": [
+        "w_turret_1"
+      ],
+      "stats": {
+        "engineering": 5,
+        "ranged_dmg": -5
+      },
+      "levelup_weights": {
+        "engineering": 2.5,
+        "melee_dmg": 0.3
+      },
+      "unique": {
+        "type": "repair_between_waves"
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 250
+      }
     },
     "ch_censor": {
       "name": "Цензор",
-      "desc": "Судит издалека и не берёт в руки ничего, что требует подойти вплотную.",
+      "desc": "Судит издалека и не берёт ничего, что требует подойти.",
       "faction": "forge",
       "texture": "ch_censor",
-      "color": "#a83a2a",
+      "color": "#c04a36",
+      "sprite": 48,
       "start_weapons": [
         "w_carbine_1"
       ],
@@ -714,8 +855,170 @@
       "unlock": {
         "type": "relics",
         "cost": 450
+      }
+    },
+    "ch_thrall": {
+      "name": "Невольник",
+      "desc": "Быстрый и слабый. Живёт тем, что отнимает.",
+      "faction": "chit",
+      "texture": "ch_thrall",
+      "color": "#4d8f6b",
+      "sprite": 48,
+      "start_weapons": [
+        "w_claws_1"
+      ],
+      "stats": {
+        "attack_speed_pct": 50,
+        "damage_pct": -40
       },
-      "sprite": 48
+      "levelup_weights": {
+        "attack_speed_pct": 2.0,
+        "lifesteal_pct": 1.8
+      },
+      "unique": {
+        "type": "lifesteal_per_melee",
+        "value": 3
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 300
+      }
+    },
+    "ch_broodmate": {
+      "name": "Выводковый",
+      "desc": "Носит на себе выводок, который дерётся сам.",
+      "faction": "chit",
+      "texture": "ch_broodmate",
+      "color": "#5aa87a",
+      "sprite": 48,
+      "start_weapons": [
+        "w_sickle_1"
+      ],
+      "stats": {
+        "move_speed_pct": 15,
+        "armor": -2
+      },
+      "levelup_weights": {
+        "move_speed_pct": 1.8,
+        "elem_dmg": 1.2
+      },
+      "unique": {
+        "type": "larva_companion",
+        "per_levels": 5
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 600
+      }
+    },
+    "ch_hierophant": {
+      "name": "Иерофант",
+      "desc": "Стихия слушается его охотнее, чем собственное тело.",
+      "faction": "rift",
+      "texture": "ch_hierophant",
+      "color": "#7a2f8f",
+      "sprite": 48,
+      "start_weapons": [
+        "w_rod_1"
+      ],
+      "stats": {
+        "elem_dmg": 6,
+        "melee_dmg": -4
+      },
+      "levelup_weights": {
+        "elem_dmg": 2.5,
+        "melee_dmg": 0.2
+      },
+      "unique": {
+        "type": "elem_chain",
+        "targets": 1
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 400
+      }
+    },
+    "ch_hollow": {
+      "name": "Полый",
+      "desc": "Начинает без оружия. Зато выбор ему дают вдвое чаще.",
+      "faction": "rift",
+      "texture": "ch_hollow",
+      "color": "#9a4aa8",
+      "sprite": 48,
+      "start_weapons": [],
+      "stats": {
+        "luck": 10
+      },
+      "levelup_weights": {
+        "luck": 2.0
+      },
+      "unique": {
+        "type": "double_levelup",
+        "slots_lost": 2
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 900,
+        "achievement": "ac_win_d2"
+      }
+    },
+    "ch_warden": {
+      "name": "Хранитель Гробниц",
+      "desc": "Медленный и несокрушимый. Лечится только сам собой.",
+      "faction": "tomb",
+      "texture": "ch_warden",
+      "color": "#2fa8a0",
+      "sprite": 64,
+      "start_weapons": [
+        "w_forgedrone_1"
+      ],
+      "stats": {
+        "armor": 5,
+        "move_speed_pct": -25
+      },
+      "levelup_weights": {
+        "armor": 2.0,
+        "max_hp": 1.5,
+        "move_speed_pct": 0.3
+      },
+      "unique": {
+        "type": "only_self_regen",
+        "value": 1
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 500
+      }
+    },
+    "ch_mirrorblade": {
+      "name": "Зеркальный клинок",
+      "desc": "Хрупкий, но попасть по нему надо ещё суметь.",
+      "faction": "mirror",
+      "texture": "ch_mirrorblade",
+      "color": "#4a7fc8",
+      "sprite": 48,
+      "start_weapons": [
+        "w_stilettos_1"
+      ],
+      "stats": {
+        "crit_pct": 15,
+        "dodge_pct": 10,
+        "max_hp_pct": -25
+      },
+      "levelup_weights": {
+        "crit_pct": 2.0,
+        "dodge_pct": 1.8,
+        "max_hp": 0.4
+      },
+      "unique": {
+        "type": "crit_iframes",
+        "value": 0.3,
+        "cooldown": 2.0
+      },
+      "unlock": {
+        "type": "relics",
+        "cost": 700
+      }
     }
   },
   "weapons": {
@@ -828,6 +1131,121 @@
       "price": 96,
       "unlock": {
         "type": "default"
+      }
+    },
+    "w_chainblade_1": {
+      "name": "Цепной клинок",
+      "texture": "w_chainblade",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "heavy"
+      ],
+      "damage": 16.0,
+      "cooldown": 1.1,
+      "range": 115,
+      "knockback": 9,
+      "crit_pct": 7,
+      "scaling": {
+        "melee_dmg": 1.2,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 95
+      },
+      "price": 24,
+      "next_tier": "w_chainblade_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_chainblade_2": {
+      "name": "Точёный цепной клинок",
+      "texture": "w_chainblade",
+      "tier": 2,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "heavy"
+      ],
+      "damage": 27.2,
+      "cooldown": 1.067,
+      "range": 120,
+      "knockback": 9,
+      "crit_pct": 7,
+      "scaling": {
+        "melee_dmg": 1.2,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 95
+      },
+      "price": 55,
+      "next_tier": "w_chainblade_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_chainblade_3": {
+      "name": "Освящённый цепной клинок",
+      "texture": "w_chainblade",
+      "tier": 3,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "heavy"
+      ],
+      "damage": 44.8,
+      "cooldown": 1.034,
+      "range": 124,
+      "knockback": 9,
+      "crit_pct": 7,
+      "scaling": {
+        "melee_dmg": 1.2,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 95
+      },
+      "price": 108,
+      "next_tier": "w_chainblade_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_chainblade_4": {
+      "name": "Заклятый цепной клинок",
+      "texture": "w_chainblade",
+      "tier": 4,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "heavy"
+      ],
+      "damage": 72.0,
+      "cooldown": 0.99,
+      "range": 129,
+      "knockback": 9,
+      "crit_pct": 7,
+      "scaling": {
+        "melee_dmg": 1.2,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 95
+      },
+      "price": 192,
+      "unlock": {
+        "type": "relics",
+        "tier": 1
       }
     },
     "w_hammer_1": {
@@ -1052,6 +1470,121 @@
         "type": "default"
       }
     },
+    "w_scourge_1": {
+      "name": "Шипастый бич",
+      "texture": "w_scourge",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 8.0,
+      "cooldown": 0.62,
+      "range": 150,
+      "knockback": 4,
+      "crit_pct": 9,
+      "scaling": {
+        "melee_dmg": 0.9,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 50
+      },
+      "price": 20,
+      "next_tier": "w_scourge_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_scourge_2": {
+      "name": "Точёный шипастый бич",
+      "texture": "w_scourge",
+      "tier": 2,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 13.6,
+      "cooldown": 0.601,
+      "range": 156,
+      "knockback": 4,
+      "crit_pct": 9,
+      "scaling": {
+        "melee_dmg": 0.9,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 50
+      },
+      "price": 46,
+      "next_tier": "w_scourge_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_scourge_3": {
+      "name": "Освящённый шипастый бич",
+      "texture": "w_scourge",
+      "tier": 3,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 22.4,
+      "cooldown": 0.583,
+      "range": 162,
+      "knockback": 4,
+      "crit_pct": 9,
+      "scaling": {
+        "melee_dmg": 0.9,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 50
+      },
+      "price": 90,
+      "next_tier": "w_scourge_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_scourge_4": {
+      "name": "Заклятый шипастый бич",
+      "texture": "w_scourge",
+      "tier": 4,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "primitive"
+      ],
+      "damage": 36.0,
+      "cooldown": 0.558,
+      "range": 168,
+      "knockback": 4,
+      "crit_pct": 9,
+      "scaling": {
+        "melee_dmg": 0.9,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 50
+      },
+      "price": 160,
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
     "w_claws_1": {
       "name": "Костяные когти",
       "texture": "w_claws",
@@ -1163,6 +1696,121 @@
         "type": "default"
       }
     },
+    "w_sickle_1": {
+      "name": "Серп-пила",
+      "texture": "w_sickle",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "spread"
+      ],
+      "damage": 11.0,
+      "cooldown": 0.78,
+      "range": 120,
+      "knockback": 5,
+      "crit_pct": 6,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 160
+      },
+      "price": 22,
+      "next_tier": "w_sickle_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_sickle_2": {
+      "name": "Точёный серп-пила",
+      "texture": "w_sickle",
+      "tier": 2,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "spread"
+      ],
+      "damage": 18.7,
+      "cooldown": 0.757,
+      "range": 125,
+      "knockback": 5,
+      "crit_pct": 6,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 160
+      },
+      "price": 51,
+      "next_tier": "w_sickle_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_sickle_3": {
+      "name": "Освящённый серп-пила",
+      "texture": "w_sickle",
+      "tier": 3,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "spread"
+      ],
+      "damage": 30.8,
+      "cooldown": 0.733,
+      "range": 130,
+      "knockback": 5,
+      "crit_pct": 6,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 160
+      },
+      "price": 99,
+      "next_tier": "w_sickle_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_sickle_4": {
+      "name": "Заклятый серп-пила",
+      "texture": "w_sickle",
+      "tier": 4,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "spread"
+      ],
+      "damage": 49.5,
+      "cooldown": 0.702,
+      "range": 134,
+      "knockback": 5,
+      "crit_pct": 6,
+      "scaling": {
+        "melee_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 160
+      },
+      "price": 176,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
     "w_pike_1": {
       "name": "Копьё-пика",
       "texture": "w_pike",
@@ -1272,6 +1920,121 @@
       "price": 144,
       "unlock": {
         "type": "default"
+      }
+    },
+    "w_stilettos_1": {
+      "name": "Парные стилеты",
+      "texture": "w_stilettos",
+      "tier": 1,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "precise"
+      ],
+      "damage": 6.0,
+      "cooldown": 0.38,
+      "range": 90,
+      "knockback": 1,
+      "crit_pct": 18,
+      "scaling": {
+        "melee_dmg": 0.85,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 55
+      },
+      "price": 26,
+      "next_tier": "w_stilettos_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_stilettos_2": {
+      "name": "Точёный парные стилеты",
+      "texture": "w_stilettos",
+      "tier": 2,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "precise"
+      ],
+      "damage": 10.2,
+      "cooldown": 0.369,
+      "range": 94,
+      "knockback": 1,
+      "crit_pct": 18,
+      "scaling": {
+        "melee_dmg": 0.85,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 55
+      },
+      "price": 60,
+      "next_tier": "w_stilettos_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_stilettos_3": {
+      "name": "Освящённый парные стилеты",
+      "texture": "w_stilettos",
+      "tier": 3,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "precise"
+      ],
+      "damage": 16.8,
+      "cooldown": 0.357,
+      "range": 97,
+      "knockback": 1,
+      "crit_pct": 18,
+      "scaling": {
+        "melee_dmg": 0.85,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 55
+      },
+      "price": 117,
+      "next_tier": "w_stilettos_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_stilettos_4": {
+      "name": "Заклятый парные стилеты",
+      "texture": "w_stilettos",
+      "tier": 4,
+      "class": "melee",
+      "tags": [
+        "blade",
+        "precise"
+      ],
+      "damage": 27.0,
+      "cooldown": 0.342,
+      "range": 101,
+      "knockback": 1,
+      "crit_pct": 18,
+      "scaling": {
+        "melee_dmg": 0.85,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 55
+      },
+      "price": 208,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
       }
     },
     "w_nailer_1": {
@@ -1413,6 +2176,145 @@
         "type": "default"
       }
     },
+    "w_spiker_1": {
+      "name": "Шпилевик",
+      "texture": "w_spiker",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise"
+      ],
+      "damage": 9.0,
+      "cooldown": 0.7,
+      "range": 320,
+      "knockback": 3,
+      "crit_pct": 7,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 520,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 19,
+      "next_tier": "w_spiker_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_spiker_2": {
+      "name": "Точёный шпилевик",
+      "texture": "w_spiker",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise"
+      ],
+      "damage": 15.3,
+      "cooldown": 0.679,
+      "range": 333,
+      "knockback": 3,
+      "crit_pct": 7,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 520,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 44,
+      "next_tier": "w_spiker_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_spiker_3": {
+      "name": "Освящённый шпилевик",
+      "texture": "w_spiker",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise"
+      ],
+      "damage": 25.2,
+      "cooldown": 0.658,
+      "range": 346,
+      "knockback": 3,
+      "crit_pct": 7,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 520,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 86,
+      "next_tier": "w_spiker_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_spiker_4": {
+      "name": "Заклятый шпилевик",
+      "texture": "w_spiker",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise"
+      ],
+      "damage": 40.5,
+      "cooldown": 0.63,
+      "range": 358,
+      "knockback": 3,
+      "crit_pct": 7,
+      "scaling": {
+        "ranged_dmg": 1.0,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 520,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 152,
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
     "w_shotgun_1": {
       "name": "Обрез",
       "texture": "w_shotgun",
@@ -1552,6 +2454,145 @@
         "type": "default"
       }
     },
+    "w_autocannon_1": {
+      "name": "Автопушка",
+      "texture": "w_autocannon",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "heavy"
+      ],
+      "damage": 7.0,
+      "cooldown": 0.28,
+      "range": 260,
+      "knockback": 2,
+      "crit_pct": 3,
+      "scaling": {
+        "ranged_dmg": 0.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 12,
+        "speed": 460,
+        "pierce": 0,
+        "ttl": 0.9,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 28,
+      "next_tier": "w_autocannon_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_autocannon_2": {
+      "name": "Точёный автопушка",
+      "texture": "w_autocannon",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "heavy"
+      ],
+      "damage": 11.9,
+      "cooldown": 0.272,
+      "range": 270,
+      "knockback": 2,
+      "crit_pct": 3,
+      "scaling": {
+        "ranged_dmg": 0.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 12,
+        "speed": 460,
+        "pierce": 0,
+        "ttl": 0.9,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 64,
+      "next_tier": "w_autocannon_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_autocannon_3": {
+      "name": "Освящённый автопушка",
+      "texture": "w_autocannon",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "heavy"
+      ],
+      "damage": 19.6,
+      "cooldown": 0.263,
+      "range": 281,
+      "knockback": 2,
+      "crit_pct": 3,
+      "scaling": {
+        "ranged_dmg": 0.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 12,
+        "speed": 460,
+        "pierce": 0,
+        "ttl": 0.9,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 126,
+      "next_tier": "w_autocannon_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_autocannon_4": {
+      "name": "Заклятый автопушка",
+      "texture": "w_autocannon",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "heavy"
+      ],
+      "damage": 31.5,
+      "cooldown": 0.252,
+      "range": 291,
+      "knockback": 2,
+      "crit_pct": 3,
+      "scaling": {
+        "ranged_dmg": 0.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 12,
+        "speed": 460,
+        "pierce": 0,
+        "ttl": 0.9,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 224,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
     "w_carbine_1": {
       "name": "Лучевой карабин",
       "texture": "w_carbine",
@@ -1685,6 +2726,713 @@
       "price": 160,
       "unlock": {
         "type": "default"
+      }
+    },
+    "w_longbarrel_1": {
+      "name": "Длинноствол",
+      "texture": "w_longbarrel",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise",
+        "heavy"
+      ],
+      "damage": 30.0,
+      "cooldown": 2.1,
+      "range": 460,
+      "knockback": 10,
+      "crit_pct": 15,
+      "scaling": {
+        "ranged_dmg": 1.4,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 760,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 38,
+      "next_tier": "w_longbarrel_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_longbarrel_2": {
+      "name": "Точёный длинноствол",
+      "texture": "w_longbarrel",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise",
+        "heavy"
+      ],
+      "damage": 51.0,
+      "cooldown": 2.037,
+      "range": 478,
+      "knockback": 10,
+      "crit_pct": 15,
+      "scaling": {
+        "ranged_dmg": 1.4,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 760,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 87,
+      "next_tier": "w_longbarrel_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_longbarrel_3": {
+      "name": "Освящённый длинноствол",
+      "texture": "w_longbarrel",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise",
+        "heavy"
+      ],
+      "damage": 84.0,
+      "cooldown": 1.974,
+      "range": 497,
+      "knockback": 10,
+      "crit_pct": 15,
+      "scaling": {
+        "ranged_dmg": 1.4,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 760,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 171,
+      "next_tier": "w_longbarrel_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_longbarrel_4": {
+      "name": "Заклятый длинноствол",
+      "texture": "w_longbarrel",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "precise",
+        "heavy"
+      ],
+      "damage": 135.0,
+      "cooldown": 1.89,
+      "range": 515,
+      "knockback": 10,
+      "crit_pct": 15,
+      "scaling": {
+        "ranged_dmg": 1.4,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 760,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 304,
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_lance_1": {
+      "name": "Гарпунный арбалет",
+      "texture": "w_lance",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "precise",
+        "heavy"
+      ],
+      "damage": 26.0,
+      "cooldown": 1.8,
+      "range": 420,
+      "knockback": 14,
+      "crit_pct": 12,
+      "scaling": {
+        "ranged_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 700,
+        "pierce": 3,
+        "ttl": 1.2,
+        "size": 4,
+        "texture": "p_harpoon"
+      },
+      "price": 34,
+      "next_tier": "w_lance_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_lance_2": {
+      "name": "Точёный гарпунный арбалет",
+      "texture": "w_lance",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "precise",
+        "heavy"
+      ],
+      "damage": 44.2,
+      "cooldown": 1.746,
+      "range": 437,
+      "knockback": 14,
+      "crit_pct": 12,
+      "scaling": {
+        "ranged_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 700,
+        "pierce": 3,
+        "ttl": 1.2,
+        "size": 4,
+        "texture": "p_harpoon"
+      },
+      "price": 78,
+      "next_tier": "w_lance_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_lance_3": {
+      "name": "Освящённый гарпунный арбалет",
+      "texture": "w_lance",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "precise",
+        "heavy"
+      ],
+      "damage": 72.8,
+      "cooldown": 1.692,
+      "range": 454,
+      "knockback": 14,
+      "crit_pct": 12,
+      "scaling": {
+        "ranged_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 700,
+        "pierce": 3,
+        "ttl": 1.2,
+        "size": 4,
+        "texture": "p_harpoon"
+      },
+      "price": 153,
+      "next_tier": "w_lance_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_lance_4": {
+      "name": "Заклятый гарпунный арбалет",
+      "texture": "w_lance",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "precise",
+        "heavy"
+      ],
+      "damage": 117.0,
+      "cooldown": 1.62,
+      "range": 470,
+      "knockback": 14,
+      "crit_pct": 12,
+      "scaling": {
+        "ranged_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 700,
+        "pierce": 3,
+        "ttl": 1.2,
+        "size": 4,
+        "texture": "p_harpoon"
+      },
+      "price": 272,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_needler_1": {
+      "name": "Игломёт",
+      "texture": "w_needler",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "precise"
+      ],
+      "damage": 4.0,
+      "cooldown": 0.2,
+      "range": 240,
+      "knockback": 1,
+      "crit_pct": 10,
+      "scaling": {
+        "ranged_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 9,
+        "speed": 560,
+        "pierce": 0,
+        "ttl": 0.7,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 30,
+      "next_tier": "w_needler_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_needler_2": {
+      "name": "Точёный игломёт",
+      "texture": "w_needler",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "precise"
+      ],
+      "damage": 6.8,
+      "cooldown": 0.194,
+      "range": 250,
+      "knockback": 1,
+      "crit_pct": 10,
+      "scaling": {
+        "ranged_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 9,
+        "speed": 560,
+        "pierce": 0,
+        "ttl": 0.7,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 69,
+      "next_tier": "w_needler_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_needler_3": {
+      "name": "Освящённый игломёт",
+      "texture": "w_needler",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "precise"
+      ],
+      "damage": 11.2,
+      "cooldown": 0.188,
+      "range": 259,
+      "knockback": 1,
+      "crit_pct": 10,
+      "scaling": {
+        "ranged_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 9,
+        "speed": 560,
+        "pierce": 0,
+        "ttl": 0.7,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 135,
+      "next_tier": "w_needler_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_needler_4": {
+      "name": "Заклятый игломёт",
+      "texture": "w_needler",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "precise"
+      ],
+      "damage": 18.0,
+      "cooldown": 0.18,
+      "range": 269,
+      "knockback": 1,
+      "crit_pct": 10,
+      "scaling": {
+        "ranged_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 9,
+        "speed": 560,
+        "pierce": 0,
+        "ttl": 0.7,
+        "size": 4,
+        "texture": "p_spike"
+      },
+      "price": 240,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_grapeshot_1": {
+      "name": "Картечница",
+      "texture": "w_grapeshot",
+      "tier": 1,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "heavy"
+      ],
+      "damage": 6.0,
+      "cooldown": 1.45,
+      "range": 230,
+      "knockback": 9,
+      "crit_pct": 4,
+      "scaling": {
+        "ranged_dmg": 0.75,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 8,
+        "spread": 56,
+        "speed": 400,
+        "pierce": 0,
+        "ttl": 0.6,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 36,
+      "next_tier": "w_grapeshot_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_grapeshot_2": {
+      "name": "Точёный картечница",
+      "texture": "w_grapeshot",
+      "tier": 2,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "heavy"
+      ],
+      "damage": 10.2,
+      "cooldown": 1.406,
+      "range": 239,
+      "knockback": 9,
+      "crit_pct": 4,
+      "scaling": {
+        "ranged_dmg": 0.75,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 8,
+        "spread": 56,
+        "speed": 400,
+        "pierce": 0,
+        "ttl": 0.6,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 83,
+      "next_tier": "w_grapeshot_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_grapeshot_3": {
+      "name": "Освящённый картечница",
+      "texture": "w_grapeshot",
+      "tier": 3,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "heavy"
+      ],
+      "damage": 16.8,
+      "cooldown": 1.363,
+      "range": 248,
+      "knockback": 9,
+      "crit_pct": 4,
+      "scaling": {
+        "ranged_dmg": 0.75,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 8,
+        "spread": 56,
+        "speed": 400,
+        "pierce": 0,
+        "ttl": 0.6,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 162,
+      "next_tier": "w_grapeshot_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_grapeshot_4": {
+      "name": "Заклятый картечница",
+      "texture": "w_grapeshot",
+      "tier": 4,
+      "class": "ranged",
+      "tags": [
+        "gun",
+        "spread",
+        "heavy"
+      ],
+      "damage": 27.0,
+      "cooldown": 1.305,
+      "range": 258,
+      "knockback": 9,
+      "crit_pct": 4,
+      "scaling": {
+        "ranged_dmg": 0.75,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 8,
+        "spread": 56,
+        "speed": 400,
+        "pierce": 0,
+        "ttl": 0.6,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 288,
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_plasmacutter_1": {
+      "name": "Плазменный резак",
+      "texture": "w_plasmacutter",
+      "tier": 1,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 15.0,
+      "cooldown": 1.0,
+      "range": 200,
+      "knockback": 3,
+      "crit_pct": 6,
+      "scaling": {
+        "elem_dmg": 1.1,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 380,
+        "pierce": 4,
+        "ttl": 0.8,
+        "size": 7,
+        "texture": "p_plasma"
+      },
+      "price": 30,
+      "next_tier": "w_plasmacutter_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_plasmacutter_2": {
+      "name": "Точёный плазменный резак",
+      "texture": "w_plasmacutter",
+      "tier": 2,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 25.5,
+      "cooldown": 0.97,
+      "range": 208,
+      "knockback": 3,
+      "crit_pct": 6,
+      "scaling": {
+        "elem_dmg": 1.1,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 380,
+        "pierce": 4,
+        "ttl": 0.8,
+        "size": 7,
+        "texture": "p_plasma"
+      },
+      "price": 69,
+      "next_tier": "w_plasmacutter_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_plasmacutter_3": {
+      "name": "Освящённый плазменный резак",
+      "texture": "w_plasmacutter",
+      "tier": 3,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 42.0,
+      "cooldown": 0.94,
+      "range": 216,
+      "knockback": 3,
+      "crit_pct": 6,
+      "scaling": {
+        "elem_dmg": 1.1,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 380,
+        "pierce": 4,
+        "ttl": 0.8,
+        "size": 7,
+        "texture": "p_plasma"
+      },
+      "price": 135,
+      "next_tier": "w_plasmacutter_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_plasmacutter_4": {
+      "name": "Заклятый плазменный резак",
+      "texture": "w_plasmacutter",
+      "tier": 4,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 67.5,
+      "cooldown": 0.9,
+      "range": 224,
+      "knockback": 3,
+      "crit_pct": 6,
+      "scaling": {
+        "elem_dmg": 1.1,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 380,
+        "pierce": 4,
+        "ttl": 0.8,
+        "size": 7,
+        "texture": "p_plasma"
+      },
+      "price": 240,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
       }
     },
     "w_rod_1": {
@@ -1822,279 +3570,140 @@
         "type": "default"
       }
     },
-    "w_lance_1": {
-      "name": "Гарпунный арбалет",
-      "texture": "w_lance",
-      "tier": 1,
-      "class": "ranged",
-      "tags": [
-        "precise",
-        "heavy"
-      ],
-      "damage": 26.0,
-      "cooldown": 1.8,
-      "range": 420,
-      "knockback": 14,
-      "crit_pct": 12,
-      "scaling": {
-        "ranged_dmg": 1.3,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 1,
-        "spread": 0,
-        "speed": 700,
-        "pierce": 3,
-        "ttl": 1.2,
-        "size": 5,
-        "texture": "p_harpoon"
-      },
-      "price": 34,
-      "next_tier": "w_lance_2",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_lance_2": {
-      "name": "Точёный гарпунный арбалет",
-      "texture": "w_lance",
-      "tier": 2,
-      "class": "ranged",
-      "tags": [
-        "precise",
-        "heavy"
-      ],
-      "damage": 44.2,
-      "cooldown": 1.746,
-      "range": 437,
-      "knockback": 14,
-      "crit_pct": 12,
-      "scaling": {
-        "ranged_dmg": 1.3,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 1,
-        "spread": 0,
-        "speed": 700,
-        "pierce": 3,
-        "ttl": 1.2,
-        "size": 5,
-        "texture": "p_harpoon"
-      },
-      "price": 78,
-      "next_tier": "w_lance_3",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_lance_3": {
-      "name": "Освящённый гарпунный арбалет",
-      "texture": "w_lance",
-      "tier": 3,
-      "class": "ranged",
-      "tags": [
-        "precise",
-        "heavy"
-      ],
-      "damage": 72.8,
-      "cooldown": 1.692,
-      "range": 454,
-      "knockback": 14,
-      "crit_pct": 12,
-      "scaling": {
-        "ranged_dmg": 1.3,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 1,
-        "spread": 0,
-        "speed": 700,
-        "pierce": 3,
-        "ttl": 1.2,
-        "size": 5,
-        "texture": "p_harpoon"
-      },
-      "price": 153,
-      "next_tier": "w_lance_4",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_lance_4": {
-      "name": "Заклятый гарпунный арбалет",
-      "texture": "w_lance",
-      "tier": 4,
-      "class": "ranged",
-      "tags": [
-        "precise",
-        "heavy"
-      ],
-      "damage": 117.0,
-      "cooldown": 1.62,
-      "range": 470,
-      "knockback": 14,
-      "crit_pct": 12,
-      "scaling": {
-        "ranged_dmg": 1.3,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 1,
-        "spread": 0,
-        "speed": 700,
-        "pierce": 3,
-        "ttl": 1.2,
-        "size": 5,
-        "texture": "p_harpoon"
-      },
-      "price": 272,
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_flamer_1": {
-      "name": "Огнемёт",
-      "texture": "w_flamer",
+    "w_venomsprayer_1": {
+      "name": "Ядо-распылитель",
+      "texture": "w_venomsprayer",
       "tier": 1,
       "class": "elem",
       "tags": [
         "warp",
         "spread"
       ],
-      "damage": 4.0,
-      "cooldown": 0.22,
-      "range": 170,
-      "knockback": 1,
-      "crit_pct": 1,
-      "scaling": {
-        "elem_dmg": 0.6,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 2,
-        "spread": 22,
-        "speed": 260,
-        "pierce": 1,
-        "ttl": 0.55,
-        "size": 7,
-        "texture": "p_flame"
-      },
-      "price": 30,
-      "next_tier": "w_flamer_2",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_flamer_2": {
-      "name": "Точёный огнемёт",
-      "texture": "w_flamer",
-      "tier": 2,
-      "class": "elem",
-      "tags": [
-        "warp",
-        "spread"
-      ],
-      "damage": 6.8,
-      "cooldown": 0.213,
-      "range": 177,
-      "knockback": 1,
-      "crit_pct": 1,
-      "scaling": {
-        "elem_dmg": 0.6,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 2,
-        "spread": 22,
-        "speed": 260,
-        "pierce": 1,
-        "ttl": 0.55,
-        "size": 7,
-        "texture": "p_flame"
-      },
-      "price": 69,
-      "next_tier": "w_flamer_3",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_flamer_3": {
-      "name": "Освящённый огнемёт",
-      "texture": "w_flamer",
-      "tier": 3,
-      "class": "elem",
-      "tags": [
-        "warp",
-        "spread"
-      ],
-      "damage": 11.2,
-      "cooldown": 0.207,
-      "range": 184,
-      "knockback": 1,
-      "crit_pct": 1,
-      "scaling": {
-        "elem_dmg": 0.6,
-        "damage_pct": 1.0
-      },
-      "shape": {
-        "type": "projectile",
-        "count": 2,
-        "spread": 22,
-        "speed": 260,
-        "pierce": 1,
-        "ttl": 0.55,
-        "size": 7,
-        "texture": "p_flame"
-      },
-      "price": 135,
-      "next_tier": "w_flamer_4",
-      "unlock": {
-        "type": "relics",
-        "tier": 2
-      }
-    },
-    "w_flamer_4": {
-      "name": "Заклятый огнемёт",
-      "texture": "w_flamer",
-      "tier": 4,
-      "class": "elem",
-      "tags": [
-        "warp",
-        "spread"
-      ],
-      "damage": 18.0,
-      "cooldown": 0.198,
+      "damage": 5.0,
+      "cooldown": 0.35,
       "range": 190,
       "knockback": 1,
-      "crit_pct": 1,
+      "crit_pct": 2,
       "scaling": {
-        "elem_dmg": 0.6,
+        "elem_dmg": 0.7,
         "damage_pct": 1.0
       },
       "shape": {
         "type": "projectile",
-        "count": 2,
-        "spread": 22,
-        "speed": 260,
-        "pierce": 1,
-        "ttl": 0.55,
-        "size": 7,
-        "texture": "p_flame"
+        "count": 3,
+        "spread": 40,
+        "speed": 280,
+        "pierce": 0,
+        "ttl": 0.65,
+        "size": 6,
+        "texture": "p_venom"
       },
-      "price": 240,
+      "price": 27,
+      "next_tier": "w_venomsprayer_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_venomsprayer_2": {
+      "name": "Точёный ядо-распылитель",
+      "texture": "w_venomsprayer",
+      "tier": 2,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 8.5,
+      "cooldown": 0.339,
+      "range": 198,
+      "knockback": 1,
+      "crit_pct": 2,
+      "scaling": {
+        "elem_dmg": 0.7,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 3,
+        "spread": 40,
+        "speed": 280,
+        "pierce": 0,
+        "ttl": 0.65,
+        "size": 6,
+        "texture": "p_venom"
+      },
+      "price": 62,
+      "next_tier": "w_venomsprayer_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_venomsprayer_3": {
+      "name": "Освящённый ядо-распылитель",
+      "texture": "w_venomsprayer",
+      "tier": 3,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 14.0,
+      "cooldown": 0.329,
+      "range": 205,
+      "knockback": 1,
+      "crit_pct": 2,
+      "scaling": {
+        "elem_dmg": 0.7,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 3,
+        "spread": 40,
+        "speed": 280,
+        "pierce": 0,
+        "ttl": 0.65,
+        "size": 6,
+        "texture": "p_venom"
+      },
+      "price": 122,
+      "next_tier": "w_venomsprayer_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_venomsprayer_4": {
+      "name": "Заклятый ядо-распылитель",
+      "texture": "w_venomsprayer",
+      "tier": 4,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 22.5,
+      "cooldown": 0.315,
+      "range": 213,
+      "knockback": 1,
+      "crit_pct": 2,
+      "scaling": {
+        "elem_dmg": 0.7,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 3,
+        "spread": 40,
+        "speed": 280,
+        "pierce": 0,
+        "ttl": 0.65,
+        "size": 6,
+        "texture": "p_venom"
+      },
+      "price": 216,
       "unlock": {
         "type": "relics",
         "tier": 2
@@ -2123,7 +3732,7 @@
         "count": 3,
         "spread": 50,
         "speed": 430,
-        "pierce": 1,
+        "pierce": 0,
         "ttl": 0.9,
         "size": 5,
         "texture": "p_spark"
@@ -2158,7 +3767,7 @@
         "count": 3,
         "spread": 50,
         "speed": 430,
-        "pierce": 1,
+        "pierce": 0,
         "ttl": 0.9,
         "size": 5,
         "texture": "p_spark"
@@ -2193,7 +3802,7 @@
         "count": 3,
         "spread": 50,
         "speed": 430,
-        "pierce": 1,
+        "pierce": 0,
         "ttl": 0.9,
         "size": 5,
         "texture": "p_spark"
@@ -2228,12 +3837,822 @@
         "count": 3,
         "spread": 50,
         "speed": 430,
-        "pierce": 1,
+        "pierce": 0,
         "ttl": 0.9,
         "size": 5,
         "texture": "p_spark"
       },
       "price": 256,
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_sporegun_1": {
+      "name": "Споровая пушка",
+      "texture": "w_sporegun",
+      "tier": 1,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread",
+        "heavy"
+      ],
+      "damage": 12.0,
+      "cooldown": 1.55,
+      "range": 240,
+      "knockback": 6,
+      "crit_pct": 3,
+      "scaling": {
+        "elem_dmg": 1.15,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 24,
+        "speed": 250,
+        "pierce": 2,
+        "ttl": 1.3,
+        "size": 9,
+        "texture": "p_spore"
+      },
+      "price": 33,
+      "next_tier": "w_sporegun_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_sporegun_2": {
+      "name": "Точёный споровая пушка",
+      "texture": "w_sporegun",
+      "tier": 2,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread",
+        "heavy"
+      ],
+      "damage": 20.4,
+      "cooldown": 1.504,
+      "range": 250,
+      "knockback": 6,
+      "crit_pct": 3,
+      "scaling": {
+        "elem_dmg": 1.15,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 24,
+        "speed": 250,
+        "pierce": 2,
+        "ttl": 1.3,
+        "size": 9,
+        "texture": "p_spore"
+      },
+      "price": 76,
+      "next_tier": "w_sporegun_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_sporegun_3": {
+      "name": "Освящённый споровая пушка",
+      "texture": "w_sporegun",
+      "tier": 3,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread",
+        "heavy"
+      ],
+      "damage": 33.6,
+      "cooldown": 1.457,
+      "range": 259,
+      "knockback": 6,
+      "crit_pct": 3,
+      "scaling": {
+        "elem_dmg": 1.15,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 24,
+        "speed": 250,
+        "pierce": 2,
+        "ttl": 1.3,
+        "size": 9,
+        "texture": "p_spore"
+      },
+      "price": 148,
+      "next_tier": "w_sporegun_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_sporegun_4": {
+      "name": "Заклятый споровая пушка",
+      "texture": "w_sporegun",
+      "tier": 4,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread",
+        "heavy"
+      ],
+      "damage": 54.0,
+      "cooldown": 1.395,
+      "range": 269,
+      "knockback": 6,
+      "crit_pct": 3,
+      "scaling": {
+        "elem_dmg": 1.15,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 24,
+        "speed": 250,
+        "pierce": 2,
+        "ttl": 1.3,
+        "size": 9,
+        "texture": "p_spore"
+      },
+      "price": 264,
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_flamer_1": {
+      "name": "Огнемёт",
+      "texture": "w_flamer",
+      "tier": 1,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 4.0,
+      "cooldown": 0.22,
+      "range": 170,
+      "knockback": 1,
+      "crit_pct": 1,
+      "scaling": {
+        "elem_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 22,
+        "speed": 260,
+        "pierce": 1,
+        "ttl": 0.55,
+        "size": 7,
+        "texture": "p_flame"
+      },
+      "price": 30,
+      "next_tier": "w_flamer_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_flamer_2": {
+      "name": "Точёный огнемёт",
+      "texture": "w_flamer",
+      "tier": 2,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 6.8,
+      "cooldown": 0.213,
+      "range": 177,
+      "knockback": 1,
+      "crit_pct": 1,
+      "scaling": {
+        "elem_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 22,
+        "speed": 260,
+        "pierce": 1,
+        "ttl": 0.55,
+        "size": 7,
+        "texture": "p_flame"
+      },
+      "price": 69,
+      "next_tier": "w_flamer_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_flamer_3": {
+      "name": "Освящённый огнемёт",
+      "texture": "w_flamer",
+      "tier": 3,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 11.2,
+      "cooldown": 0.207,
+      "range": 184,
+      "knockback": 1,
+      "crit_pct": 1,
+      "scaling": {
+        "elem_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 22,
+        "speed": 260,
+        "pierce": 1,
+        "ttl": 0.55,
+        "size": 7,
+        "texture": "p_flame"
+      },
+      "price": 135,
+      "next_tier": "w_flamer_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_flamer_4": {
+      "name": "Заклятый огнемёт",
+      "texture": "w_flamer",
+      "tier": 4,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "spread"
+      ],
+      "damage": 18.0,
+      "cooldown": 0.198,
+      "range": 190,
+      "knockback": 1,
+      "crit_pct": 1,
+      "scaling": {
+        "elem_dmg": 0.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 2,
+        "spread": 22,
+        "speed": 260,
+        "pierce": 1,
+        "ttl": 0.55,
+        "size": 7,
+        "texture": "p_flame"
+      },
+      "price": 240,
+      "unlock": {
+        "type": "relics",
+        "tier": 1
+      }
+    },
+    "w_icelens_1": {
+      "name": "Ледяная линза",
+      "texture": "w_icelens",
+      "tier": 1,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 18.0,
+      "cooldown": 1.4,
+      "range": 340,
+      "knockback": 12,
+      "crit_pct": 9,
+      "scaling": {
+        "elem_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 480,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 6,
+        "texture": "p_ice"
+      },
+      "price": 35,
+      "next_tier": "w_icelens_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_icelens_2": {
+      "name": "Точёный ледяная линза",
+      "texture": "w_icelens",
+      "tier": 2,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 30.6,
+      "cooldown": 1.358,
+      "range": 354,
+      "knockback": 12,
+      "crit_pct": 9,
+      "scaling": {
+        "elem_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 480,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 6,
+        "texture": "p_ice"
+      },
+      "price": 80,
+      "next_tier": "w_icelens_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_icelens_3": {
+      "name": "Освящённый ледяная линза",
+      "texture": "w_icelens",
+      "tier": 3,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 50.4,
+      "cooldown": 1.316,
+      "range": 367,
+      "knockback": 12,
+      "crit_pct": 9,
+      "scaling": {
+        "elem_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 480,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 6,
+        "texture": "p_ice"
+      },
+      "price": 158,
+      "next_tier": "w_icelens_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_icelens_4": {
+      "name": "Заклятый ледяная линза",
+      "texture": "w_icelens",
+      "tier": 4,
+      "class": "elem",
+      "tags": [
+        "warp",
+        "precise"
+      ],
+      "damage": 81.0,
+      "cooldown": 1.26,
+      "range": 381,
+      "knockback": 12,
+      "crit_pct": 9,
+      "scaling": {
+        "elem_dmg": 1.3,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 480,
+        "pierce": 2,
+        "ttl": 1.1,
+        "size": 6,
+        "texture": "p_ice"
+      },
+      "price": 280,
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_turret_1": {
+      "name": "Автотурель",
+      "texture": "w_turret",
+      "tier": 1,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "gun"
+      ],
+      "damage": 8.0,
+      "cooldown": 0.6,
+      "range": 270,
+      "knockback": 2,
+      "crit_pct": 4,
+      "scaling": {
+        "engineering": 1.5,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 440,
+        "pierce": 0,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 24,
+      "next_tier": "w_turret_2",
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "w_turret_2": {
+      "name": "Точёный автотурель",
+      "texture": "w_turret",
+      "tier": 2,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "gun"
+      ],
+      "damage": 13.6,
+      "cooldown": 0.582,
+      "range": 281,
+      "knockback": 2,
+      "crit_pct": 4,
+      "scaling": {
+        "engineering": 1.5,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 440,
+        "pierce": 0,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 55,
+      "next_tier": "w_turret_3",
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "w_turret_3": {
+      "name": "Освящённый автотурель",
+      "texture": "w_turret",
+      "tier": 3,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "gun"
+      ],
+      "damage": 22.4,
+      "cooldown": 0.564,
+      "range": 292,
+      "knockback": 2,
+      "crit_pct": 4,
+      "scaling": {
+        "engineering": 1.5,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 440,
+        "pierce": 0,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 108,
+      "next_tier": "w_turret_4",
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "w_turret_4": {
+      "name": "Заклятый автотурель",
+      "texture": "w_turret",
+      "tier": 4,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "gun"
+      ],
+      "damage": 36.0,
+      "cooldown": 0.54,
+      "range": 302,
+      "knockback": 2,
+      "crit_pct": 4,
+      "scaling": {
+        "engineering": 1.5,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 440,
+        "pierce": 0,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_slug"
+      },
+      "price": 192,
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "w_bonemine_1": {
+      "name": "Костяная мина",
+      "texture": "w_bonemine",
+      "tier": 1,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "heavy"
+      ],
+      "damage": 26.0,
+      "cooldown": 2.2,
+      "range": 150,
+      "knockback": 16,
+      "crit_pct": 2,
+      "scaling": {
+        "engineering": 1.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 360
+      },
+      "price": 29,
+      "next_tier": "w_bonemine_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_bonemine_2": {
+      "name": "Точёный костяная мина",
+      "texture": "w_bonemine",
+      "tier": 2,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "heavy"
+      ],
+      "damage": 44.2,
+      "cooldown": 2.134,
+      "range": 156,
+      "knockback": 16,
+      "crit_pct": 2,
+      "scaling": {
+        "engineering": 1.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 360
+      },
+      "price": 67,
+      "next_tier": "w_bonemine_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_bonemine_3": {
+      "name": "Освящённый костяная мина",
+      "texture": "w_bonemine",
+      "tier": 3,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "heavy"
+      ],
+      "damage": 72.8,
+      "cooldown": 2.068,
+      "range": 162,
+      "knockback": 16,
+      "crit_pct": 2,
+      "scaling": {
+        "engineering": 1.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 360
+      },
+      "price": 130,
+      "next_tier": "w_bonemine_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_bonemine_4": {
+      "name": "Заклятый костяная мина",
+      "texture": "w_bonemine",
+      "tier": 4,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "heavy"
+      ],
+      "damage": 117.0,
+      "cooldown": 1.98,
+      "range": 168,
+      "knockback": 16,
+      "crit_pct": 2,
+      "scaling": {
+        "engineering": 1.8,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "arc",
+        "angle": 360
+      },
+      "price": 232,
+      "unlock": {
+        "type": "relics",
+        "tier": 2
+      }
+    },
+    "w_forgedrone_1": {
+      "name": "Литейный дрон",
+      "texture": "w_forgedrone",
+      "tier": 1,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "precise"
+      ],
+      "damage": 10.0,
+      "cooldown": 0.85,
+      "range": 300,
+      "knockback": 2,
+      "crit_pct": 7,
+      "scaling": {
+        "engineering": 1.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 500,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 31,
+      "next_tier": "w_forgedrone_2",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_forgedrone_2": {
+      "name": "Точёный литейный дрон",
+      "texture": "w_forgedrone",
+      "tier": 2,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "precise"
+      ],
+      "damage": 17.0,
+      "cooldown": 0.825,
+      "range": 312,
+      "knockback": 2,
+      "crit_pct": 7,
+      "scaling": {
+        "engineering": 1.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 500,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 71,
+      "next_tier": "w_forgedrone_3",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_forgedrone_3": {
+      "name": "Освящённый литейный дрон",
+      "texture": "w_forgedrone",
+      "tier": 3,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "precise"
+      ],
+      "damage": 28.0,
+      "cooldown": 0.799,
+      "range": 324,
+      "knockback": 2,
+      "crit_pct": 7,
+      "scaling": {
+        "engineering": 1.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 500,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 140,
+      "next_tier": "w_forgedrone_4",
+      "unlock": {
+        "type": "relics",
+        "tier": 3
+      }
+    },
+    "w_forgedrone_4": {
+      "name": "Заклятый литейный дрон",
+      "texture": "w_forgedrone",
+      "tier": 4,
+      "class": "engi",
+      "tags": [
+        "construct",
+        "precise"
+      ],
+      "damage": 45.0,
+      "cooldown": 0.765,
+      "range": 336,
+      "knockback": 2,
+      "crit_pct": 7,
+      "scaling": {
+        "engineering": 1.6,
+        "damage_pct": 1.0
+      },
+      "shape": {
+        "type": "projectile",
+        "count": 1,
+        "spread": 0,
+        "speed": 500,
+        "pierce": 1,
+        "ttl": 1.0,
+        "size": 4,
+        "texture": "p_beam"
+      },
+      "price": 248,
       "unlock": {
         "type": "relics",
         "tier": 3
@@ -2298,6 +4717,169 @@
       "stats": {
         "armor": 2,
         "move_speed_pct": -4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_whetstone": {
+      "name": "Точильный камень",
+      "desc": "Скрип по железу успокаивает.",
+      "texture": "it_whetstone",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "blade"
+      ],
+      "stats": {
+        "melee_dmg": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_powder_horn": {
+      "name": "Пороховница",
+      "desc": "Сухая. Пока что.",
+      "texture": "it_powder_horn",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "gun"
+      ],
+      "stats": {
+        "ranged_dmg": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_tallow": {
+      "name": "Свечное сало",
+      "desc": "Мажут раны и петли.",
+      "texture": "it_tallow",
+      "tier": 1,
+      "price": 10,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "hp_regen": 1
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_scrap_charm": {
+      "name": "Оберег из хлама",
+      "desc": "Работает, если верить.",
+      "texture": "it_scrap_charm",
+      "tier": 1,
+      "price": 11,
+      "tags": [
+        "primitive"
+      ],
+      "stats": {
+        "luck": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_worn_boots": {
+      "name": "Стоптанные башмаки",
+      "desc": "Помнят больше дорог, чем ты.",
+      "texture": "it_worn_boots",
+      "tier": 1,
+      "price": 11,
+      "tags": [],
+      "stats": {
+        "move_speed_pct": 5
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_cracked_lens": {
+      "name": "Треснувшая линза",
+      "desc": "Двоится, зато далеко.",
+      "texture": "it_cracked_lens",
+      "tier": 1,
+      "price": 13,
+      "tags": [
+        "precise"
+      ],
+      "stats": {
+        "range": 1,
+        "crit_pct": 2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_rag_wrap": {
+      "name": "Тряпичная намотка",
+      "desc": "Не броня, но лучше, чем ничего.",
+      "texture": "it_rag_wrap",
+      "tier": 1,
+      "price": 10,
+      "tags": [],
+      "stats": {
+        "max_hp": 4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_bone_charm": {
+      "name": "Костяной амулет",
+      "desc": "Чей-то. Уже неважно.",
+      "texture": "it_bone_charm",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "primitive"
+      ],
+      "stats": {
+        "crit_pct": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_gear_bit": {
+      "name": "Обломок шестерни",
+      "desc": "Зубьев не хватает, а крутится.",
+      "texture": "it_gear_bit",
+      "tier": 1,
+      "price": 13,
+      "tags": [
+        "construct"
+      ],
+      "stats": {
+        "engineering": 2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_ember_shard": {
+      "name": "Уголёк",
+      "desc": "Всё ещё тёплый.",
+      "texture": "it_ember_shard",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "elem_dmg": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_thin_blade": {
+      "name": "Тонкое лезвие",
+      "desc": "Ломается, но успевает.",
+      "texture": "it_thin_blade",
+      "tier": 1,
+      "price": 12,
+      "tags": [
+        "blade"
+      ],
+      "stats": {
+        "attack_speed_pct": 4,
+        "melee_dmg": 1
       },
       "effect": null,
       "coop_only": false
@@ -2383,6 +4965,226 @@
       "effect": null,
       "coop_only": false
     },
+    "it_chain_belt": {
+      "name": "Цепной пояс",
+      "desc": "Звенит на каждом шаге.",
+      "texture": "it_chain_belt",
+      "tier": 2,
+      "price": 27,
+      "tags": [
+        "blunt"
+      ],
+      "stats": {
+        "knockback": 4,
+        "melee_dmg": 4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_tithe_ledger": {
+      "name": "Книга десятины",
+      "desc": "Аккуратный почерк, страшные цифры.",
+      "texture": "it_tithe_ledger",
+      "tier": 2,
+      "price": 29,
+      "tags": [],
+      "stats": {
+        "tithe": 2
+      },
+      "effect": {
+        "trigger": "wave_end",
+        "type": "give_ash",
+        "value": 6
+      },
+      "coop_only": false
+    },
+    "it_spare_barrel": {
+      "name": "Запасной ствол",
+      "desc": "Меняют, пока не остыл.",
+      "texture": "it_spare_barrel",
+      "tier": 2,
+      "price": 26,
+      "tags": [
+        "gun"
+      ],
+      "stats": {
+        "ranged_dmg": 5,
+        "move_speed_pct": -2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_nerve_stim": {
+      "name": "Нервный стимулятор",
+      "desc": "Руки быстрее головы.",
+      "texture": "it_nerve_stim",
+      "tier": 2,
+      "price": 31,
+      "tags": [],
+      "stats": {
+        "attack_speed_pct": 9,
+        "max_hp": -3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_scrap_plating": {
+      "name": "Обшивка из хлама",
+      "desc": "Гремит, но держит.",
+      "texture": "it_scrap_plating",
+      "tier": 2,
+      "price": 28,
+      "tags": [
+        "heavy",
+        "construct"
+      ],
+      "stats": {
+        "armor": 3,
+        "attack_speed_pct": -4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_carrion_hook": {
+      "name": "Крюк падальщика",
+      "desc": "Тянет к себе всё, что упало.",
+      "texture": "it_carrion_hook",
+      "tier": 2,
+      "price": 25,
+      "tags": [],
+      "stats": {
+        "tithe": 1,
+        "luck": 4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_warp_sliver": {
+      "name": "Осколок разлома",
+      "desc": "Холодный на ощупь и на слух.",
+      "texture": "it_warp_sliver",
+      "tier": 2,
+      "price": 30,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "elem_dmg": 5,
+        "hp_regen": -1
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_padded_hood": {
+      "name": "Подбитый капюшон",
+      "desc": "Гасит и удары, и голоса.",
+      "texture": "it_padded_hood",
+      "tier": 2,
+      "price": 27,
+      "tags": [],
+      "stats": {
+        "max_hp": 8,
+        "dodge_pct": 2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_oiled_gears": {
+      "name": "Промасленные шестерни",
+      "desc": "Не скрипят — уже победа.",
+      "texture": "it_oiled_gears",
+      "tier": 2,
+      "price": 29,
+      "tags": [
+        "construct"
+      ],
+      "stats": {
+        "engineering": 3,
+        "attack_speed_pct": 3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_blood_vial": {
+      "name": "Пузырёк крови",
+      "desc": "Не спрашивай чьей.",
+      "texture": "it_blood_vial",
+      "tier": 2,
+      "price": 32,
+      "tags": [],
+      "stats": {
+        "lifesteal_pct": 4
+      },
+      "effect": {
+        "trigger": "on_kill",
+        "type": "heal",
+        "value": 0.2
+      },
+      "coop_only": false
+    },
+    "it_hunters_mark": {
+      "name": "Метка охотника",
+      "desc": "Ставится один раз.",
+      "texture": "it_hunters_mark",
+      "tier": 2,
+      "price": 26,
+      "tags": [
+        "precise"
+      ],
+      "stats": {
+        "crit_pct": 6,
+        "max_hp": -2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_ash_filter": {
+      "name": "Пепельный фильтр",
+      "desc": "Дышать всё ещё нечем, но реже.",
+      "texture": "it_ash_filter",
+      "tier": 2,
+      "price": 24,
+      "tags": [],
+      "stats": {
+        "hp_regen": 2,
+        "move_speed_pct": -2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_split_shot": {
+      "name": "Разводной приклад",
+      "desc": "Бьёт шире, целит хуже.",
+      "texture": "it_split_shot",
+      "tier": 2,
+      "price": 30,
+      "tags": [
+        "spread"
+      ],
+      "stats": {
+        "ranged_dmg": 3,
+        "range": -1,
+        "attack_speed_pct": 6
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_iron_nails": {
+      "name": "Гвозди в подошве",
+      "desc": "Идёшь громко, зато твёрдо.",
+      "texture": "it_iron_nails",
+      "tier": 2,
+      "price": 25,
+      "tags": [
+        "primitive"
+      ],
+      "stats": {
+        "melee_dmg": 5,
+        "move_speed_pct": -3
+      },
+      "effect": null,
+      "coop_only": false
+    },
     "it_martyr_nail": {
       "name": "Гвоздь мученика",
       "desc": "Боль — тоже форма молитвы.",
@@ -2451,6 +5253,195 @@
       "effect": null,
       "coop_only": false
     },
+    "it_choir_scroll": {
+      "name": "Свиток хора",
+      "desc": "Поют даже когда закрыт.",
+      "texture": "it_choir_scroll",
+      "tier": 3,
+      "price": 57,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "damage_pct": 8,
+        "attack_speed_pct": -5
+      },
+      "effect": {
+        "trigger": "wave_end",
+        "type": "add_stat",
+        "stat": "max_hp",
+        "value": 2
+      },
+      "coop_only": false
+    },
+    "it_rust_crown": {
+      "name": "Ржавый венец",
+      "desc": "Тяжелее, чем выглядит.",
+      "texture": "it_rust_crown",
+      "tier": 3,
+      "price": 59,
+      "tags": [
+        "heavy"
+      ],
+      "stats": {
+        "armor": 4,
+        "max_hp": 10,
+        "move_speed_pct": -9
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_thorn_mantle": {
+      "name": "Терновая мантия",
+      "desc": "Колет и своего.",
+      "texture": "it_thorn_mantle",
+      "tier": 3,
+      "price": 61,
+      "tags": [],
+      "stats": {
+        "melee_dmg": 8,
+        "hp_regen": -2
+      },
+      "effect": {
+        "trigger": "on_hit",
+        "type": "thorns",
+        "value": 3
+      },
+      "coop_only": false
+    },
+    "it_leech_grub": {
+      "name": "Личинка-пиявка",
+      "desc": "Шевелится под кожей.",
+      "texture": "it_leech_grub",
+      "tier": 3,
+      "price": 63,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "lifesteal_pct": 8,
+        "max_hp_pct": -8
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_focus_prism": {
+      "name": "Фокусирующая призма",
+      "desc": "Свет собирается в точку.",
+      "texture": "it_focus_prism",
+      "tier": 3,
+      "price": 58,
+      "tags": [
+        "precise"
+      ],
+      "stats": {
+        "range": 4,
+        "crit_pct": 7,
+        "attack_speed_pct": -6
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_scrap_engine": {
+      "name": "Хламовый движок",
+      "desc": "Работает вопреки чертежу.",
+      "texture": "it_scrap_engine",
+      "tier": 3,
+      "price": 64,
+      "tags": [
+        "construct"
+      ],
+      "stats": {
+        "engineering": 6,
+        "elem_dmg": 4,
+        "armor": -2
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_famine_bowl": {
+      "name": "Чаша голода",
+      "desc": "Пустеет быстрее, чем наполняется.",
+      "texture": "it_famine_bowl",
+      "tier": 3,
+      "price": 56,
+      "tags": [],
+      "stats": {
+        "tithe": 4,
+        "luck": 6,
+        "max_hp": -6
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_storm_coil": {
+      "name": "Грозовая катушка",
+      "desc": "Волосы дыбом на три шага вокруг.",
+      "texture": "it_storm_coil",
+      "tier": 3,
+      "price": 62,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "elem_dmg": 9,
+        "hp_regen": -1,
+        "move_speed_pct": -3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_dead_weight": {
+      "name": "Мёртвый груз",
+      "desc": "Держит на земле, когда несёт.",
+      "texture": "it_dead_weight",
+      "tier": 3,
+      "price": 55,
+      "tags": [
+        "heavy"
+      ],
+      "stats": {
+        "knockback": 8,
+        "melee_dmg": 6,
+        "dodge_pct": -4
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_pale_mask": {
+      "name": "Бледная маска",
+      "desc": "Своё лицо начинаешь забывать.",
+      "texture": "it_pale_mask",
+      "tier": 3,
+      "price": 60,
+      "tags": [
+        "precise"
+      ],
+      "stats": {
+        "dodge_pct": 10,
+        "damage_pct": 5,
+        "max_hp": -8
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_ember_lung": {
+      "name": "Угольное лёгкое",
+      "desc": "Каждый вдох — с искрой.",
+      "texture": "it_ember_lung",
+      "tier": 3,
+      "price": 59,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "elem_dmg": 7,
+        "attack_speed_pct": 5,
+        "armor": -3
+      },
+      "effect": null,
+      "coop_only": false
+    },
     "it_reliquary": {
       "name": "Малый реликварий",
       "desc": "Внутри — чей-то палец. Помогает.",
@@ -2506,6 +5497,124 @@
       "effect": null,
       "coop_only": false
     },
+    "it_martyrs_crown": {
+      "name": "Венец мученика",
+      "desc": "Носят недолго и не снимают.",
+      "texture": "it_martyrs_crown",
+      "tier": 4,
+      "price": 125,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "damage_pct": 25,
+        "crit_pct": 8,
+        "max_hp_pct": -20
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_gilded_ledger": {
+      "name": "Золочёная книга",
+      "desc": "Считает даже то, чего нет.",
+      "texture": "it_gilded_ledger",
+      "tier": 4,
+      "price": 118,
+      "tags": [],
+      "stats": {
+        "tithe": 8,
+        "luck": 10,
+        "damage_pct": -8
+      },
+      "effect": {
+        "trigger": "wave_end",
+        "type": "give_ash_pct",
+        "value": 5
+      },
+      "coop_only": false
+    },
+    "it_hollow_engine": {
+      "name": "Полый двигатель",
+      "desc": "Гудит там, где должно быть сердце.",
+      "texture": "it_hollow_engine",
+      "tier": 4,
+      "price": 122,
+      "tags": [
+        "construct"
+      ],
+      "stats": {
+        "engineering": 10,
+        "attack_speed_pct": 10,
+        "max_hp_pct": -12
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_second_skin": {
+      "name": "Вторая кожа",
+      "desc": "Первая уже не годилась.",
+      "texture": "it_second_skin",
+      "tier": 4,
+      "price": 116,
+      "tags": [],
+      "stats": {
+        "armor": 6,
+        "dodge_pct": 8,
+        "damage_pct": -10
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_glass_edge": {
+      "name": "Стеклянное лезвие",
+      "desc": "Разрежет что угодно. Один раз.",
+      "texture": "it_glass_edge",
+      "tier": 4,
+      "price": 124,
+      "tags": [
+        "blade",
+        "precise"
+      ],
+      "stats": {
+        "crit_pct": 20,
+        "melee_dmg": 12,
+        "max_hp_pct": -25
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_wailing_core": {
+      "name": "Воющее ядро",
+      "desc": "Слышно за две арены.",
+      "texture": "it_wailing_core",
+      "tier": 4,
+      "price": 121,
+      "tags": [
+        "warp"
+      ],
+      "stats": {
+        "elem_dmg": 14,
+        "range": 3,
+        "hp_regen": -3
+      },
+      "effect": null,
+      "coop_only": false
+    },
+    "it_ash_heart": {
+      "name": "Пепельное сердце",
+      "desc": "Бьётся тихо и ровно.",
+      "texture": "it_ash_heart",
+      "tier": 4,
+      "price": 119,
+      "tags": [],
+      "stats": {
+        "lifesteal_pct": 10,
+        "max_hp": 15,
+        "attack_speed_pct": -10
+      },
+      "effect": null,
+      "coop_only": false
+    },
     "it_choir_bell": {
       "name": "Хоровой колокол",
       "desc": "Слышен всем, кто ещё стоит.",
@@ -2546,6 +5655,63 @@
         "radius": 260
       },
       "coop_only": true
+    },
+    "it_blood_pact": {
+      "name": "Кровный уговор",
+      "desc": "Больно обоим, зато поровну.",
+      "texture": "it_blood_pact",
+      "tier": 3,
+      "price": 60,
+      "tags": [],
+      "stats": {
+        "lifesteal_pct": 5,
+        "max_hp": -6
+      },
+      "effect": {
+        "trigger": "aura",
+        "type": "ally_stat",
+        "stat": "lifesteal_pct",
+        "value": 3,
+        "radius": 240
+      },
+      "coop_only": true
+    },
+    "it_lifting_hand": {
+      "name": "Поднимающая рука",
+      "desc": "Тянет вверх, пока сама стоит.",
+      "texture": "it_lifting_hand",
+      "tier": 2,
+      "price": 28,
+      "tags": [
+        "holy"
+      ],
+      "stats": {
+        "hp_regen": 1
+      },
+      "effect": {
+        "trigger": "ally_revive",
+        "type": "heal",
+        "value": 6
+      },
+      "coop_only": true
+    },
+    "it_shared_purse": {
+      "name": "Общий кошель",
+      "desc": "Дно у него одно на всех.",
+      "texture": "it_shared_purse",
+      "tier": 4,
+      "price": 117,
+      "tags": [],
+      "stats": {
+        "tithe": 5,
+        "damage_pct": -5
+      },
+      "effect": {
+        "trigger": "wave_end",
+        "type": "give_pot",
+        "value": 12
+      },
+      "coop_only": true
     }
   },
   "enemies": {
@@ -2558,7 +5724,8 @@
       "damage": 3,
       "speed": 92,
       "size": 14,
-      "ash": 2,
+      "sprite": 48,
+      "ash": 3,
       "xp": 1,
       "score": 2,
       "arenas": [
@@ -2566,8 +5733,7 @@
       ],
       "min_wave": 1,
       "max_wave": 12,
-      "weight": 10,
-      "sprite": 48
+      "weight": 10
     },
     "e_flesh": {
       "name": "Ком плоти",
@@ -2578,6 +5744,7 @@
       "damage": 7,
       "speed": 62,
       "size": 20,
+      "sprite": 48,
       "ash": 4,
       "xp": 2,
       "score": 5,
@@ -2587,8 +5754,7 @@
       "min_wave": 2,
       "max_wave": 20,
       "weight": 6,
-      "knockback_resist": 0.6,
-      "sprite": 48
+      "knockback_resist": 0.6
     },
     "e_spitter": {
       "name": "Плевальщик",
@@ -2599,6 +5765,7 @@
       "damage": 5,
       "speed": 70,
       "size": 15,
+      "sprite": 48,
       "ash": 3,
       "xp": 2,
       "score": 4,
@@ -2616,10 +5783,483 @@
           "speed": 260,
           "ttl": 1.6,
           "size": 6,
-          "texture": "p_spit"
+          "texture": "p_venom"
         }
-      },
-      "sprite": 48
+      }
+    },
+    "e_hiverat": {
+      "name": "Ульевая крыса",
+      "texture": "e_hiverat",
+      "color": "#7a6a5a",
+      "ai": "chase",
+      "hp": 5,
+      "damage": 2,
+      "speed": 118,
+      "size": 11,
+      "sprite": 48,
+      "ash": 2,
+      "xp": 1,
+      "score": 1,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 1,
+      "max_wave": 8,
+      "weight": 8
+    },
+    "e_zealot": {
+      "name": "Одержимый",
+      "texture": "e_zealot",
+      "color": "#c8703a",
+      "ai": "charger",
+      "hp": 18,
+      "damage": 8,
+      "speed": 84,
+      "size": 16,
+      "sprite": 48,
+      "ash": 3,
+      "xp": 2,
+      "score": 5,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 4,
+      "max_wave": 20,
+      "weight": 6
+    },
+    "e_bomber": {
+      "name": "Смертник",
+      "texture": "e_bomber",
+      "color": "#a8442a",
+      "ai": "bomber",
+      "hp": 14,
+      "damage": 16,
+      "speed": 100,
+      "size": 16,
+      "sprite": 48,
+      "ash": 4,
+      "xp": 3,
+      "score": 7,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 5,
+      "max_wave": 20,
+      "weight": 4
+    },
+    "e_censerbearer": {
+      "name": "Кадиленосец",
+      "texture": "e_censerbearer",
+      "color": "#c8a35a",
+      "ai": "support",
+      "hp": 22,
+      "damage": 4,
+      "speed": 66,
+      "size": 17,
+      "sprite": 48,
+      "ash": 5,
+      "xp": 3,
+      "score": 8,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 7,
+      "max_wave": 20,
+      "weight": 3
+    },
+    "e_scavenger": {
+      "name": "Падальщик",
+      "texture": "e_scavenger",
+      "color": "#8aa84a",
+      "ai": "chase",
+      "hp": 10,
+      "damage": 4,
+      "speed": 104,
+      "size": 14,
+      "sprite": 48,
+      "ash": 2,
+      "xp": 1,
+      "score": 3,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 1,
+      "max_wave": 12,
+      "weight": 10
+    },
+    "e_brute": {
+      "name": "Верзила",
+      "texture": "e_brute",
+      "color": "#6d8f3a",
+      "ai": "chase",
+      "hp": 44,
+      "damage": 11,
+      "speed": 56,
+      "size": 24,
+      "sprite": 64,
+      "ash": 6,
+      "xp": 4,
+      "score": 12,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 4,
+      "max_wave": 20,
+      "weight": 5,
+      "knockback_resist": 0.8
+    },
+    "e_slinger": {
+      "name": "Метатель",
+      "texture": "e_slinger",
+      "color": "#9a8a4a",
+      "ai": "shooter",
+      "hp": 13,
+      "damage": 6,
+      "speed": 76,
+      "size": 15,
+      "sprite": 48,
+      "ash": 3,
+      "xp": 2,
+      "score": 5,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 2,
+      "max_wave": 20,
+      "weight": 6,
+      "attack": {
+        "cooldown": 1.9,
+        "range": 340,
+        "keep_dist": 250,
+        "projectile": {
+          "speed": 300,
+          "ttl": 1.5,
+          "size": 5,
+          "texture": "p_slug"
+        }
+      }
+    },
+    "e_ashhound": {
+      "name": "Пепельный пёс",
+      "texture": "e_ashhound",
+      "color": "#7a7060",
+      "ai": "charger",
+      "hp": 12,
+      "damage": 6,
+      "speed": 132,
+      "size": 13,
+      "sprite": 48,
+      "ash": 2,
+      "xp": 2,
+      "score": 4,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 3,
+      "max_wave": 20,
+      "weight": 7
+    },
+    "e_chainganger": {
+      "name": "Цепник",
+      "texture": "e_chainganger",
+      "color": "#8a5a3a",
+      "ai": "chase",
+      "hp": 30,
+      "damage": 9,
+      "speed": 74,
+      "size": 19,
+      "sprite": 48,
+      "ash": 5,
+      "xp": 3,
+      "score": 9,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 6,
+      "max_wave": 20,
+      "weight": 5
+    },
+    "e_scrapthrower": {
+      "name": "Хламомёт",
+      "texture": "e_scrapthrower",
+      "color": "#a89a5a",
+      "ai": "orbiter",
+      "hp": 20,
+      "damage": 7,
+      "speed": 88,
+      "size": 17,
+      "sprite": 48,
+      "ash": 4,
+      "xp": 3,
+      "score": 7,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 7,
+      "max_wave": 20,
+      "weight": 4,
+      "attack": {
+        "cooldown": 1.5,
+        "range": 280,
+        "keep_dist": 200,
+        "projectile": {
+          "speed": 320,
+          "ttl": 1.2,
+          "size": 6,
+          "texture": "p_slug"
+        }
+      }
+    },
+    "e_husk": {
+      "name": "Литая шелуха",
+      "texture": "e_husk",
+      "color": "#5a6a6a",
+      "ai": "chase",
+      "hp": 16,
+      "damage": 5,
+      "speed": 68,
+      "size": 15,
+      "sprite": 48,
+      "ash": 3,
+      "xp": 2,
+      "score": 4,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 1,
+      "max_wave": 14,
+      "weight": 9,
+      "knockback_resist": 0.7
+    },
+    "e_drone": {
+      "name": "Верфный дрон",
+      "texture": "e_drone",
+      "color": "#2fa8a0",
+      "ai": "orbiter",
+      "hp": 14,
+      "damage": 5,
+      "speed": 112,
+      "size": 13,
+      "sprite": 48,
+      "ash": 3,
+      "xp": 2,
+      "score": 5,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 2,
+      "max_wave": 20,
+      "weight": 7,
+      "attack": {
+        "cooldown": 1.7,
+        "range": 300,
+        "keep_dist": 230,
+        "projectile": {
+          "speed": 380,
+          "ttl": 1.3,
+          "size": 5,
+          "texture": "p_beam"
+        }
+      }
+    },
+    "e_swarmlet": {
+      "name": "Рой-мелочь",
+      "texture": "e_swarmlet",
+      "color": "#4d8f6b",
+      "ai": "splitter",
+      "hp": 7,
+      "damage": 3,
+      "speed": 124,
+      "size": 10,
+      "sprite": 48,
+      "ash": 1,
+      "xp": 1,
+      "score": 2,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 1,
+      "max_wave": 20,
+      "weight": 9
+    },
+    "e_warden": {
+      "name": "Сторожевой литой",
+      "texture": "e_warden",
+      "color": "#3a8a86",
+      "ai": "chase",
+      "hp": 56,
+      "damage": 13,
+      "speed": 48,
+      "size": 26,
+      "sprite": 64,
+      "ash": 8,
+      "xp": 5,
+      "score": 16,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 5,
+      "max_wave": 20,
+      "weight": 4,
+      "knockback_resist": 0.9
+    },
+    "e_hatcher": {
+      "name": "Кладочник",
+      "texture": "e_hatcher",
+      "color": "#6aa88a",
+      "ai": "summoner",
+      "hp": 34,
+      "damage": 6,
+      "speed": 58,
+      "size": 20,
+      "sprite": 48,
+      "ash": 6,
+      "xp": 4,
+      "score": 12,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 6,
+      "max_wave": 20,
+      "weight": 3
+    },
+    "el_butcherling": {
+      "name": "Мясничий выродок",
+      "texture": "el_butcherling",
+      "color": "#9a4a5a",
+      "ai": "chase",
+      "hp": 156.0,
+      "damage": 11.2,
+      "speed": 62,
+      "size": 36,
+      "sprite": 64,
+      "ash": 32,
+      "xp": 8,
+      "score": 30,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 2,
+      "max_wave": 20,
+      "weight": 6,
+      "knockback_resist": 0.7,
+      "elite": true,
+      "of": "e_flesh"
+    },
+    "el_archzealot": {
+      "name": "Архиодержимый",
+      "texture": "el_archzealot",
+      "color": "#c8703a",
+      "ai": "charger",
+      "hp": 108.0,
+      "damage": 12.8,
+      "speed": 84,
+      "size": 29,
+      "sprite": 64,
+      "ash": 24,
+      "xp": 8,
+      "score": 30,
+      "arenas": [
+        "ar_hive"
+      ],
+      "min_wave": 4,
+      "max_wave": 20,
+      "weight": 6,
+      "elite": true,
+      "of": "e_zealot",
+      "knockback_resist": 0.7
+    },
+    "el_warboss": {
+      "name": "Вожак-верзила",
+      "texture": "el_warboss",
+      "color": "#6d8f3a",
+      "ai": "chase",
+      "hp": 264.0,
+      "damage": 17.6,
+      "speed": 56,
+      "size": 43,
+      "sprite": 64,
+      "ash": 48,
+      "xp": 16,
+      "score": 72,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 4,
+      "max_wave": 20,
+      "weight": 5,
+      "knockback_resist": 0.8,
+      "elite": true,
+      "of": "e_brute"
+    },
+    "el_houndmaster": {
+      "name": "Псарь",
+      "texture": "el_houndmaster",
+      "color": "#7a7060",
+      "ai": "charger",
+      "hp": 72.0,
+      "damage": 9.6,
+      "speed": 132,
+      "size": 23,
+      "sprite": 64,
+      "ash": 16,
+      "xp": 8,
+      "score": 24,
+      "arenas": [
+        "ar_ash"
+      ],
+      "min_wave": 3,
+      "max_wave": 20,
+      "weight": 7,
+      "elite": true,
+      "of": "e_ashhound",
+      "knockback_resist": 0.7
+    },
+    "el_ironwarden": {
+      "name": "Железный страж",
+      "texture": "el_ironwarden",
+      "color": "#3a8a86",
+      "ai": "chase",
+      "hp": 336.0,
+      "damage": 20.8,
+      "speed": 48,
+      "size": 47,
+      "sprite": 64,
+      "ash": 64,
+      "xp": 20,
+      "score": 96,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 5,
+      "max_wave": 20,
+      "weight": 4,
+      "knockback_resist": 0.9,
+      "elite": true,
+      "of": "e_warden"
+    },
+    "el_broodqueen": {
+      "name": "Матка кладки",
+      "texture": "el_broodqueen",
+      "color": "#6aa88a",
+      "ai": "summoner",
+      "hp": 204.0,
+      "damage": 9.6,
+      "speed": 58,
+      "size": 36,
+      "sprite": 64,
+      "ash": 48,
+      "xp": 16,
+      "score": 72,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "min_wave": 6,
+      "max_wave": 20,
+      "weight": 3,
+      "elite": true,
+      "of": "e_hatcher",
+      "knockback_resist": 0.7
     }
   },
   "bosses": {
@@ -2636,11 +6276,11 @@
       "ash": 60,
       "xp": 40,
       "score": 250,
-      "knockback_resist": 0.95,
       "arenas": [
         "ar_hive"
       ],
       "boss": true,
+      "knockback_resist": 0.95,
       "phases": [
         {
           "hp_pct": 1.0,
@@ -2668,22 +6308,11 @@
       "ash": 140,
       "xp": 90,
       "score": 600,
-      "knockback_resist": 1.0,
       "arenas": [
         "ar_hive"
       ],
       "boss": true,
-      "attack": {
-        "cooldown": 1.6,
-        "range": 460,
-        "keep_dist": 300,
-        "projectile": {
-          "speed": 260,
-          "ttl": 2.2,
-          "size": 9,
-          "texture": "p_warp"
-        }
-      },
+      "knockback_resist": 1.0,
       "phases": [
         {
           "hp_pct": 1.0,
@@ -2696,7 +6325,168 @@
           "speed_mult": 1.3,
           "cooldown_mult": 0.55
         }
+      ],
+      "attack": {
+        "cooldown": 1.6,
+        "range": 460,
+        "keep_dist": 300,
+        "projectile": {
+          "speed": 260,
+          "ttl": 2.2,
+          "size": 9,
+          "texture": "p_warp"
+        }
+      }
+    },
+    "b_iron_chief": {
+      "name": "Железный Вожак",
+      "texture": "b_iron_chief",
+      "color": "#6d8f3a",
+      "ai": "charger",
+      "hp": 1000,
+      "damage": 18,
+      "speed": 64,
+      "size": 46,
+      "sprite": 112,
+      "ash": 65,
+      "xp": 42,
+      "score": 270,
+      "arenas": [
+        "ar_ash"
+      ],
+      "boss": true,
+      "knockback_resist": 0.95,
+      "phases": [
+        {
+          "hp_pct": 1.0,
+          "pattern": "charge",
+          "speed_mult": 1.0
+        },
+        {
+          "hp_pct": 0.6,
+          "pattern": "chase",
+          "speed_mult": 1.7,
+          "damage_mult": 1.3
+        }
       ]
+    },
+    "b_ash_titan": {
+      "name": "Пепельный Титан",
+      "texture": "b_ash_titan",
+      "color": "#a89a5a",
+      "ai": "chase",
+      "hp": 2600,
+      "damage": 24,
+      "speed": 40,
+      "size": 58,
+      "sprite": 128,
+      "ash": 150,
+      "xp": 95,
+      "score": 650,
+      "arenas": [
+        "ar_ash"
+      ],
+      "boss": true,
+      "knockback_resist": 1.0,
+      "phases": [
+        {
+          "hp_pct": 1.0,
+          "pattern": "chase",
+          "speed_mult": 1.0
+        },
+        {
+          "hp_pct": 0.6,
+          "pattern": "charge",
+          "speed_mult": 1.5,
+          "damage_mult": 1.4
+        }
+      ]
+    },
+    "b_cast_sentinel": {
+      "name": "Литой Сторож",
+      "texture": "b_cast_sentinel",
+      "color": "#2fa8a0",
+      "ai": "shooter",
+      "hp": 1100,
+      "damage": 17,
+      "speed": 44,
+      "size": 48,
+      "sprite": 112,
+      "ash": 70,
+      "xp": 45,
+      "score": 290,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "boss": true,
+      "knockback_resist": 1.0,
+      "phases": [
+        {
+          "hp_pct": 1.0,
+          "pattern": "shooter",
+          "speed_mult": 1.0
+        },
+        {
+          "hp_pct": 0.6,
+          "pattern": "spiral",
+          "speed_mult": 1.2,
+          "cooldown_mult": 0.5
+        }
+      ],
+      "attack": {
+        "cooldown": 1.4,
+        "range": 420,
+        "keep_dist": 280,
+        "projectile": {
+          "speed": 420,
+          "ttl": 1.6,
+          "size": 7,
+          "texture": "p_beam"
+        }
+      }
+    },
+    "b_barrow_lord": {
+      "name": "Курганный Владыка",
+      "texture": "b_barrow_lord",
+      "color": "#3a8a86",
+      "ai": "summoner",
+      "hp": 2800,
+      "damage": 22,
+      "speed": 42,
+      "size": 56,
+      "sprite": 128,
+      "ash": 160,
+      "xp": 100,
+      "score": 700,
+      "arenas": [
+        "ar_tomb"
+      ],
+      "boss": true,
+      "knockback_resist": 1.0,
+      "phases": [
+        {
+          "hp_pct": 1.0,
+          "pattern": "shooter",
+          "speed_mult": 1.0
+        },
+        {
+          "hp_pct": 0.6,
+          "pattern": "spiral",
+          "speed_mult": 1.4,
+          "cooldown_mult": 0.6
+        }
+      ],
+      "attack": {
+        "cooldown": 1.8,
+        "range": 440,
+        "keep_dist": 290,
+        "projectile": {
+          "speed": 300,
+          "ttl": 2.0,
+          "size": 8,
+          "texture": "p_warp"
+        }
+      }
     }
   },
   "arenas": {
@@ -2707,16 +6497,83 @@
         "gr_hive_a"
       ],
       "ground_color": "#1a1c22",
-      "decor": [],
+      "decor": [
+        "dc_pipe"
+      ],
       "enemy_pool": [
         "e_cultist",
         "e_flesh",
-        "e_spitter"
+        "e_spitter",
+        "e_hiverat",
+        "e_zealot",
+        "e_bomber",
+        "e_censerbearer"
+      ],
+      "elite_pool": [
+        "el_butcherling",
+        "el_archzealot"
       ],
       "boss_mid": "b_butcher",
       "boss_final": "b_rift_father",
       "unlock": {
         "type": "default"
+      }
+    },
+    "ar_ash": {
+      "name": "Пепельные Пустоши",
+      "desc": "Пепел по колено, кости и обломки того, что летало.",
+      "ground": [
+        "gr_ash_a"
+      ],
+      "ground_color": "#221f1a",
+      "decor": [
+        "dc_bones"
+      ],
+      "enemy_pool": [
+        "e_scavenger",
+        "e_brute",
+        "e_slinger",
+        "e_ashhound",
+        "e_chainganger",
+        "e_scrapthrower"
+      ],
+      "elite_pool": [
+        "el_warboss",
+        "el_houndmaster"
+      ],
+      "boss_mid": "b_iron_chief",
+      "boss_final": "b_ash_titan",
+      "unlock": {
+        "type": "relics",
+        "cost": 400
+      }
+    },
+    "ar_tomb": {
+      "name": "Мёртвая Верфь",
+      "desc": "Тёмный металл, зелёные руны и то, что ещё шевелится в трюмах.",
+      "ground": [
+        "gr_tomb_a"
+      ],
+      "ground_color": "#141a1c",
+      "decor": [
+        "dc_hull"
+      ],
+      "enemy_pool": [
+        "e_husk",
+        "e_drone",
+        "e_swarmlet",
+        "e_warden",
+        "e_hatcher"
+      ],
+      "elite_pool": [
+        "el_ironwarden",
+        "el_broodqueen"
+      ],
+      "boss_mid": "b_cast_sentinel",
+      "boss_final": "b_barrow_lord",
+      "unlock": {
+        "type": "relics",
+        "cost": 1000
       }
     }
   },
@@ -2729,6 +6586,30 @@
         "value": 10
       }
     },
+    "ac_wave20": {
+      "name": "Двадцатая волна",
+      "desc": "Дойти до волны 20.",
+      "cond": {
+        "type": "reach_wave",
+        "value": 20
+      }
+    },
+    "ac_first_win": {
+      "name": "Первый пепел",
+      "desc": "Победить в забеге.",
+      "cond": {
+        "type": "wins",
+        "value": 1
+      }
+    },
+    "ac_win_d1": {
+      "name": "Ратное дело",
+      "desc": "Победить на сложности «Ратник».",
+      "cond": {
+        "type": "win_danger",
+        "value": 1
+      }
+    },
     "ac_win_d2": {
       "name": "Крестовый поход",
       "desc": "Победить на сложности «Крестоносец».",
@@ -2737,12 +6618,44 @@
         "value": 2
       }
     },
+    "ac_win_d3": {
+      "name": "Мученический венец",
+      "desc": "Победить на сложности «Мученик».",
+      "cond": {
+        "type": "win_danger",
+        "value": 3
+      }
+    },
     "ac_coop4": {
       "name": "Плечом к плечу",
       "desc": "Победить в комнате из 4+ игроков.",
       "cond": {
         "type": "win_coop",
         "value": 4
+      }
+    },
+    "ac_coop8": {
+      "name": "Полный хор",
+      "desc": "Победить в комнате из 8 игроков.",
+      "cond": {
+        "type": "win_coop",
+        "value": 8
+      }
+    },
+    "ac_boss5": {
+      "name": "Разделочник",
+      "desc": "Убить 5 боссов.",
+      "cond": {
+        "type": "bosses",
+        "value": 5
+      }
+    },
+    "ac_kills1000": {
+      "name": "Тысяча имён",
+      "desc": "Убить 1000 врагов за всё время.",
+      "cond": {
+        "type": "kills",
+        "value": 1000
       }
     }
   },

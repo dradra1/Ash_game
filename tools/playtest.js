@@ -124,14 +124,20 @@ function playOne(seed) {
         m = mergeable(p, config);
       }
       for (let pass = 0; pass < 3; pass++) {
+        // Пока слоты пустые, оружие важнее предметов: один ствол не выносит волну
+        const needWeapons = freeSlotIndex(p) >= 0
+          && p.slots.filter((s) => s.cfg).length < 3;
+        for (let pri = 0; pri < 2; pri++) {
         for (let i = 0; i < shop.slots.length; i++) {
           const s = shop.slots[i];
           if (!s.cfg || s.sold) continue;
+          if (needWeapons && pri === 0 && s.kind !== 'weapon') continue;
           if (s.kind === 'weapon' && freeSlotIndex(p) < 0) continue;
           if (p.ash < s.price) continue;
           const res = buy(p, shop, i, config, () => refreshStats(p, config));
           if (res === 'ok') bought++;
           else if (process.env.PT_DEBUG) console.log('  отказ', s.kind, s.id, s.price, res, 'прах', Math.floor(p.ash));
+        }
         }
         // Реролл как у человека: если ничего не по карману, но реролл по карману —
         // крутим в надежде на что-то дешевле; если по карману покупка, крутим только
