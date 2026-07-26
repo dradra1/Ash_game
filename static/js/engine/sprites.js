@@ -19,6 +19,24 @@ export function getSprite(textureId) {
   return s;
 }
 
+// Рисует одиночную иконку (оружие, предмет, UI) с центром в (x, y),
+// вписывая всё изображение в квадрат size×size с сохранением пропорций.
+// Возвращает true, если нарисовано; false — вызывающий рисует плейсхолдер.
+export function drawIcon(ctx, textureId, x, y, size) {
+  const s = getSprite(textureId);
+  if (!s || !s.ready || s.failed) return false;
+  const img = s.img;
+  const maxSide = Math.max(img.width, img.height);
+  if (maxSide <= 0) return false;
+  const scale = size / maxSide;
+  const dw = Math.round(img.width * scale);
+  const dh = Math.round(img.height * scale);
+  const dx = Math.round(x - dw / 2);
+  const dy = Math.round(y - dh / 2);
+  ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
+  return true;
+}
+
 // Рисует кадр dir/frame листа с центром в (x, y), масштабируя до size.
 // Возвращает true, если нарисовано; false — вызывающий рисует плейсхолдер.
 export function drawSheet(ctx, textureId, dir, frame, x, y, size) {

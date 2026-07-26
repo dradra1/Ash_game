@@ -27,7 +27,7 @@ REPO = os.path.join(ROOT, "config", "game_config.json")
 LIVE = os.path.join(os.environ.get("ASH_DATA", os.path.join(ROOT, "data")),
                     "game_config.json")
 
-CONTENT_VERSION = 3
+CONTENT_VERSION = 4
 
 
 def patch(cfg):

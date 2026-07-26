@@ -18,8 +18,11 @@ def ranged(cooldown, rng, keep, speed, ttl, size, texture):
 #     арены, min/max волна, вес, доп.
 ENEMIES = {
     # --- Улей-Город: культисты, мутанты, бомберы ------------------------
+    # ash=3, а не 2: проход M4 показал, что ранние смерти лечатся темпом набора
+    # арсенала, а не живучестью (BALANCE.md §7). Правка жила только в конфиге и
+    # была снесена очередным патчем — теперь она здесь, в источнике правды.
     "e_cultist": dict(name="Культист", color="#8a6a4a", ai=CHASE, hp=8, damage=3,
-                      speed=92, size=14, ash=2, xp=1, score=2,
+                      speed=92, size=14, ash=3, xp=1, score=2,
                       arenas=["ar_hive"], min_wave=1, max_wave=12, weight=10),
     "e_flesh": dict(name="Ком плоти", color="#9a4a5a", ai=CHASE, hp=26, damage=7,
                     speed=62, size=20, ash=4, xp=2, score=5, kb=0.6,
@@ -29,7 +32,7 @@ ENEMIES = {
                       attack=ranged(2.2, 300, 220, 260, 1.6, 6, "p_venom"),
                       arenas=["ar_hive"], min_wave=3, max_wave=20, weight=5),
     "e_hiverat": dict(name="Ульевая крыса", color="#7a6a5a", ai=CHASE, hp=5, damage=2,
-                      speed=118, size=11, ash=1, xp=1, score=1,
+                      speed=118, size=11, ash=2, xp=1, score=1,
                       arenas=["ar_hive"], min_wave=1, max_wave=8, weight=8),
     "e_zealot": dict(name="Одержимый", color="#c8703a", ai=CHARGER, hp=18, damage=8,
                      speed=84, size=16, ash=3, xp=2, score=5,

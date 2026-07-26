@@ -1,5 +1,5 @@
 {
-  "content_version": 3,
+  "content_version": 4,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -1614,7 +1614,7 @@
       }
     },
     "w_claws_2": {
-      "name": "Точёный костяные когти",
+      "name": "Точёные костяные когти",
       "texture": "w_claws",
       "tier": 2,
       "class": "melee",
@@ -1642,7 +1642,7 @@
       }
     },
     "w_claws_3": {
-      "name": "Освящённый костяные когти",
+      "name": "Освящённые костяные когти",
       "texture": "w_claws",
       "tier": 3,
       "class": "melee",
@@ -1670,7 +1670,7 @@
       }
     },
     "w_claws_4": {
-      "name": "Заклятый костяные когти",
+      "name": "Заклятые костяные когти",
       "texture": "w_claws",
       "tier": 4,
       "class": "melee",
@@ -1840,7 +1840,7 @@
       }
     },
     "w_pike_2": {
-      "name": "Точёный копьё-пика",
+      "name": "Точёное копьё-пика",
       "texture": "w_pike",
       "tier": 2,
       "class": "melee",
@@ -1868,7 +1868,7 @@
       }
     },
     "w_pike_3": {
-      "name": "Освящённый копьё-пика",
+      "name": "Освящённое копьё-пика",
       "texture": "w_pike",
       "tier": 3,
       "class": "melee",
@@ -1896,7 +1896,7 @@
       }
     },
     "w_pike_4": {
-      "name": "Заклятый копьё-пика",
+      "name": "Заклятое копьё-пика",
       "texture": "w_pike",
       "tier": 4,
       "class": "melee",
@@ -1952,7 +1952,7 @@
       }
     },
     "w_stilettos_2": {
-      "name": "Точёный парные стилеты",
+      "name": "Точёные парные стилеты",
       "texture": "w_stilettos",
       "tier": 2,
       "class": "melee",
@@ -1981,7 +1981,7 @@
       }
     },
     "w_stilettos_3": {
-      "name": "Освящённый парные стилеты",
+      "name": "Освящённые парные стилеты",
       "texture": "w_stilettos",
       "tier": 3,
       "class": "melee",
@@ -2010,7 +2010,7 @@
       }
     },
     "w_stilettos_4": {
-      "name": "Заклятый парные стилеты",
+      "name": "Заклятые парные стилеты",
       "texture": "w_stilettos",
       "tier": 4,
       "class": "melee",
@@ -2490,7 +2490,7 @@
       }
     },
     "w_autocannon_2": {
-      "name": "Точёный автопушка",
+      "name": "Точёная автопушка",
       "texture": "w_autocannon",
       "tier": 2,
       "class": "ranged",
@@ -2525,7 +2525,7 @@
       }
     },
     "w_autocannon_3": {
-      "name": "Освящённый автопушка",
+      "name": "Освящённая автопушка",
       "texture": "w_autocannon",
       "tier": 3,
       "class": "ranged",
@@ -2560,7 +2560,7 @@
       }
     },
     "w_autocannon_4": {
-      "name": "Заклятый автопушка",
+      "name": "Заклятая автопушка",
       "texture": "w_autocannon",
       "tier": 4,
       "class": "ranged",
@@ -3190,7 +3190,7 @@
       }
     },
     "w_grapeshot_2": {
-      "name": "Точёный картечница",
+      "name": "Точёная картечница",
       "texture": "w_grapeshot",
       "tier": 2,
       "class": "ranged",
@@ -3226,7 +3226,7 @@
       }
     },
     "w_grapeshot_3": {
-      "name": "Освящённый картечница",
+      "name": "Освящённая картечница",
       "texture": "w_grapeshot",
       "tier": 3,
       "class": "ranged",
@@ -3262,7 +3262,7 @@
       }
     },
     "w_grapeshot_4": {
-      "name": "Заклятый картечница",
+      "name": "Заклятая картечница",
       "texture": "w_grapeshot",
       "tier": 4,
       "class": "ranged",
@@ -3885,7 +3885,7 @@
       }
     },
     "w_sporegun_2": {
-      "name": "Точёный споровая пушка",
+      "name": "Точёная споровая пушка",
       "texture": "w_sporegun",
       "tier": 2,
       "class": "elem",
@@ -3921,7 +3921,7 @@
       }
     },
     "w_sporegun_3": {
-      "name": "Освящённый споровая пушка",
+      "name": "Освящённая споровая пушка",
       "texture": "w_sporegun",
       "tier": 3,
       "class": "elem",
@@ -3957,7 +3957,7 @@
       }
     },
     "w_sporegun_4": {
-      "name": "Заклятый споровая пушка",
+      "name": "Заклятая споровая пушка",
       "texture": "w_sporegun",
       "tier": 4,
       "class": "elem",
@@ -4166,7 +4166,7 @@
       }
     },
     "w_icelens_2": {
-      "name": "Точёный ледяная линза",
+      "name": "Точёная ледяная линза",
       "texture": "w_icelens",
       "tier": 2,
       "class": "elem",
@@ -4201,7 +4201,7 @@
       }
     },
     "w_icelens_3": {
-      "name": "Освящённый ледяная линза",
+      "name": "Освящённая ледяная линза",
       "texture": "w_icelens",
       "tier": 3,
       "class": "elem",
@@ -4236,7 +4236,7 @@
       }
     },
     "w_icelens_4": {
-      "name": "Заклятый ледяная линза",
+      "name": "Заклятая ледяная линза",
       "texture": "w_icelens",
       "tier": 4,
       "class": "elem",
@@ -4304,7 +4304,7 @@
       }
     },
     "w_turret_2": {
-      "name": "Точёный автотурель",
+      "name": "Точёная автотурель",
       "texture": "w_turret",
       "tier": 2,
       "class": "engi",
@@ -4338,7 +4338,7 @@
       }
     },
     "w_turret_3": {
-      "name": "Освящённый автотурель",
+      "name": "Освящённая автотурель",
       "texture": "w_turret",
       "tier": 3,
       "class": "engi",
@@ -4372,7 +4372,7 @@
       }
     },
     "w_turret_4": {
-      "name": "Заклятый автотурель",
+      "name": "Заклятая автотурель",
       "texture": "w_turret",
       "tier": 4,
       "class": "engi",
@@ -4434,7 +4434,7 @@
       }
     },
     "w_bonemine_2": {
-      "name": "Точёный костяная мина",
+      "name": "Точёная костяная мина",
       "texture": "w_bonemine",
       "tier": 2,
       "class": "engi",
@@ -4463,7 +4463,7 @@
       }
     },
     "w_bonemine_3": {
-      "name": "Освящённый костяная мина",
+      "name": "Освящённая костяная мина",
       "texture": "w_bonemine",
       "tier": 3,
       "class": "engi",
@@ -4492,7 +4492,7 @@
       }
     },
     "w_bonemine_4": {
-      "name": "Заклятый костяная мина",
+      "name": "Заклятая костяная мина",
       "texture": "w_bonemine",
       "tier": 4,
       "class": "engi",

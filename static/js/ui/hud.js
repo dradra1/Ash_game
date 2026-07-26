@@ -2,7 +2,7 @@
 // Рисуется на том же canvas в экранных координатах (после renderer.end()).
 // Все подписи — только через t('ui.hud.*'), ни одной строки текста в коде.
 
-import { drawSheet } from '../engine/sprites.js';
+import { drawIcon } from '../engine/sprites.js';
 
 export function createHud(config, t) {
   const h = config.render.hud;
@@ -59,7 +59,7 @@ export function createHud(config, t) {
 
       if (slot && slot.cfg) {
         const w = slot.cfg;
-        if (!drawSheet(ctx, w.texture, 0, 0, sx + h.slot / 2, sy + h.slot / 2, h.slot - 6)) {
+        if (!drawIcon(ctx, w.texture, sx + h.slot / 2, sy + h.slot / 2, h.slot - 6)) {
           ctx.fillStyle = config.shop.tier_color[w.tier - 1] || h.text;
           ctx.fillRect(sx + 8, sy + 8, h.slot - 16, h.slot - 16);
         }
