@@ -16,6 +16,7 @@ import { createSpawner, spawnPoint } from './spawn.js';
 import { createShop } from './shop.js';
 import { createEconomy } from './economy.js';
 import { createLevelUp } from './level.js';
+import { buildArenaLayout, createPropIndex, separateFromProps } from './arena.js';
 import { resolveCurseFx, curseStatMods, applyCurseToDanger } from './curses.js';
 
 export const PHASE_INTRO = 'intro';
@@ -85,6 +86,12 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     }
     state.players.push(pl);
   }
+
+  // Раскладка арены выводится из сида отдельным rng и по сети не передаётся:
+  // кооп-клиент строит ту же самую из (seed, arenaId, размер). Порядок важен —
+  // layout обязан быть построен до пулов, но своим rng, не общим.
+  const layout = buildArenaLayout(config, arenaId, seed, arenaW, arenaH);
+  const propIndex = createPropIndex(layout, config);
 
   const enemyPool = createPool(config.sim.max_enemies_cap, makeEnemy, resetEnemy);
   const projPool = createPool(config.sim.max_projectiles, makeProjectile, resetProjectile);
@@ -178,7 +185,9 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
           * dangerCfg.ash_mult * curseFx.ash_drop_mult;
       }
       const xpAmount = e.xp * curseFx.xp_mult;
-      dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
+      const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
+      // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
+      if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
       // Опыт в коопе НЕ делится: каждый получает полный XP со всех убийств
       for (let i = 0; i < state.players.length; i++) {
         if (state.players[i].alive) addXp(state.players[i], config, xpAmount);
@@ -243,7 +252,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
 
   const enemyDeps = {
     config, players: state.players, rng,
-    fireProjectile, hitPlayer,
+    fireProjectile, hitPlayer, propIndex,
   };
   const weaponDeps = {
     config, rng, enemyPool, enemyGrid: shifted, queryBuf, projPool, damageEnemy,
@@ -255,7 +264,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   const pickupDeps = { config, players: state.players, onCollect };
   const spawnDeps = {
     config, players: state.players, rng, pool: enemyPool,
-    wave: 1, danger: dangerCfg, arenaId, arenaW, arenaH, curseFx,
+    wave: 1, danger: dangerCfg, arenaId, arenaW, arenaH, curseFx, propIndex,
   };
 
   function findPlayer(id) {
@@ -309,7 +318,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       * (1 + config.coop.boss_hp_per_player * (state.players.length - 1));
     e.hp = e.maxHp;
     e.boss = true;
-    if (!spawnPoint(config, rng, state.players, bossPoint, 8, arenaW, arenaH)) {
+    if (!spawnPoint(config, rng, state.players, bossPoint, 8, arenaW, arenaH, propIndex)) {
       bossPoint.x = arenaW / 2;
       bossPoint.y = config.arena.spawn_margin;
     }
@@ -514,7 +523,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
 
     // На левелапе мир стоит: только UI выбора
     if (state.phase !== PHASE_LEVELUP) {
-      stepPlayers(state.players, dt, config, arenaW, arenaH);
+      stepPlayers(state.players, dt, config, arenaW, arenaH, propIndex);
     }
 
     if (state.phase === PHASE_WAVE) {
@@ -665,7 +674,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     economy, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,
     noteShopBuy, curseFx,
     cheatAddAsh, cheatLevelUp, cheatGodMode, cheatKillAll, cheatSkipWave,
-    danger: dangerCfg, arenaW, arenaH,
+    danger: dangerCfg, arenaW, arenaH, layout, propIndex,
   };
 }
 

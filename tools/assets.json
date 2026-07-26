@@ -1221,5 +1221,181 @@
       "view": "side",
       "prompt": "two curved arrows chasing each other in a circle"
     }
+  },
+  "world": {
+    "dc_pipe": {
+      "tool": "create_map_object",
+      "gen": 192,
+      "fit": 96,
+      "view": "high top-down",
+      "prompt": "a tangled heap of burst industrial pipes and broken conduit, rusted iron, torn insulation wrap, dark sludge pooling between them, seen from above as a low impassable pile"
+    },
+    "dc_girder": {
+      "tool": "create_map_object",
+      "gen": 176,
+      "fit": 88,
+      "view": "high top-down",
+      "prompt": "a collapsed roof girder snapped in two, buckled steel beam half buried in rubble and broken masonry, seen from above as a low impassable heap"
+    },
+    "dc_container": {
+      "tool": "create_map_object",
+      "gen": 208,
+      "fit": 104,
+      "view": "high top-down",
+      "prompt": "a crushed cargo container lying on its side, dented ribbed steel walls, peeling paint, spilled crates jammed underneath, seen from above as a low solid block"
+    },
+    "dc_vent": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "prompt": "a squat rusted ventilation stack with a bent grille cowl and soot-blackened mouth, bolted to a low concrete base, seen from above"
+    },
+    "dc_bones": {
+      "tool": "create_map_object",
+      "gen": 192,
+      "fit": 96,
+      "view": "high top-down",
+      "prompt": "a heaped drift of huge pale weathered bones, cracked ribs and long limb bones tangled together and half sunk in grey ash, seen from above as a low impassable mound"
+    },
+    "dc_wreck": {
+      "tool": "create_map_object",
+      "gen": 224,
+      "fit": 112,
+      "view": "high top-down",
+      "prompt": "the broken nose section of a crashed flying machine, torn dark hull plating, snapped ribs of the frame, buried at an angle in ash, seen from above as a low solid mass"
+    },
+    "dc_scrap": {
+      "tool": "create_map_object",
+      "gen": 160,
+      "fit": 80,
+      "view": "high top-down",
+      "prompt": "a heap of rusted scrap metal, crumpled sheet plate, coiled wire and torn machine parts welded into a low mound by rust, seen from above"
+    },
+    "dc_rock": {
+      "tool": "create_map_object",
+      "gen": 144,
+      "fit": 72,
+      "view": "high top-down",
+      "prompt": "a cluster of jagged dark volcanic rock outcrops pushing up through grey ash, sharp angular facets, seen from above as a low impassable clump"
+    },
+    "dc_hull": {
+      "tool": "create_map_object",
+      "gen": 224,
+      "fit": 112,
+      "view": "high top-down",
+      "prompt": "a torn section of a ship hull lying on the deck, dark tarnished metal plating, exposed frame ribs, verdigris streaks in the seams, seen from above as a low solid mass"
+    },
+    "dc_monolith": {
+      "tool": "create_map_object",
+      "gen": 160,
+      "fit": 80,
+      "view": "high top-down",
+      "prompt": "a squat toppled stone marker slab, dark engraved surface with worn carved lines and dim green glow in the grooves, cracked base, seen from above"
+    },
+    "dc_cradle": {
+      "tool": "create_map_object",
+      "gen": 192,
+      "fit": 96,
+      "view": "high top-down",
+      "prompt": "a heavy dark metal cargo cradle frame, thick angled struts and clamp arms, empty and half collapsed, seen from above as a low impassable frame"
+    },
+    "dc_slabs": {
+      "tool": "create_map_object",
+      "gen": 160,
+      "fit": 80,
+      "view": "high top-down",
+      "prompt": "a fallen stack of dark engraved stone slabs, tumbled and cracked apart, faint teal patina in the carved lines, seen from above as a low pile"
+    },
+    "dcl_oil": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "prompt": "a spilled patch of near-black oil soaked into the floor, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_soot": {
+      "tool": "create_map_object",
+      "gen": 112,
+      "fit": 56,
+      "view": "high top-down",
+      "prompt": "a smudged patch of black soot and grey ash ground into the floor, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_paint": {
+      "tool": "create_map_object",
+      "gen": 96,
+      "fit": 48,
+      "view": "high top-down",
+      "prompt": "a worn patch where dull ochre paint has flaked away to bare grey metal, blotchy and uneven, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_burn": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "prompt": "a patch of blackened scorched ground fading to grey ash at the ragged edges, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_drift": {
+      "tool": "create_map_object",
+      "gen": 144,
+      "fit": 72,
+      "view": "high top-down",
+      "prompt": "a thin patch of dark grey ash dusted unevenly over the ground, barely visible, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_crack": {
+      "tool": "create_map_object",
+      "gen": 112,
+      "fit": 56,
+      "view": "high top-down",
+      "prompt": "a patch of dry ground split by thin dark hairline cracks, cracks are DARK GREY, unlit, no lava, no molten rock, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_rune": {
+      "tool": "create_map_object",
+      "gen": 128,
+      "fit": 64,
+      "view": "high top-down",
+      "prompt": "a patch of worn carved lines scratched into the floor, dull unlit grey-green grooves, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_verdigris": {
+      "tool": "create_map_object",
+      "gen": 112,
+      "fit": 56,
+      "view": "high top-down",
+      "prompt": "a dull desaturated grey-green patch of corrosion crusted on metal, muted and dark, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    },
+    "dcl_scorch": {
+      "tool": "create_map_object",
+      "gen": 112,
+      "fit": 56,
+      "view": "high top-down",
+      "prompt": "a sooty grey-black smear radiating outward in uneven streaks, a completely flat stain lying on the ground, NO HEIGHT, NO VOLUME, NO SHADOW, NO GLOW, NO LIGHT, NO SYMBOL, NO ICON, not an object, seen straight from directly above, soft irregular ragged edges, very low contrast, desaturated, dark",
+      "outline": "lineless",
+      "shading": "flat shading",
+      "detail": "low detail"
+    }
   }
 }

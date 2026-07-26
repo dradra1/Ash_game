@@ -2,6 +2,7 @@
 
 import { createStats, resolveStats, moveSpeed, armorFactor, dodgeChance } from './stats.js';
 import { makeSlot, equip } from './weapon.js';
+import { separateFromProps } from './arena.js';
 
 export function createPlayer(config, id, name, characterId, x, y) {
   const chCfg = config.characters[characterId];
@@ -101,7 +102,7 @@ export function hurtPlayer(player, config, rng, amount) {
 // arenaW/arenaH передаются явно: в коопе арена масштабируется числом игроков,
 // и брать размер напрямую из конфига значило бы зажимать игроков в меньший
 // прямоугольник, чем тот, куда спавнятся враги.
-export function stepPlayers(players, dt, config, arenaW, arenaH) {
+export function stepPlayers(players, dt, config, arenaW, arenaH, propIndex) {
   const w = arenaW || config.arena.size[0];
   const h = arenaH || config.arena.size[1];
   const pad = config.arena.wall_padding;
@@ -131,6 +132,9 @@ export function stepPlayers(players, dt, config, arenaW, arenaH) {
     if (p.vx !== 0 || p.vy !== 0) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
+      // Сначала препятствия, потом стены: стена — жёсткая граница и должна
+      // выиграть, иначе завал у края вытолкнет игрока наружу арены.
+      if (propIndex) separateFromProps(p, p.radius, propIndex, null);
       if (p.x < pad) p.x = pad; else if (p.x > w - pad) p.x = w - pad;
       if (p.y < pad) p.y = pad; else if (p.y > h - pad) p.y = h - pad;
       if (p.vx * p.vx > p.vy * p.vy) p.dir = p.vx > 0 ? 1 : 3;

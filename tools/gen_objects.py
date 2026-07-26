@@ -34,7 +34,7 @@ ASSETS = os.path.join(ROOT, "tools", "assets.json")
 STATE = os.path.join(ROOT, "scratch", "gen_objects_state.json")
 TEXDIR = os.path.join(ROOT, "static", "textures")
 DOWNLOAD = "https://api.pixellab.ai/mcp/map-objects/{oid}/download"
-SECTIONS = ("weapons", "projectiles", "items", "stats", "meta")
+SECTIONS = ("weapons", "projectiles", "items", "stats", "meta", "world")
 FILL = 0.92
 INFLIGHT = 4
 PACE = 6
@@ -92,8 +92,11 @@ def create(key, entry, style):
         "width": gen,
         "height": gen,
         "view": entry.get("view", "side"),
-        "outline": "single color outline",
-        "detail": "high detail",
+        # Обводка и шейдинг переопределяются записью. Плоским пятнам на полу
+        # обводка противопоказана: контур превращает подтёк в наклейку.
+        "outline": entry.get("outline", "single color outline"),
+        "detail": entry.get("detail", "high detail"),
+        "shading": entry.get("shading", "medium shading"),
     }
     code, out = pxl("call", "create_map_object", json.dumps(payload, ensure_ascii=False))
     if "job slots" in out or "rate limit" in out.lower():

@@ -77,12 +77,113 @@ export function createRenderer(canvas, config, arenaSize) {
   // когда спрайт впервые готов; createPattern на кадр — это аллокация в горячем цикле.
   const groundPatterns = {};
 
+  // Пол печётся целиком в offscreen-холст один раз за забег: ~4 тысячи drawImage
+  // однократно вместо тысяч на каждый кадр. В кадре остаётся один drawImage
+  // видимого прямоугольника — это дешевле прежней заливки паттерном.
+  let layout = null;
+  let floor = null;
+  let floorTried = false;
+
+  function setArenaLayout(next) {
+    layout = next || null;
+    floor = null;
+    floorTried = false;
+  }
+
+  // Спрайт «решён», если он загрузился или окончательно не смог: ждать вечно
+  // отсутствующий PNG нельзя, иначе пол не запечётся никогда.
+  function spriteResolved(id) {
+    const s = getSprite(id);
+    return !s || s.failed || s.ready;
+  }
+
+  function layoutResolved() {
+    for (let i = 0; i < layout.ground.length; i++) {
+      if (!spriteResolved(layout.ground[i])) return false;
+    }
+    for (let i = 0; i < layout.decals.length; i++) {
+      if (!spriteResolved(layout.decals[i].texture)) return false;
+    }
+    return true;
+  }
+
+  function bakeFloor() {
+    const doc = globalThis.document;
+    if (!doc || !doc.createElement) return false;
+    const c = doc.createElement('canvas');
+    c.width = layout.width;
+    c.height = layout.height;
+    const g = c.getContext('2d');
+    if (!g) return false;
+    g.imageSmoothingEnabled = false;
+
+    // Подложка: если тайла нет, под ним всё равно не должно просвечивать
+    g.fillStyle = layout.groundColor || BG_COLOR;
+    g.fillRect(0, 0, layout.width, layout.height);
+
+    const tile = layout.tile;
+    const ground = layout.ground;
+    const tiles = layout.tiles;
+    for (let row = 0; row < layout.rows; row++) {
+      const base = row * layout.cols;
+      for (let col = 0; col < layout.cols; col++) {
+        const s = getSprite(ground[tiles[base + col]]);
+        if (!s || !s.ready || s.failed) continue;
+        g.drawImage(s.img, col * tile, row * tile, tile, tile);
+      }
+    }
+
+    // Декали плоские, поэтому уезжают в тот же холст и в кадре не стоят ничего
+    for (let i = 0; i < layout.decals.length; i++) {
+      const d = layout.decals[i];
+      const s = getSprite(d.texture);
+      if (!s || !s.ready || s.failed) continue;
+      const half = d.size / 2;
+      g.globalAlpha = d.alpha;
+      if (d.flip) {
+        g.save();
+        g.translate(d.x, d.y);
+        g.scale(-1, 1);
+        g.drawImage(s.img, -half, -half, d.size, d.size);
+        g.restore();
+      } else {
+        g.drawImage(s.img, d.x - half, d.y - half, d.size, d.size);
+      }
+    }
+    g.globalAlpha = 1;
+
+    floor = c;
+    return true;
+  }
+
   function drawArena(arena) {
     ctx.fillStyle = WALL_COLOR;
     ctx.fillRect(-wallPad, -wallPad, arenaW + wallPad * 2, arenaH + wallPad * 2);
+
+    if (!floor && layout && !floorTried && layoutResolved()) {
+      floorTried = !bakeFloor();
+    }
+
+    if (floor) {
+      // Только видимый кусок: блитить холст 2272×1704 целиком незачем
+      const hw = view.w / (2 * view.zoom);
+      const hh = view.h / (2 * view.zoom);
+      let sx = Math.floor(camera.x - hw);
+      let sy = Math.floor(camera.y - hh);
+      let sw = Math.ceil(hw * 2) + 2;
+      let sh = Math.ceil(hh * 2) + 2;
+      if (sx < 0) { sw += sx; sx = 0; }
+      if (sy < 0) { sh += sy; sy = 0; }
+      if (sx + sw > floor.width) sw = floor.width - sx;
+      if (sy + sh > floor.height) sh = floor.height - sy;
+      if (sw > 0 && sh > 0) {
+        ctx.drawImage(floor, sx, sy, sw, sh, sx, sy, sw, sh);
+        return;
+      }
+    }
+
+    // Деградация: пока тайлы не загрузились — паттерн первого, потом сплошной цвет
     let pattern = null;
-    // Берём только первый тайл списка ground: вариации пришлось бы рисовать
-    // по-тайлово drawImage'ами (тысячи вызовов на кадр) — за бюджетом рендера.
     const groundId = arena.ground && arena.ground.length ? arena.ground[0] : null;
     if (groundId) {
       pattern = groundPatterns[groundId] || null;
@@ -96,6 +197,46 @@ export function createRenderer(canvas, config, arenaSize) {
     }
     ctx.fillStyle = pattern || arena.ground_color;
     ctx.fillRect(0, 0, arenaW, arenaH);
+  }
+
+  // Препятствия: между полом и сущностями, с отсечением по камере. Их десятки,
+  // не сотни, поэтому обычный цикл с проверкой границ здесь уместен.
+  function drawProps(props) {
+    const hw = view.w / (2 * view.zoom);
+    const hh = view.h / (2 * view.zoom);
+    const x0 = camera.x - hw;
+    const x1 = camera.x + hw;
+    const y0 = camera.y - hh;
+    const y1 = camera.y + hh;
+    for (let i = 0; i < props.length; i++) {
+      const p = props[i];
+      const half = p.size / 2;
+      if (p.x + half < x0 || p.x - half > x1 || p.y + half < y0 || p.y - half > y1) continue;
+      if (drawSprite(p.texture, p.x, p.y, p.size, 0, p.flip)) continue;
+      ctx.fillStyle = PROP_COLOR;                    // плейсхолдер, пока нет PNG
+      ctx.fillRect(Math.round(p.x - p.r), Math.round(p.y - p.r), p.r * 2, p.r * 2);
+    }
+  }
+
+  // Одиночный спрайт с поворотом. Оружие в руке, снаряды, декор, VFX — всё сюда.
+  // Без поворота и отражения идёт быстрый путь без трансформа: на 600 снарядах
+  // разница между drawImage и save/rotate/restore уже заметна.
+  function drawSprite(textureId, x, y, size, angle, flip) {
+    const s = getSprite(textureId);
+    if (!s || !s.ready || s.failed) return false;
+    const img = s.img;
+    const half = size / 2;
+    if (!angle && !flip) {
+      ctx.drawImage(img, Math.round(x - half), Math.round(y - half), size, size);
+      return true;
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    if (angle) ctx.rotate(angle);
+    if (flip) ctx.scale(1, -1);
+    ctx.drawImage(img, -half, -half, size, size);
+    ctx.restore();
+    return true;
   }
 
   function drawRect(x, y, w, h, color) {
@@ -148,7 +289,10 @@ export function createRenderer(canvas, config, arenaSize) {
     end,
     follow,
     worldToScreen,
+    setArenaLayout,
     drawArena,
+    drawProps,
+    drawSprite,
     drawEntity,
     drawRect,
     drawDot,
@@ -159,3 +303,4 @@ export function createRenderer(canvas, config, arenaSize) {
 }
 
 const TAU = Math.PI * 2;
+const PROP_COLOR = '#2b2f38';

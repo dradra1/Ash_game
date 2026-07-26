@@ -1,11 +1,18 @@
 // Враги: пул, скейлинг по волне, ИИ-архетипы, урон и смерть.
 // Ноль аллокаций в step: сущности из пула, соседи — через grid, буферы переиспользуются.
 
+import { separateFromProps, slideAlong } from './arena.js';
+
 // Архетипы M1. Остальные (charger/orbiter/splitter/bomber/summoner/support) — M4.
 export const AI_CHASE = 0;
 export const AI_SHOOTER = 1;
 
 const AI_CODE = { chase: AI_CHASE, shooter: AI_SHOOTER };
+
+// Нормаль последнего выталкивания. Один объект на модуль: аллокация на кадр при
+// 450 врагах — прямое нарушение бюджета (CLAUDE.md §4).
+const propHit = { nx: 0, ny: 0 };
+const PROP_TOUCH = 0.5;          // враг «толще» своего радиуса не лезет в завал
 
 // Запись врага может лежать и в config.enemies, и в config.bosses — боссы это те же
 // сущности с фазами и своим дропом, а не отдельная ветка кода.
@@ -182,6 +189,14 @@ export function stepEnemies(pool, dt, deps) {
 
     e.x += (e.vx + e.kbX) * dt;
     e.y += (e.vy + e.kbY) * dt;
+
+    // Обтекание завалов. Врагу, у которого препятствие ровно между ним и целью,
+    // мало выталкивания: он упрётся в него лбом и будет стоять всю волну. Убираем
+    // составляющую скорости внутрь препятствия — он соскальзывает вдоль края.
+    // Это не поиск пути: для орды хватает скольжения, и оно O(1) на сущность.
+    if (deps.propIndex && separateFromProps(e, e.size * PROP_TOUCH, deps.propIndex, propHit)) {
+      slideAlong(e, propHit.nx, propHit.ny);
+    }
 
     // Направление спрайта по доминирующей оси
     const mx = e.vx + e.kbX;

@@ -1,5 +1,5 @@
 {
-  "content_version": 10,
+  "content_version": 15,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -15,7 +15,8 @@
     "corpse_fade_sec": 0.6,
     "enemy_contact_cooldown": 0.6,
     "knockback_decay": 8.0,
-    "knockback_scale": 40
+    "knockback_scale": 40,
+    "pickup_radius": 6
   },
   "net": {
     "snapshot_hz": 20,
@@ -88,7 +89,18 @@
     "min_spawn_dist": 200,
     "spawn_margin": 40,
     "camera_lag": 0.12,
-    "wall_padding": 16
+    "wall_padding": 16,
+    "tile_size": 32,
+    "chunk_tiles": 7,
+    "tile_scatter": 0.0,
+    "props_max": 26,
+    "props_min_gap": 118,
+    "props_center_clear": 240,
+    "props_wall_margin": 96,
+    "props_attempts_per_prop": 14,
+    "decals_max": 90,
+    "spawn_clear": 26,
+    "tile_feather": 0.55
   },
   "player": {
     "move_speed": 130,
@@ -6581,7 +6593,11 @@
       "name": "Улей-Город",
       "desc": "Ржавые плиты, трубы и вечный смог нижних ярусов.",
       "ground": [
-        "gr_hive_a"
+        "gr_hive_a",
+        "gr_hive_b",
+        "gr_hive_c",
+        "gr_hive_d",
+        "gr_hive_e"
       ],
       "ground_color": "#1a1c22",
       "decor": [
@@ -6604,13 +6620,70 @@
       "boss_final": "b_rift_father",
       "unlock": {
         "type": "default"
-      }
+      },
+      "props": [
+        {
+          "texture": "dc_pipe",
+          "r": 30,
+          "size": 96,
+          "weight": 4
+        },
+        {
+          "texture": "dc_girder",
+          "r": 26,
+          "size": 88,
+          "weight": 3
+        },
+        {
+          "texture": "dc_container",
+          "r": 34,
+          "size": 104,
+          "weight": 2
+        },
+        {
+          "texture": "dc_vent",
+          "r": 20,
+          "size": 64,
+          "weight": 1
+        }
+      ],
+      "decals": [
+        {
+          "texture": "dcl_oil",
+          "size": 64,
+          "alpha": 0.55,
+          "weight": 4
+        },
+        {
+          "texture": "dcl_soot",
+          "size": 56,
+          "alpha": 0.45,
+          "weight": 4
+        },
+        {
+          "texture": "dcl_scorch",
+          "size": 56,
+          "alpha": 0.4,
+          "weight": 2
+        }
+      ],
+      "ground_weights": [
+        10,
+        5,
+        6,
+        4,
+        2
+      ]
     },
     "ar_ash": {
       "name": "Пепельные Пустоши",
       "desc": "Пепел по колено, кости и обломки того, что летало.",
       "ground": [
-        "gr_ash_a"
+        "gr_ash_a",
+        "gr_ash_b",
+        "gr_ash_c",
+        "gr_ash_d",
+        "gr_ash_e"
       ],
       "ground_color": "#221f1a",
       "decor": [
@@ -6633,13 +6706,70 @@
       "unlock": {
         "type": "relics",
         "cost": 400
-      }
+      },
+      "props": [
+        {
+          "texture": "dc_bones",
+          "r": 28,
+          "size": 96,
+          "weight": 4
+        },
+        {
+          "texture": "dc_wreck",
+          "r": 34,
+          "size": 112,
+          "weight": 2
+        },
+        {
+          "texture": "dc_scrap",
+          "r": 24,
+          "size": 80,
+          "weight": 3
+        },
+        {
+          "texture": "dc_rock",
+          "r": 22,
+          "size": 72,
+          "weight": 3
+        }
+      ],
+      "decals": [
+        {
+          "texture": "dcl_burn",
+          "size": 64,
+          "alpha": 0.5,
+          "weight": 4
+        },
+        {
+          "texture": "dcl_drift",
+          "size": 72,
+          "alpha": 0.35,
+          "weight": 4
+        },
+        {
+          "texture": "dcl_crack",
+          "size": 56,
+          "alpha": 0.45,
+          "weight": 3
+        }
+      ],
+      "ground_weights": [
+        12,
+        6,
+        4,
+        3,
+        1
+      ]
     },
     "ar_tomb": {
       "name": "Мёртвая Верфь",
       "desc": "Тёмный металл, зелёные руны и то, что ещё шевелится в трюмах.",
       "ground": [
-        "gr_tomb_a"
+        "gr_tomb_a",
+        "gr_tomb_b",
+        "gr_tomb_c",
+        "gr_tomb_d",
+        "gr_tomb_e"
       ],
       "ground_color": "#141a1c",
       "decor": [
@@ -6661,7 +6791,60 @@
       "unlock": {
         "type": "relics",
         "cost": 1000
-      }
+      },
+      "props": [
+        {
+          "texture": "dc_hull",
+          "r": 34,
+          "size": 112,
+          "weight": 3
+        },
+        {
+          "texture": "dc_monolith",
+          "r": 22,
+          "size": 80,
+          "weight": 3
+        },
+        {
+          "texture": "dc_cradle",
+          "r": 30,
+          "size": 96,
+          "weight": 2
+        },
+        {
+          "texture": "dc_slabs",
+          "r": 24,
+          "size": 80,
+          "weight": 3
+        }
+      ],
+      "decals": [
+        {
+          "texture": "dcl_rune",
+          "size": 64,
+          "alpha": 0.45,
+          "weight": 2
+        },
+        {
+          "texture": "dcl_scorch",
+          "size": 56,
+          "alpha": 0.45,
+          "weight": 4
+        },
+        {
+          "texture": "dcl_soot",
+          "size": 56,
+          "alpha": 0.4,
+          "weight": 3
+        }
+      ],
+      "ground_weights": [
+        10,
+        4,
+        3,
+        5,
+        2
+      ]
     }
   },
   "achievements": {

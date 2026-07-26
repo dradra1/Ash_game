@@ -3,6 +3,7 @@
 
 import { initEnemy } from './enemy.js';
 import { nearestAlivePlayer } from './enemy.js';
+import { isClear } from './arena.js';
 
 // Сколько врагов в секунду положено на этой волне
 export function spawnBudget(config, wave, danger, players) {
@@ -35,7 +36,7 @@ export function poolForWave(config, arenaId, wave, out) {
 
 // Точка спавна за краем арены, не ближе min_spawn_dist к любому живому игроку.
 // Пишет в out {x, y}; возвращает false, если за attempts попыток не нашлось места.
-export function spawnPoint(config, rng, players, out, attempts, arenaW, arenaH) {
+export function spawnPoint(config, rng, players, out, attempts, arenaW, arenaH, propIndex) {
   const w = arenaW || config.arena.size[0];
   const h = arenaH || config.arena.size[1];
   const margin = config.arena.spawn_margin;
@@ -60,6 +61,8 @@ export function spawnPoint(config, rng, players, out, attempts, arenaW, arenaH) 
       const dy = p.y - y;
       if (dx * dx + dy * dy < minDist2) { ok = false; break; }
     }
+    // Босс ставится этой же функцией, но внутрь арены — родиться в завале нельзя
+    if (ok && propIndex && !isClear(x, y, config.arena.spawn_clear || 24, propIndex)) ok = false;
     if (ok) {
       out.x = x;
       out.y = y;
@@ -105,7 +108,8 @@ export function createSpawner(config) {
     const want = Math.min(packSize, Math.floor(state.credit));
     for (let i = 0; i < want; i++) {
       if (deps.pool.count >= cap) break;            // деградация, а не рост
-      if (!spawnPoint(config_, deps.rng, players, point, 8, deps.arenaW, deps.arenaH)) break;
+      if (!spawnPoint(config_, deps.rng, players, point, 8,
+        deps.arenaW, deps.arenaH, deps.propIndex)) break;
       const e = deps.pool.spawn();
       if (!e) break;                                 // пул кончился — тоже деградация
       const typeId = pickType(config_, deps.rng, typeBuf, nTypes);

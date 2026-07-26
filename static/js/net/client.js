@@ -8,8 +8,12 @@
 
 import { CH } from './transport.js';
 import { createInputCodec, createSnapshotCodec, buildTypeIndex, PHASE_NAME } from './protocol.js';
+import { separateFromProps } from '../sim/arena.js';
 
-export function createNetClient(transport, config, myIndex) {
+// propIndex — препятствия арены. Клиент не симулирует мир, но своего персонажа
+// предсказывает, и без коллизий предсказание въезжало бы в завал, а сверка с
+// хостом выдёргивала бы обратно: у каждого препятствия управление «резинит».
+export function createNetClient(transport, config, myIndex, propIndex) {
   const inputCodec = createInputCodec();
   const snapCodec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
@@ -168,6 +172,7 @@ export function createNetClient(transport, config, myIndex) {
           p.vy = input.y * moveSpeed;
           p.x += p.vx * dt;
           p.y += p.vy * dt;
+          if (propIndex) separateFromProps(p, config.player.radius, propIndex, null);
           if (p.vx !== 0 || p.vy !== 0) {
             if (p.vx * p.vx > p.vy * p.vy) p.dir = p.vx > 0 ? 1 : 3;
             else p.dir = p.vy > 0 ? 0 : 2;

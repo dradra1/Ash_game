@@ -9,6 +9,7 @@ import { createInput } from './engine/input.js';
 import { createRenderer } from './engine/render.js';
 import { createLocalTransport, createSocketTransport, CH } from './net/transport.js';
 import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP } from './sim/run.js';
+import { buildArenaLayout, createPropIndex } from './sim/arena.js';
 import { createHost } from './net/host.js';
 import { createNetClient } from './net/client.js';
 import { createLobby, roomFromUrl } from './net/lobby.js';
@@ -120,6 +121,7 @@ async function boot() {
   let lobby = null;
   let socket = null;
   let arenaId = null;
+  let arenaLayout = null;
   let runId = null;
   let finished = false;
   let myIndex = 0;
@@ -159,6 +161,7 @@ async function boot() {
     netClient = null;
     remoteLevelChoices = null;
     shopSnap = null;
+    arenaLayout = null;
     finished = false;
     godOn = false;
   }
@@ -436,6 +439,7 @@ async function boot() {
     renderer.follow(me.x, me.y, config.sim.dt);
     renderer.begin();
     renderer.drawArena(config.arenas[arenaId]);
+    if (arenaLayout) renderer.drawProps(arenaLayout.props);
 
     if (run) {
       const pickups = run.pickupPool;
@@ -521,6 +525,7 @@ async function boot() {
 
   function bootEngine(arenaSize) {
     renderer = createRenderer(canvas, config, arenaSize);
+    renderer.setArenaLayout(arenaLayout);
     input = createInput(canvas, config);
     loop = createLoop({
       dt: config.sim.dt,
@@ -566,6 +571,7 @@ async function boot() {
       arena: arenaId, danger, unlocked: unlockedWeapons, curses,
     });
     debugExtra.seed = data.seed;
+    arenaLayout = run.layout;
     bootEngine([run.arenaW, run.arenaH]);
   }
 
@@ -654,9 +660,17 @@ async function boot() {
       run = createRun({ config, seed: msg.seed, transport, players,
         arena: arenaId, danger, unlocked: unlockedWeapons, curses });
       hostNet = createHost(run, transport, config);
+      arenaLayout = run.layout;
       bootEngine([run.arenaW, run.arenaH]);
     } else {
-      netClient = createNetClient(transport, config, myIndex);
+      // Клиент строит ту же раскладку сам: (seed, arenaId, размер) у него есть,
+      // по сети арена не передаётся вовсе.
+      const scale = 1 + config.coop.arena_per_player * (room.players.length - 1);
+      const w = Math.round(config.arena.size[0] * scale);
+      const h = Math.round(config.arena.size[1] * scale);
+      arenaLayout = buildArenaLayout(config, arenaId, msg.seed, w, h);
+      netClient = createNetClient(transport, config, myIndex,
+        createPropIndex(arenaLayout, config));
       transport.on(CH.EVENT, (msg) => {
         if (!msg) return;
         if (msg.t === 'shop' && msg.p === myIndex) {
@@ -674,9 +688,6 @@ async function boot() {
       remoteShop = remoteAdapter(() => shopSnap, (kind, a) => {
         transport.send(CH.EVENT, { t: 'shop_act', p: myIndex, kind, a });
       });
-      const scale = 1 + config.coop.arena_per_player * (room.players.length - 1);
-      const w = Math.round(config.arena.size[0] * scale);
-      const h = Math.round(config.arena.size[1] * scale);
       bootEngine([w, h]);
       const sync = () => {
         const ps = netClient.state.players;
