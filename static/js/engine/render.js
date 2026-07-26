@@ -83,12 +83,31 @@ export function createRenderer(canvas, config) {
     ctx.fillRect(x, y, w, h);
   }
 
-  // Спрайт, при отсутствии PNG — цветной квадрат-плейсхолдер
-  function drawEntity(textureId, dir, frame, x, y, size, color) {
-    if (drawSheet(ctx, textureId, dir, frame, x, y, size)) return;
+  // Спрайт с деградацией: сначала лист движения (<texture>_walk), если он есть,
+  // потом idle-лист, и только потом цветной квадрат-плейсхолдер.
+  function drawEntity(textureId, dir, frame, x, y, size, color, altId) {
+    if (altId && drawSheet(ctx, altId, dir, frame, x, y, size)) return;
+    if (drawSheet(ctx, textureId, dir, 0, x, y, size)) return;
     const half = size / 2;
     ctx.fillStyle = color;
     ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
+  }
+
+  // Круглая метка (прах, снаряд без спрайта)
+  function drawDot(x, y, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fill();
+  }
+
+  // Эллипс под спрайтом цветом игрока — в куче из восьми это главный ориентир
+  function drawRing(x, y, r, color, width) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.ellipse(x, y + r * 0.55, r, r * 0.4, 0, 0, TAU);
+    ctx.stroke();
   }
 
   function drawText(text, x, y, color, align) {
@@ -112,6 +131,11 @@ export function createRenderer(canvas, config) {
     drawArena,
     drawEntity,
     drawRect,
+    drawDot,
+    drawRing,
     drawText,
+    view,
   };
 }
+
+const TAU = Math.PI * 2;

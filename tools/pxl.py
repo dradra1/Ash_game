@@ -120,6 +120,63 @@ def cmd_wait(args):
              f"Если >15 мин — удалить и перегенерировать (ASSETS.md).")
 
 
+def cmd_sheets(args):
+    """Собрать спрайт-листы персонажа: спека строится из get_character автоматически.
+
+    Разбирает вывод get_character (idle-ротации + группы анимаций с их uuid по
+    направлениям) и зовёт tools/fetch_anim_sheets.py. Вручную это 50+ повторов
+    копирования uuid — ровно то, на чём делают опечатки.
+    """
+    out = call("get_character", {"character_id": args.id})
+    if "status: completed" not in out:
+        sys.exit(f"персонаж ещё не готов:\n{out.splitlines()[0]}")
+
+    m = re.search(r"rotations/([0-9a-f-]{36})/([0-9a-f-]{36})/rotations/", out)
+    acc = cid = None
+    m = re.search(r"pixellab-characters/([0-9a-f-]{36})/([0-9a-f-]{36})/", out)
+    if m:
+        acc, cid = m.group(1), m.group(2)
+    if not acc:
+        sys.exit("не нашёл account/cid в ответе get_character")
+
+    spec = {"texture_id": args.texture_id, "account": acc, "cid": cid,
+            "idle": True, "fit": args.fit, "outdir": args.outdir}
+
+    # Строки вида: "  <имя> — 4 dir (…), Nf … [group: …]" и следом "    <dir>: <url>, …"
+    current = None
+    for line in out.splitlines():
+        head = re.match(r"\s{2}(\S+) — \d+ dir", line)
+        if head:
+            name = head.group(1).lower()
+            current = "walk" if "walk" in name or "run" in name else "attack"
+            spec.setdefault(current, {})
+            continue
+        body = re.match(r"\s{4}(south|east|north|west):\s*(\S+)", line)
+        if body and current:
+            urls = [u.strip() for u in line.split(":", 1)[1].split(",") if u.strip()]
+            uid = re.search(r"animations/([0-9a-f-]{36})/", body.group(2))
+            if uid:
+                spec[current][body.group(1)] = [uid.group(1), len(urls)]
+
+    for kind in ("walk", "attack"):
+        dirs = spec.get(kind)
+        if dirs and len(dirs) < 4:
+            print(f"пропускаю {kind}: есть только {sorted(dirs)}", file=sys.stderr)
+            spec.pop(kind)
+
+    tmp = os.path.join(ROOT, "scratch")
+    os.makedirs(tmp, exist_ok=True)
+    path = os.path.join(tmp, f"spec_{args.texture_id}.json")
+    with open(path, "w") as f:
+        json.dump(spec, f, ensure_ascii=False, indent=2)
+
+    have = [k for k in ("walk", "attack") if k in spec]
+    print(f"спека: {path} (idle{''.join(' + ' + h for h in have)})")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from fetch_anim_sheets import build
+    build(spec, spec["outdir"])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -142,6 +199,12 @@ def main():
     p.add_argument("--kind", choices=["character", "object"], default="character")
     p.add_argument("--timeout", type=int, default=900)
 
+    p = sub.add_parser("sheets", help="собрать idle/walk/attack листы персонажа")
+    p.add_argument("id")
+    p.add_argument("texture_id")
+    p.add_argument("--fit", type=int, default=48)
+    p.add_argument("--outdir", default="static/textures/")
+
     a = ap.parse_args()
 
     if a.cmd == "balance":
@@ -160,6 +223,8 @@ def main():
         print(call(getter, {key: a.id}))
     elif a.cmd == "wait":
         cmd_wait(a)
+    elif a.cmd == "sheets":
+        cmd_sheets(a)
 
 
 if __name__ == "__main__":

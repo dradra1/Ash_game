@@ -5,7 +5,8 @@ import { createLoop } from './engine/loop.js';
 import { createInput } from './engine/input.js';
 import { createRenderer } from './engine/render.js';
 import { createLocalTransport, CH } from './net/transport.js';
-import { createRun } from './sim/run.js';
+import { createRun, PHASE_OVER } from './sim/run.js';
+import { createHud } from './ui/hud.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
 
@@ -26,7 +27,7 @@ async function boot() {
   try {
     profile = await fetchJson('/api/profile');
   } catch (e) {
-    // M0: без профиля играть всё равно можно
+    // без профиля играть всё равно можно
   }
 
   const dict = (config.i18n && config.i18n.ru) || {};
@@ -45,6 +46,7 @@ async function boot() {
   const playerName = bootInfo.name || (profile && profile.name) || 'player';
 
   const screens = createScreens(uiRoot, config, t);
+  const hud = createHud(config, t);
 
   let transport = null;
   let run = null;
@@ -53,10 +55,24 @@ async function boot() {
   let loop = null;
   let debug = null;
   let arenaId = null;
+  let runId = null;
+  let finished = false;
 
   // Переиспользуемые объекты кадра — без аллокаций в горячем цикле
   const inputPayload = { id: 0, x: 0, y: 0 };
   const debugExtra = { entities: 0, kbs: 0, ping: 0, seed: 0 };
+  const ashColor = config.render.ash_color;
+  const ashSize = config.render.ash_size;
+  const animFps = config.render.anim_fps;
+  const WALK = '_walk';
+
+  function myPlayer() {
+    const players = run.state.players;
+    for (let i = 0; i < players.length; i++) {
+      if (players[i].id === transport.id) return players[i];
+    }
+    return players[0];
+  }
 
   function update(dt) {
     if (input.consumePressed('F3')) debug.toggle();
@@ -65,29 +81,90 @@ async function boot() {
     inputPayload.y = input.move.y;
     transport.send(CH.INPUT, inputPayload);
     run.step(dt);
+
+    if (run.state.phase === PHASE_OVER && !finished) {
+      finished = true;
+      reportRun();
+    }
   }
 
-  function render(alpha) {
-    const players = run.state.players;
-    let me = players[0];
-    for (let i = 0; i < players.length; i++) {
-      if (players[i].id === transport.id) { me = players[i]; break; }
-    }
+  function render() {
+    const me = myPlayer();
     renderer.follow(me.x, me.y, config.sim.dt);
     renderer.begin();
     renderer.drawArena(config.arenas[arenaId]);
-    // Размер спрайта — из конфига сущности, а не радиус коллизии: это разные вещи
-    // (радиус ~10 px, спрайт 48 px).
+
+    // Прах
+    const pickups = run.pickupPool;
+    for (let i = 0; i < pickups.count; i++) {
+      const p = pickups.items[i];
+      renderer.drawDot(p.x, p.y, ashSize / 2, ashColor);
+    }
+
+    // Враги
+    const enemies = run.enemyPool;
+    for (let i = 0; i < enemies.count; i++) {
+      const e = enemies.items[i];
+      const moving = e.vx !== 0 || e.vy !== 0;
+      renderer.drawEntity(e.cfg.texture, e.dir, (e.animT * animFps) | 0,
+        e.x, e.y, e.sprite, e.cfg.color, moving ? e.cfg.texture + WALK : null);
+    }
+
+    // Игроки: под спрайтом — эллипс цветом персонажа, над головой — ник
+    const players = run.state.players;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
+      if (!p.alive) continue;
       const chCfg = config.characters[p.character];
       const size = chCfg.sprite || config.render.sprite_default;
-      renderer.drawEntity(chCfg.texture, p.dir, 0, p.x, p.y, size, chCfg.color);
+      if (config.render.player_ring) {
+        renderer.drawRing(p.x, p.y, size * 0.3, chCfg.color, config.render.player_ring_width);
+      }
+      const moving = p.vx !== 0 || p.vy !== 0;
+      renderer.drawEntity(chCfg.texture, p.dir, (p.animT * animFps) | 0,
+        p.x, p.y, size, chCfg.color, moving ? chCfg.texture + WALK : null);
+      if (config.render.nameplate && players.length > 1) {
+        renderer.drawText(p.name, p.x, p.y - config.render.nameplate_offset,
+          chCfg.color, 'center');
+      }
     }
+
+    // Снаряды
+    const projs = run.projPool;
+    for (let i = 0; i < projs.count; i++) {
+      const pr = projs.items[i];
+      const r = Math.max(config.render.projectile_size_min, pr.size);
+      renderer.drawDot(pr.x, pr.y, r, pr.color || ashColor);
+    }
+
     renderer.end();
+    hud.draw(renderer.ctx, run, me, renderer.view);
+
     if (debug.visible) {
-      debugExtra.entities = run.stats.entities;
+      const s = run.refreshStats();
+      debugExtra.entities = s.entities;
       debug.draw(renderer.ctx, debugExtra);
+    }
+  }
+
+  async function reportRun() {
+    const st = run.state;
+    try {
+      await fetchJson('/api/run/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          run_id: runId,
+          wave: st.wave,
+          win: st.win,
+          bosses: st.bosses,
+          time_sec: st.time,
+          kills: st.kills,
+          score: st.score,
+        }),
+      });
+    } catch (e) {
+      // итог не отправился — забег всё равно закончен, реликвии начислит сервер позже
     }
   }
 
@@ -103,8 +180,10 @@ async function boot() {
         body: JSON.stringify({ character, arena: arenaId, danger }),
       });
     } catch (e) {
-      return; // M0: при ошибке старта остаёмся в меню
+      return;   // при ошибке старта остаёмся в меню
     }
+    runId = data.run_id;
+    finished = false;
 
     transport = createLocalTransport();
     run = createRun({
@@ -112,6 +191,8 @@ async function boot() {
       seed: data.seed,
       transport,
       players: [{ id: transport.id, name: playerName, character }],
+      arena: arenaId,
+      danger,
     });
     renderer = createRenderer(canvas, config);
     input = createInput(canvas, config);
@@ -124,8 +205,7 @@ async function boot() {
     debug = createDebug(loop, transport);
     debugExtra.seed = data.seed;
 
-    // Хуки для браузерной проверки (tools/smoke.py): DoD этапов формулируется как
-    // «игрок бегает на 60 fps», и это проверяется в настоящем браузере.
+    // Хуки для браузерной проверки (tools/smoke.py)
     globalThis.__RUN__ = run;
     globalThis.__LOOP__ = loop;
 

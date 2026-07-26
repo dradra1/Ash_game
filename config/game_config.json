@@ -12,7 +12,10 @@
     "max_particles": 300,
     "pickup_magnet_radius": 40,
     "pickup_stack_merge": 5,
-    "corpse_fade_sec": 0.6
+    "corpse_fade_sec": 0.6,
+    "enemy_contact_cooldown": 0.6,
+    "knockback_decay": 8.0,
+    "knockback_scale": 40
   },
   "net": {
     "snapshot_hz": 20,
@@ -51,7 +54,30 @@
     "hp_bar_width": 28,
     "bg_color": "#0a0b0e",
     "wall_color": "#3a3f4a",
-    "joystick_radius": 48
+    "joystick_radius": 48,
+    "hud": {
+      "text": "#c9c4b8",
+      "dim": "#7a7568",
+      "panel": "rgba(10,11,14,0.72)",
+      "hp_bg": "#2a1c1c",
+      "hp_fill": "#a8342f",
+      "hp_low": "#e05a3a",
+      "xp_bg": "#1c2230",
+      "xp_fill": "#4a7fc8",
+      "ash": "#c8a35a",
+      "crit": "#e0a03a",
+      "cd_fill": "rgba(0,0,0,0.6)",
+      "slot_bg": "#181b22",
+      "slot_border": "#3a3f4a",
+      "bar_w": 220,
+      "bar_h": 16,
+      "slot": 34,
+      "pad": 12
+    },
+    "ash_color": "#c8a35a",
+    "ash_size": 8,
+    "projectile_size_min": 3,
+    "anim_fps": 8
   },
   "arena": {
     "size": [
@@ -280,7 +306,8 @@
         "kind": "flat",
         "color": "#9a8a7a"
       }
-    }
+    },
+    "range_step_px": 20
   },
   "level": {
     "xp_formula": {

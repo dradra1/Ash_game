@@ -26,12 +26,18 @@ def main():
     ap.add_argument("--min-fps", type=float, default=50.0)
     a = ap.parse_args()
 
-    errors, problems = [], []
+    errors, problems, bad_responses = [], [], []
 
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--no-sandbox"])
         page = browser.new_page(viewport={"width": 1280, "height": 800})
-        page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+        # Сетевые ошибки ловим по URL ответа, а не по тексту консоли: браузер пишет
+        # «Failed to load resource: 404» без адреса, и отличить отсутствующую текстуру
+        # (штатное поведение) от сломанного эндпоинта по тексту нельзя.
+        page.on("response", lambda r: bad_responses.append((r.status, r.url))
+                if r.status >= 400 else None)
+        page.on("console", lambda m: errors.append(m.text)
+                if m.type == "error" and "Failed to load resource" not in m.text else None)
         page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
 
         # Регистрация (или вход, если такой игрок уже есть) — через API, не через форму:
@@ -113,13 +119,16 @@ def main():
 
     # Отсутствующая текстура — штатное поведение (нет PNG → цветной прямоугольник),
     # а 409 на регистрации означает «игрок уже есть» и гасится входом.
-    def noise(msg):
-        low = msg.lower()
-        return ("favicon" in low
-                or "/static/textures/" in msg
-                or "409" in msg)
+    missing_textures = sorted({u.rsplit("/", 1)[-1] for s, u in bad_responses
+                               if "/static/textures/" in u})
+    real_bad = [(s, u) for s, u in bad_responses
+                if "/static/textures/" not in u and "favicon" not in u
+                and not (s == 409 and u.endswith("/api/register"))]
+    if real_bad:
+        problems.append("запросы с ошибкой: "
+                        + " | ".join(f"{s} {u}" for s, u in real_bad[:5]))
 
-    real_errors = [e for e in errors if not noise(e)]
+    real_errors = [e for e in errors if "favicon" not in e.lower()]
     if real_errors:
         problems.append("ошибки в консоли: " + " | ".join(real_errors[:5]))
 
@@ -127,6 +136,8 @@ def main():
     print(f"fps: {fps if fps is None else round(fps, 1)}   "
           f"sim: {sim_ms if sim_ms is None else round(sim_ms, 3)} мс")
     print(f"скриншот: {a.shot}")
+    if missing_textures:
+        print(f"нет текстур (рисуются плейсхолдеры): {', '.join(missing_textures)}")
     if problems:
         print("\nПРОБЛЕМЫ:")
         for pr in problems:
