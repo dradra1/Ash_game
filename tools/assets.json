@@ -383,7 +383,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a short whip handle with three barbed leather lashes, iron thorns knotted into the cords"
+      "prompt": "a flail whip: a short wooden handle with THREE separate long leather cords hanging loose from it, each cord knotted with iron barbs and ending in a spiked iron tip, the cords spread apart and clearly separate"
     },
     "w_claws": {
       "tool": "create_map_object",
@@ -396,15 +396,15 @@
       "tool": "create_map_object",
       "gen": 64,
       "fit": 32,
-      "view": "side",
-      "prompt": "a wide crescent sickle with a serrated inner edge and a cloth-wrapped haft"
+      "view": "high top-down",
+      "prompt": "a blade curved like a crescent moon, its concave inner edge lined with saw teeth, joined to a short straight wooden handle at one horn of the crescent. ONE BLADE ONLY. NOT double-headed. NOT a pickaxe. NOT an anchor"
     },
     "w_pike": {
       "tool": "create_map_object",
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a long slender pike with a narrow spike head, a small crossbar and an iron ferrule"
+      "prompt": "a long spear with a broad polished steel leaf-shaped head and a crossbar beneath it, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark"
     },
     "w_stilettos": {
       "tool": "create_map_object",
@@ -624,8 +624,8 @@
       "tool": "create_map_object",
       "gen": 64,
       "fit": 32,
-      "view": "side",
-      "prompt": "a single long rusty iron nail"
+      "view": "high top-down",
+      "prompt": "a plain straight rusted metal shaft with a small flat disc at the top end and a sharp taper at the bottom end, nothing else attached. NO HANDLE. NO CROSSPIECE. NO BLADE. NO HEAD OTHER THAN THE FLAT DISC. It is a simple fastener"
     },
     "it_lamp_oil": {
       "tool": "create_map_object",
@@ -674,7 +674,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a charm of wired-together scrap metal offcuts"
+      "prompt": "a talisman of three irregular flat scrap-metal offcuts bound together with twisted copper wire, hanging from a loop of cord. NOT A FIGURE. NOT A ROBOT"
     },
     "it_worn_boots": {
       "tool": "create_map_object",
@@ -856,7 +856,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a boot sole studded with protruding iron nails"
+      "prompt": "the underside of a leather boot sole with many short iron hobnails driven through it, the outline clearly boot-shaped with heel and toe"
     },
     "it_martyr_nail": {
       "tool": "create_map_object",
@@ -926,7 +926,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a small grimy engine block of welded scrap with a short exhaust"
+      "prompt": "a small dirty machine motor: a cylindrical engine block with cooling fins, a short exhaust pipe angled upward, oil stains and welded patches"
     },
     "it_famine_bowl": {
       "tool": "create_map_object",
@@ -947,7 +947,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a heavy lead weight on a short iron chain"
+      "prompt": "a heavy dull grey lead block weight cast with a thick iron ring on top, a short length of chain hooked through the ring"
     },
     "it_pale_mask": {
       "tool": "create_map_object",
@@ -1010,7 +1010,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a folded sheet of thin translucent flayed skin"
+      "prompt": "a loosely draped sheet of thin translucent pale skin hanging over an edge, soft irregular folds and a ragged torn hem"
     },
     "it_glass_edge": {
       "tool": "create_map_object",

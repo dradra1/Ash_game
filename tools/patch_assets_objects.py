@@ -2,8 +2,8 @@
 """Идемпотентно дописывает в tools/assets.json промпты объектов и иконок.
 
 Секции: weapons (24 семейства без спрайта), projectiles (12), items (64),
-stats (17), meta (4). Оружие и предметы — create_map_object в боковой проекции,
-иконки статов и мета-улучшений — create_ui_asset.
+stats (17), meta (4). Всё рисуется create_map_object в боковой проекции —
+почему не create_ui_asset для иконок, объяснено ниже, над таблицей STATS.
 
 Оружие в конфиге живёт семействами по 4 тира на одну текстуру: тир меняет числа,
 а не спрайт, поэтому промпт один на семейство.
@@ -19,10 +19,10 @@ PATH = os.path.join(ROOT, "tools", "assets.json")
 WEAPONS = {
     "w_chainblade":   "a heavy sword whose cutting edge is a running loop of toothed chain links, worn leather grip, rust and machine oil",
     "w_hammer":       "a two-handed maul with a blockish iron head banded in copper coils, faint sparks arcing across the striking face",
-    "w_scourge":      "a short whip handle with three barbed leather lashes, iron thorns knotted into the cords",
+    "w_scourge":      "a flail whip: a short wooden handle with THREE separate long leather cords hanging loose from it, each cord knotted with iron barbs and ending in a spiked iron tip, the cords spread apart and clearly separate",
     "w_claws":        "a fist harness of four long curved bone claws, sinew bindings and iron rivets",
-    "w_sickle":       "a wide crescent sickle with a serrated inner edge and a cloth-wrapped haft",
-    "w_pike":         "a long slender pike with a narrow spike head, a small crossbar and an iron ferrule",
+    "w_sickle":       "a blade curved like a crescent moon, its concave inner edge lined with saw teeth, joined to a short straight wooden handle at one horn of the crescent. ONE BLADE ONLY. NOT double-headed. NOT a pickaxe. NOT an anchor",
+    "w_pike":         "a long spear with a broad polished steel leaf-shaped head and a crossbar beneath it, pale wooden shaft wrapped in leather, the bright metal head standing out sharply against the dark",
     "w_stilettos":    "a matched pair of thin needle-point stilettos laid crossed, wire-wound grips",
     "w_spiker":       "a compact spike-driving pistol with a heavy piston head and a pressure hose",
     "w_shotgun":      "a sawn-off double-barrelled shotgun, cut stock, scarred wood and blued steel",
@@ -61,14 +61,14 @@ PROJECTILES = {
 
 # Предметы: иконка в боковой проекции, одиночный PNG, читается на #0d0f14.
 ITEMS = {
-    "it_rusty_nail":     "a single long rusty iron nail",
+    "it_rusty_nail":     "a plain straight rusted metal shaft with a small flat disc at the top end and a sharp taper at the bottom end, nothing else attached. NO HANDLE. NO CROSSPIECE. NO BLADE. NO HEAD OTHER THAN THE FLAT DISC. It is a simple fastener",
     "it_lamp_oil":       "a small clay flask of lamp oil with a cloth stopper",
     "it_ash_pouch":      "a drawstring leather pouch spilling grey ash",
     "it_iron_plate":     "a dented rectangular iron armour plate with rivets",
     "it_whetstone":      "a worn grey whetstone block with a leather strap",
     "it_powder_horn":    "a curved powder horn with a brass cap",
     "it_tallow":         "a lump of pale tallow with a short wick",
-    "it_scrap_charm":    "a charm of wired-together scrap metal offcuts",
+    "it_scrap_charm":    "a talisman of three irregular flat scrap-metal offcuts bound together with twisted copper wire, hanging from a loop of cord. NOT A FIGURE. NOT A ROBOT",
     "it_worn_boots":     "a pair of cracked leather boots, soles worn through",
     "it_cracked_lens":   "a round glass lens in a brass rim with a crack across it",
     "it_rag_wrap":       "a roll of stained cloth bandage wrapping",
@@ -94,7 +94,7 @@ ITEMS = {
     "it_hunters_mark":   "a barbed iron arrowhead tied with red thread",
     "it_ash_filter":     "a round respirator filter cartridge clogged with grey ash",
     "it_split_shot":     "a forked wooden gun stock split into two prongs",
-    "it_iron_nails":     "a boot sole studded with protruding iron nails",
+    "it_iron_nails":     "the underside of a leather boot sole with many short iron hobnails driven through it, the outline clearly boot-shaped with heel and toe",
     "it_martyr_nail":    "a long blackened nail wrapped in a scrap of bloodied cloth",
     "it_bloodwick":      "a candle with a dark red wick burning low",
     "it_furnace_heart":  "a fist-sized iron sphere with molten orange light in its seams",
@@ -104,10 +104,10 @@ ITEMS = {
     "it_thorn_mantle":   "a shoulder mantle of dark cloth stitched with iron thorns",
     "it_leech_grub":     "a fat pale grub with a ringed sucking mouth",
     "it_focus_prism":    "a clear angular prism splitting a thin beam of light",
-    "it_scrap_engine":   "a small grimy engine block of welded scrap with a short exhaust",
+    "it_scrap_engine":   "a small dirty machine motor: a cylindrical engine block with cooling fins, a short exhaust pipe angled upward, oil stains and welded patches",
     "it_famine_bowl":    "a shallow empty clay begging bowl, chipped at the rim",
     "it_storm_coil":     "a copper coil on an iron core with blue arcs at the tips",
-    "it_dead_weight":    "a heavy lead weight on a short iron chain",
+    "it_dead_weight":    "a heavy dull grey lead block weight cast with a thick iron ring on top, a short length of chain hooked through the ring",
     "it_pale_mask":      "a featureless pale mask with narrow eye slits",
     "it_ember_lung":     "a bellows-like organ of scorched leather glowing orange inside",
     "it_reliquary":      "a small brass reliquary casket with a hinged lid and a glass window",
@@ -116,7 +116,7 @@ ITEMS = {
     "it_martyrs_crown":  "a crown of twisted barbed wire with dried blood on the barbs",
     "it_gilded_ledger":  "a ledger book bound in gold leaf with an ornate clasp",
     "it_hollow_engine":  "a hollow engine housing with nothing inside but cold green light",
-    "it_second_skin":    "a folded sheet of thin translucent flayed skin",
+    "it_second_skin":    "a loosely draped sheet of thin translucent pale skin hanging over an edge, soft irregular folds and a ragged torn hem",
     "it_glass_edge":     "a blade knapped from thick green bottle glass, cloth-wrapped grip",
     "it_wailing_core":   "a cracked metal sphere with a screaming mouth shape in its surface",
     "it_ash_heart":      "a heart-shaped lump of compacted grey ash, cracked and smouldering",
@@ -162,6 +162,15 @@ META = {
 }
 
 
+# Проекция по умолчанию боковая, но паре предметов она вредит: в профиль «стержень
+# с навершием» модель неизбежно достраивает до инструмента — гвоздь выходит палицей,
+# серп киркой. Сверху у них нет силуэта инструмента, и шаблон не срабатывает.
+VIEW_OVERRIDE = {
+    "it_rusty_nail": "high top-down",
+    "w_sickle": "high top-down",
+}
+
+
 def main():
     with open(PATH, encoding="utf-8") as f:
         data = json.load(f)
@@ -184,6 +193,8 @@ def main():
         target = data.setdefault(section, {})
         for key, prompt in prompts.items():
             entry = dict(meta, prompt=prompt)
+            if key in VIEW_OVERRIDE:
+                entry["view"] = VIEW_OVERRIDE[key]
             if target.get(key) == entry:
                 continue
             target[key] = entry

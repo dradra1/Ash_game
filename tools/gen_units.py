@@ -75,18 +75,27 @@ def units(only):
 def slots_busy(text):
     """«Зайди позже», а не отказ: pixellab при этом ничего не списывает и не создаёт.
 
-    Оба ответа надо ловить одинаково — иначе прогон выкашивает пол-очереди на ровном
-    месте, приняв временную преграду за ошибку промпта.
+    Формулировок у одной и той же преграды три, и они не пересекаются по словам:
+    «need N job slots», «rate limit exceeded» и «429: Maximum 10 concurrent
+    background jobs allowed». Ловить надо все — иначе прогон выкашивает пол-очереди
+    на ровном месте, приняв занятость сервиса за ошибку промпта.
     """
-    return "job slots" in text or "rate limit" in text.lower()
+    low = text.lower()
+    return ("job slots" in low or "rate limit" in low
+            or "concurrent background jobs" in low)
 
 
 def create(key, entry, style):
     """Поставить создание персонажа. -> cid | False (нет слотов) | None (ошибка)."""
+    # v3 умеет только гуманоидов: на quadruped он отвечает «v3 mode does not support
+    # quadruped body type». Зверям остаётся standard (1 генерация, грубее) либо pro
+    # (20–40). Начинаем со standard и смотрим глазами — лестница качества из
+    # описания animate_character: template → v3 → pro.
+    quad = entry.get("body_type") == "quadruped"
     payload = {
         "description": f"{entry['prompt']}, {style}",
         "name": key,
-        "mode": "v3",
+        "mode": entry.get("mode", "standard" if quad else "v3"),
         "size": entry["size"],
         "view": "high top-down",
         "outline": "single color outline",
@@ -164,13 +173,17 @@ def main():
 
     while todo and time.time() < deadline:
         progressed = False
+        busy = False          # сервис занят — новых постановок в этом проходе больше нет
         for key, entry, style in list(todo):
             st = state.setdefault(key, {"phase": "new"})
 
             if st["phase"] == "new":
+                if busy:
+                    continue  # молчим, а не долбим API одним и тем же отказом 27 раз
                 cid = create(key, entry, style)
                 if cid is False:
-                    continue                      # слотов нет, вернёмся позже
+                    busy = True
+                    continue
                 if cid is None:
                     failed.append(key); todo.remove((key, entry, style)); continue
                 st.update(phase="creating", cid=cid)
@@ -183,8 +196,11 @@ def main():
                     log(f"  · {key} отрисован")
 
             elif st["phase"] == "created":
+                if busy:
+                    continue
                 res = animate(key, st["cid"], entry)
                 if res is False:
+                    busy = True
                     continue
                 if res is None:
                     failed.append(key); todo.remove((key, entry, style)); continue
