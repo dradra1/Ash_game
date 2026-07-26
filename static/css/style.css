@@ -198,7 +198,9 @@ html, body {
     min-height: 128px;
     background: #181b22;
     border: 1px solid #3a3f4a;
-    padding: 10px;
+    /* Нижний отступ шире прочих: .card-price лежит абсолютом в правом нижнем
+       углу, и без резерва длинное описание подлезает прямо под цену. */
+    padding: 10px 10px 26px;
     cursor: pointer;
     font-size: 12px;
 }
@@ -278,6 +280,15 @@ html, body {
     pointer-events: none;
 }
 .tooltip .stat { padding: 1px 0; }
+
+.icon {
+    display: inline-block;
+    vertical-align: middle;
+    image-rendering: pixelated;
+}
+.icon-lg { width: 32px; height: 32px; }
+.icon-sm { width: 20px; height: 20px; margin-right: 6px; }
+.icon-xs { width: 14px; height: 14px; margin-right: 4px; }
 
 /* ---- Меню и лобби ------------------------------------------------------ */
 

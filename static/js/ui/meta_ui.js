@@ -4,7 +4,7 @@
 // Экран только ОТОБРАЖАЕТ то, что разрешил сервер: цена, баланс и сама покупка
 // проверяются в /api/meta/unlock. Здесь ничего не начисляется.
 
-import { statsHtml } from './tooltip.js';
+import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createMetaUi(root, config, t, api) {
   const doc = root.ownerDocument;
@@ -95,7 +95,8 @@ export function createMetaUi(root, config, t, api) {
     el.className = 'meta-card' + (opts.owned ? ' owned' : '')
       + (opts.locked ? ' locked-out' : '');
     el.style.borderColor = opts.color || '#3a3f4a';
-    let html = `<div class="meta-name" style="color:${opts.color || '#c9c4b8'}">`
+    let html = iconHtml(opts.icon, 'icon-lg')
+      + `<div class="meta-name" style="color:${opts.color || '#c9c4b8'}">`
       + `${opts.name}</div>`;
     if (opts.sub) html += `<div class="meta-sub">${opts.sub}</div>`;
     if (opts.body) html += opts.body;
@@ -165,6 +166,7 @@ export function createMetaUi(root, config, t, api) {
       const owned = isDefault(w) || owns('weapon', id);
       bodyEl.appendChild(card({
         name: w.name, color: config.shop.tier_color[0],
+        icon: w.texture,
         owned,
         sub: t('ui.class.' + w.class),
         body: `<div class="meta-line">${Math.round(w.damage)} / ${w.cooldown.toFixed(2)}с</div>`
@@ -183,6 +185,7 @@ export function createMetaUi(root, config, t, api) {
       const price = maxed ? null : up.price[Math.min(rank, up.price.length - 1)];
       bodyEl.appendChild(card({
         name: up.name, color: '#c8a35a', owned: maxed,
+        icon: up.texture,
         sub: `+${up.step} ${up.stat}`,
         body: `<div class="meta-line">${t('ui.meta.rank')}: ${rank} / ${up.max_ranks}</div>`,
         price,

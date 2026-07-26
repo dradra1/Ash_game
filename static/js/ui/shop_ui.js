@@ -3,7 +3,7 @@
 
 import { buy, sell, merge, mergeable, rerollCost } from '../sim/shop.js';
 import { refreshStats } from '../sim/player.js';
-import { statsHtml } from './tooltip.js';
+import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createShopUi(root, config, t, tip) {
   const doc = root.ownerDocument;
@@ -50,7 +50,8 @@ export function createShopUi(root, config, t, tip) {
   }
 
   function cardHtml(cfg, kind) {
-    const head = `<div class="card-name" style="color:${tierColor(cfg.tier)}">${cfg.name}</div>`;
+    const head = iconHtml(cfg.texture, 'icon-lg')
+      + `<div class="card-name" style="color:${tierColor(cfg.tier)}">${cfg.name}</div>`;
     const tierRow = `<div class="card-tier">${'I'.repeat(cfg.tier).replace('IIII', 'IV')}</div>`;
     if (kind === 'weapon') {
       return head + tierRow
@@ -125,7 +126,8 @@ export function createShopUi(root, config, t, tip) {
       cell.className = 'inv-cell' + (s.cfg ? '' : ' empty');
       if (s.cfg) {
         cell.style.borderColor = tierColor(s.cfg.tier);
-        cell.innerHTML = `<div class="inv-name">${s.cfg.name}</div>`;
+        cell.innerHTML = iconHtml(s.cfg.texture, 'icon-sm')
+          + `<div class="inv-name">${s.cfg.name}</div>`;
         const sellBtn = doc.createElement('button');
         sellBtn.type = 'button';
         sellBtn.className = 'mini';
@@ -158,7 +160,8 @@ export function createShopUi(root, config, t, tip) {
       const cell = doc.createElement('div');
       cell.className = 'inv-cell small';
       cell.style.borderColor = tierColor(cfg.tier);
-      cell.innerHTML = `<div class="inv-name">${cfg.name}</div>`;
+      cell.innerHTML = iconHtml(cfg.texture, 'icon-sm')
+        + `<div class="inv-name">${cfg.name}</div>`;
       const idx = i;
       const sellBtn = doc.createElement('button');
       sellBtn.type = 'button';
@@ -184,7 +187,10 @@ export function createShopUi(root, config, t, tip) {
       const v = p.stats[key];
       if (v === 0) continue;
       const suffix = meta.kind === 'pct' ? '%' : '';
-      html += `<div class="stat-row"><span style="color:${meta.color}">${meta.name}</span>`
+      // Иконка живёт внутри span с названием, а не рядом: .stat-row — это flex
+      // со space-between, и третий ребёнок растащил бы строку по краям.
+      html += `<div class="stat-row"><span style="color:${meta.color}">`
+        + `${iconHtml(meta.texture, 'icon-xs')}${meta.name}</span>`
         + `<span>${Math.round(v * 100) / 100}${suffix}</span></div>`;
     }
     statsEl.innerHTML = html;

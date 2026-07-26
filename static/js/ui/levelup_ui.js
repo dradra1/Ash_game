@@ -3,7 +3,7 @@
 // В соло игра ставится на паузу (это решает main.js по флагу pausesGame),
 // в коопе модалка висит поверх боя и выбор можно отложить — очередь копится.
 
-import { statsHtml } from './tooltip.js';
+import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createLevelUpUi(root, config, t) {
   const doc = root.ownerDocument;
@@ -50,7 +50,8 @@ export function createLevelUpUi(root, config, t) {
       const c = choices[i];
       const suffix = c.kind === 'pct' ? '%' : '';
       cards[i].innerHTML =
-        `<div class="choice-name" style="color:${c.color}">${c.name}</div>`
+        iconHtml(c.texture, 'icon-lg')
+        + `<div class="choice-name" style="color:${c.color}">${c.name}</div>`
         + `<div class="choice-value">+${c.value}${suffix}</div>`;
       cards[i].style.borderColor = c.color;
     }

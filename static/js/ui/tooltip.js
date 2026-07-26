@@ -32,6 +32,15 @@ export function createTooltip(root) {
   return { show, hide, bind, el };
 }
 
+// Иконка одиночного PNG (оружие, предмет, стат, мета-улучшение) для DOM-экранов.
+// Нет файла — onerror убирает узел: по CLAUDE.md §3.3 отсутствие текстуры это
+// штатный случай, подпись остаётся, вёрстка не едет.
+export function iconHtml(textureId, cls) {
+  if (!textureId) return '';
+  const c = cls ? ' ' + cls : '';
+  return `<img src="/static/textures/${textureId}.png" class="icon${c}" alt="" onerror="this.remove()">`;
+}
+
 // Разметка описания статов сущности: «+4 Ближний урон», «−20% Здоровье»
 export function statsHtml(config, stats) {
   if (!stats) return '';
@@ -44,8 +53,9 @@ export function statsHtml(config, stats) {
     const v = stats[key];
     const sign = v > 0 ? '+' : '−';
     const suffix = meta.kind === 'pct' || (pctKey && !config.stats.meta[key]) ? '%' : '';
+    const icon = iconHtml(meta.texture, 'icon-xs');
     out += `<div class="stat" style="color:${v > 0 ? meta.color : '#a8564a'}">`
-      + `${sign}${Math.abs(v)}${suffix} ${meta.name}</div>`;
+      + `${icon}${icon ? ' ' : ''}${sign}${Math.abs(v)}${suffix} ${meta.name}</div>`;
   }
   return out;
 }
