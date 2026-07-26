@@ -178,7 +178,7 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 | `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle |
 | `ch_conductor` | Хормейстер | cov | 32 | ✅ idle |
 | `ch_brute` | Громила | scrap | 64 | ✅ idle |
-| `ch_scavenger` | Падальщик | scrap | 32 | ⬜ |
+| `ch_scavenger` | Падальщик | scrap | 32 | ✅ idle |
 | `ch_artificer` | Артифекс | forge | 32 | ✅ idle |
 | `ch_censor` | Цензор | forge | 48 | ✅ idle |
 | `ch_thrall` | Невольник | chit | 32 | ✅ idle |
@@ -208,8 +208,9 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 ## 8. Состояние на конец первой итерации
 
-Готово и в игре: **13 из 14 персонажей** (падальщик перегенерируется — первая
-попытка упала на стороне pixellab), **3 врага улья**, **4 оружия**. Ходьба снята
+Готово и в игре: **все 14 персонажей**, **3 врага улья**, **4 оружия**.
+Контактный лист в игровом размере проверен: все четырнадцать силуэтов различимы
+друг от друга — требование коопа из §4 выполнено. Ходьба снята
 у пилигрима и культиста, остальным нужна догенерация (`animate_character`
 шаблоном `walking-4-frames`, 4 джоба на персонажа).
 
