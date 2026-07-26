@@ -24,7 +24,11 @@
 - **Кооп**: host-authoritative — браузер хоста считает мир, остальные шлют ввод и
   получают снапшоты. Соло — это комната из одного игрока через `LocalTransport`.
 
-## Запуск
+## Играть
+
+**https://ash.sanyago.space**
+
+## Запуск локально
 
 ```bash
 docker compose up -d --build

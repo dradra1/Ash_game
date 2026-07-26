@@ -355,3 +355,28 @@ html, body {
 .meta-foot .price { color: #c8a35a; }
 .owned-tag { color: #a8d07a; }
 .mini.buy { position: absolute; right: 10px; bottom: 6px; }
+
+/* ---- Экран итогов ------------------------------------------------------ */
+
+.result-rows { margin: 10px 0 12px; min-width: 300px; }
+.result-awards { margin-bottom: 10px; }
+.result-award { color: #a8d07a; font-size: 12px; padding: 2px 0; }
+.result-flag { color: #c34b4b; font-size: 12px; padding: 4px 0; }
+
+/* ---- Мобильный режим --------------------------------------------------- */
+
+@media (max-width: 820px), (pointer: coarse) {
+    .modal { padding: 12px 14px; width: 96vw; max-height: 88vh; }
+    .modal.wide { width: 96vw; }
+    .shop-slots { flex-wrap: wrap; }
+    .card { min-width: 44%; min-height: 108px; }
+    .shop-cols { flex-direction: column; gap: 10px; }
+    .meta-body { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    /* Пальцем нужно куда попадать: увеличиваем все интерактивные элементы */
+    .btn, .mini, .choice { min-height: 40px; padding: 10px 14px; font-size: 13px; }
+    .lock { width: 32px; height: 32px; font-size: 18px; }
+    .choice-row { flex-wrap: wrap; }
+    .choice { min-width: 45%; }
+    .menu { min-width: 74vw; }
+    .lobby-code .code { font-size: 22px; letter-spacing: 3px; }
+}

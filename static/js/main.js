@@ -20,6 +20,9 @@ import { createShopUi } from './ui/shop_ui.js';
 import { localAdapter, remoteAdapter } from './ui/shop_adapter.js';
 import { createLobbyUi } from './ui/lobby_ui.js';
 import { createMetaUi } from './ui/meta_ui.js';
+import { createResultUi } from './ui/result_ui.js';
+import { createParticles } from './engine/particles.js';
+import { createAudio } from './engine/audio.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
 
@@ -66,6 +69,12 @@ async function boot() {
   const levelUi = createLevelUpUi(uiRoot, config, t);
   const shopUi = createShopUi(uiRoot, config, t, tip);
   const lobbyUi = createLobbyUi(uiRoot, config, t);
+  const resultUi = createResultUi(uiRoot, config, t);
+  const audio = createAudio(config);
+  const particles = createParticles(config);
+  // Звук нельзя запустить до жеста пользователя — цепляем на первый же
+  doc.addEventListener('pointerdown', () => audio.unlock(), { once: true });
+  doc.addEventListener('keydown', () => audio.unlock(), { once: true });
   const metaUi = createMetaUi(uiRoot, config, t, {
     profile: () => fetchJson('/api/profile'),
     async unlock(kind, id) {
@@ -165,14 +174,38 @@ async function boot() {
       transport.send(CH.INPUT, inputPayload);
     }
     run.step(dt);
+    drainEvents();
+    particles.step(dt);
     if (hostNet) hostNet.step(dt);
 
     if (run.state.phase === PHASE_OVER && !finished) {
       finished = true;
       levelUi.hide();
       shopUi.hide();
-      reportRun();
+      audio.play(run.state.win ? 'levelup' : 'death');
+      loop.stop();
+      reportRun().then((award) => {
+        resultUi.show(run.state, award, {
+          onAgain: () => { resultUi.hide(); startSolo(); },
+          onBack: () => { resultUi.hide(); showMenu(); },
+        });
+      });
     }
+  }
+
+  // События симуляции превращаются в звук и партиклы. Очередь разбирается
+  // здесь, а не в sim: симуляция не должна знать ни про звук, ни про экран.
+  function drainEvents() {
+    const evs = run.events;
+    if (!evs.length) return;
+    for (let i = 0; i < evs.length; i++) {
+      const e = evs[i];
+      if (e.type === 'wave_start') audio.play('wave');
+      else if (e.type === 'boss_spawn') audio.play('boss');
+      else if (e.type === 'player_down') audio.play('death');
+      else if (e.type === 'shop_open') audio.play('buy');
+    }
+    if (!hostNet) evs.length = 0;   // у хоста очередь забирает host.js
   }
 
   // В соло левелап ставит игру на паузу, в коопе — нет (ТЗ §5)
@@ -238,6 +271,8 @@ async function boot() {
       }
     }
 
+    particles.draw(renderer.ctx);
+
     if (run) {
       const projs = run.projPool;
       for (let i = 0; i < projs.count; i++) {
@@ -266,7 +301,7 @@ async function boot() {
   async function reportRun() {
     const st = run ? run.state : world();
     try {
-      await fetchJson('/api/run/finish', {
+      return await fetchJson('/api/run/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -275,7 +310,7 @@ async function boot() {
         }),
       });
     } catch (e) {
-      // итог не ушёл — забег всё равно закончен
+      return { relics_gained: 0, achievements: [] };   // итог не ушёл, забег закончен
     }
   }
 
@@ -289,6 +324,7 @@ async function boot() {
       render,
     });
     debug = createDebug(loop, transport);
+    particles.clear();
     // Хуки для браузерной проверки (tools/smoke.py, tools/coop_test.py)
     globalThis.__RUN__ = run || { state: netClient.state };
     globalThis.__NET__ = netClient || hostNet;

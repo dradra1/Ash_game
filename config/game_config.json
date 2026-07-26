@@ -6661,10 +6661,11 @@
   },
   "audio": {
     "master": 0.8,
-    "music": 0.5,
     "sfx": {},
     "sfx_instance_limit": 4,
-    "tracks": {}
+    "tracks": {},
+    "music_volume": 0.5,
+    "sfx_volume": 0.7
   },
   "i18n": {
     "ru": {
@@ -6744,7 +6745,8 @@
       "ui.error.max_rank": "Максимальный ранг",
       "ui.error.not_unlockable": "Это не открывается",
       "ui.error.bad_kind": "Неизвестный тип",
-      "ui.error.bad_id": "Неизвестный идентификатор"
+      "ui.error.bad_id": "Неизвестный идентификатор",
+      "ui.result.flagged": "Результат не сошёлся с проверкой — реликвии не начислены"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -6823,7 +6825,8 @@
       "ui.error.max_rank": "Max rank",
       "ui.error.not_unlockable": "Not unlockable",
       "ui.error.bad_kind": "Unknown kind",
-      "ui.error.bad_id": "Unknown id"
+      "ui.error.bad_id": "Unknown id",
+      "ui.result.flagged": "The result failed validation — no relics awarded"
     }
   }
 }

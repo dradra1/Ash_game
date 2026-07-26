@@ -173,28 +173,28 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 | texture | персонаж | фракция | px | статус |
 |---|---|---|---|---|
-| `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle (48px), walk в очереди |
-| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle (48px) |
-| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle (48px) |
-| `ch_conductor` | Хормейстер | cov | 32 | ⬜ |
-| `ch_brute` | Громила | scrap | 64 | ⬜ |
+| `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle 48px + walk |
+| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle 48px |
+| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle 48px |
+| `ch_conductor` | Хормейстер | cov | 32 | ✅ idle 48px |
+| `ch_brute` | Громила | scrap | 64 | ✅ idle 48px |
 | `ch_scavenger` | Падальщик | scrap | 32 | ⬜ |
-| `ch_artificer` | Артифекс | forge | 32 | ⬜ |
-| `ch_censor` | Цензор | forge | 48 | ✅ idle (48px) |
-| `ch_thrall` | Невольник | chit | 32 | ⬜ |
-| `ch_broodmate` | Выводковый | chit | 32 | ⬜ |
-| `ch_hierophant` | Иерофант | rift | 32 | ⬜ |
-| `ch_hollow` | Полый | rift | 32 | ⬜ |
+| `ch_artificer` | Артифекс | forge | 32 | ✅ idle 48px |
+| `ch_censor` | Цензор | forge | 48 | ✅ idle 48px |
+| `ch_thrall` | Невольник | chit | 32 | ✅ idle 48px |
+| `ch_broodmate` | Выводковый | chit | 32 | ✅ idle 48px |
+| `ch_hierophant` | Иерофант | rift | 32 | ✅ idle 48px |
+| `ch_hollow` | Полый | rift | 32 | ✅ idle 48px |
 | `ch_warden` | Хранитель Гробниц | tomb | 64 | ⬜ |
-| `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ⬜ |
+| `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ✅ idle 48px |
 
 ### Враги, элиты, боссы
 
 | texture | враг | арена | px | статус |
 |---|---|---|---|---|
-| `e_cultist` | Культист | ar_hive | 48 | ✅ idle (48px), walk в очереди |
-| `e_flesh` | Ком плоти | ar_hive | 48 | ✅ idle (48px) |
-| `e_spitter` | Плевальщик | ar_hive | 48 | ✅ idle (48px) |
+| `e_cultist` | Культист | ar_hive | 48 | ✅ idle 48px + walk |
+| `e_flesh` | Ком плоти | ar_hive | 48 | ✅ idle 48px |
+| `e_spitter` | Плевальщик | ar_hive | 48 | ✅ idle 48px |
 
 Остальные 15 обычных, 6 элит и 6 боссов заводятся на этапе M4 вместе с их записями в
 конфиге — реестр пополняется тогда же.
