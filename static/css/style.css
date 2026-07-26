@@ -1,7 +1,43 @@
+/* Оформление интерфейса — на сгенерированных панелях (static/ui/), натянутых
+   через border-image как 9-slice. Отсюда два правила по всему файлу:
+
+   1. У элемента со скином `border` задаёт ТОЛЩИНУ рамки, а не цвет: цвет рисует
+      картинка. Число после url() — срез в пикселях ИСХОДНИКА, число после «/» —
+      во что он рендерится. Ключевое слово fill отрисовывает и середину картинки.
+      Кнопкам и карточкам fill нужен — они и есть металлическая пластина. Крупным
+      панелям НЕ нужен: их середина у ui_panel светло-серая, и растянутая на весь
+      модал она выбивала интерфейс из тёмной гаммы. Без fill сквозь рамку виден
+      собственный тёмный фон элемента.
+   2. Цвет тира и фракции приходит из конфига инлайном. Раньше он ложился в
+      border-color, но под border-image рамку рисует картинка, и цвет пропал бы
+      совсем. Поэтому JS пишет переменную --accent, а её показывает полоска
+      ::before и цвет названия. */
+:root {
+    --ink: #c9c4b8;
+    --ink-dim: #7a7568;
+    --ink-mute: #9a9488;
+    --gold: #c8a35a;
+    --gold-bright: #e0c07a;
+    --green: #a8d07a;
+    --red: #c34b4b;
+    --line: #3a3f4a;
+    --surface: #181b22;
+    --raised: #22262f;
+    --accent: var(--line);
+    --ui: url(/static/ui/);
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+/* Скин рисуется картинкой, поэтому масштабируется без сглаживания — иначе
+   пиксельная рамка мылится на любом нецелом размере. */
+.modal, .menu, .btn, .mini, .card, .choice, .inv-cell, .meta-card,
+.tooltip, .btn.tab, .auth-box {
+    image-rendering: pixelated;
 }
 
 html, body {
@@ -49,8 +85,9 @@ html, body {
 
 .auth-box {
     width: 320px;
-    padding: 24px;
-    border: 1px solid #3a3f4a;
+    padding: 20px;
+    border: 14px solid transparent;
+    border-image: url(/static/ui/ui_panel.png) 32 fill / 14px / 0 stretch;
     background: #14171f;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
@@ -144,9 +181,13 @@ html, body {
     top: 50%;
     transform: translate(-50%, -50%);
     background: rgba(10, 11, 14, 0.94);
-    border: 1px solid #3a3f4a;
-    padding: 18px 20px;
-    color: #c9c4b8;
+    border: 22px solid transparent;
+    /* Срез 72, а не 32: у ui_panel рамка ВЛОЖЕННАЯ (внешняя + внутренняя), и
+       мелкий срез оставлял внутреннюю в растягиваемой середине — она лезла
+       поперёк панели полосой между кнопками. Режем за обеими. */
+    border-image: url(/static/ui/ui_panel.png) 66 / 22px / 0 stretch;
+    padding: 10px 14px;
+    color: var(--ink);
     font-family: monospace;
     max-height: 92vh;
     overflow-y: auto;
@@ -180,12 +221,14 @@ html, body {
 
 .choice {
     flex: 1 1 0;
+    position: relative;
     min-width: 130px;
-    background: #181b22;
-    border: 1px solid #3a3f4a;
-    color: #c9c4b8;
+    background: var(--surface);
+    border: 12px solid transparent;
+    border-image: url(/static/ui/ui_card.png) 26 fill / 12px / 0 stretch;
+    color: var(--ink);
     font-family: monospace;
-    padding: 14px 10px;
+    padding: 8px 6px;
     cursor: pointer;
     text-align: center;
 }
@@ -207,17 +250,31 @@ html, body {
 .shop-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .shop-top .ash { color: #c8a35a; margin-right: auto; }
 
+/* Кнопка: четыре состояния — четыре картинки. `border` тут только толщина,
+   цвет даёт скин; background остаётся запасным вариантом, если PNG не приехал. */
 .btn {
-    background: #22262f;
-    border: 1px solid #3a3f4a;
-    color: #c9c4b8;
+    background: var(--raised);
+    border: 10px solid transparent;
+    border-image: url(/static/ui/ui_btn.png) 26 fill / 10px / 0 stretch;
+    color: var(--ink);
     font-family: monospace;
-    padding: 7px 14px;
+    padding: 2px 10px;
+    min-height: 34px;
     cursor: pointer;
 }
-.btn:hover:not(:disabled) { background: #2c313c; }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn.go { border-color: #6a8f4a; color: #a8d07a; }
+.btn:hover:not(:disabled) {
+    border-image-source: url(/static/ui/ui_btn_hover.png);
+    color: var(--gold-bright);
+}
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.go {
+    border-image-source: url(/static/ui/ui_btn_go.png);
+    color: var(--green);
+}
+.btn.danger, .btn.leave {
+    border-image-source: url(/static/ui/ui_btn_danger.png);
+    color: var(--red);
+}
 
 .shop-slots { display: flex; gap: 10px; margin-bottom: 16px; }
 
@@ -225,11 +282,12 @@ html, body {
     position: relative;
     flex: 1 1 0;
     min-height: 128px;
-    background: #181b22;
-    border: 1px solid #3a3f4a;
+    background: var(--surface);
+    border: 12px solid transparent;
+    border-image: url(/static/ui/ui_card.png) 26 fill / 12px / 0 stretch;
     /* Нижний отступ шире прочих: .card-price лежит абсолютом в правом нижнем
        углу, и без резерва длинное описание подлезает прямо под цену. */
-    padding: 10px 10px 26px;
+    padding: 2px 4px 20px;
     cursor: pointer;
     font-size: 12px;
 }
@@ -267,7 +325,9 @@ html, body {
     cursor: pointer;
     font-size: 13px;
 }
-.lock.on { color: #c8a35a; }
+.lock.on { color: var(--gold); }
+.lock .icon { margin: 0; width: 16px; height: 16px; }
+.lock.on .icon { filter: none; }
 
 .shop-cols { display: flex; gap: 18px; }
 .col { flex: 1 1 0; }
@@ -275,16 +335,25 @@ html, body {
 
 .inv-cell {
     position: relative;
-    border: 1px solid #3a3f4a;
-    background: #181b22;
-    padding: 7px 9px;
+    border: 9px solid transparent;
+    border-image: url(/static/ui/ui_cell.png) 20 fill / 9px / 0 stretch;
+    background: var(--surface);
+    padding: 2px 4px;
     margin-bottom: 6px;
     font-size: 12px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.inv-cell.empty { opacity: 0.3; min-height: 18px; }
+.inv-cell.empty {
+    /* Скин снимаем совсем: пустой слот — это отсутствие содержимого, а
+       отрисованная плашка читалась заметнее занятых строк. */
+    border-image: none;
+    border: 1px dashed #262a33;
+    opacity: 0.5;
+    min-height: 18px;
+    padding: 2px 6px;
+}
 .inv-name { margin-right: auto; }
 
 /* Выбранный пункт в сетапе / лобби (класс locked = selected) */
@@ -304,12 +373,13 @@ html, body {
 }
 
 .mini {
-    background: #22262f;
-    border: 1px solid #3a3f4a;
-    color: #9a9488;
+    background: var(--raised);
+    border: 7px solid transparent;
+    border-image: url(/static/ui/ui_btn.png) 26 fill / 7px / 0 stretch;
+    color: var(--ink-mute);
     font-family: monospace;
     font-size: 11px;
-    padding: 2px 7px;
+    padding: 1px 5px;
     cursor: pointer;
 }
 .mini:hover { color: #c9c4b8; }
@@ -321,11 +391,14 @@ html, body {
     position: fixed;
     z-index: 20;
     background: rgba(10, 11, 14, 0.97);
-    border: 1px solid #3a3f4a;
-    color: #c9c4b8;
+    /* ui_tooltip сгенерировать не удалось: модель трижды нарисовала внутрь
+       иллюстрацию меню. Берём ui_cell — он ровно того вида, что нужен. */
+    border: 10px solid transparent;
+    border-image: url(/static/ui/ui_cell.png) 20 fill / 10px / 0 stretch;
+    color: var(--ink);
     font-family: monospace;
     font-size: 12px;
-    padding: 8px 10px;
+    padding: 4px 6px;
     max-width: 260px;
     pointer-events: none;
 }
@@ -352,8 +425,12 @@ html, body {
     gap: 10px;
     min-width: 260px;
     background: rgba(10, 11, 14, 0.94);
-    border: 1px solid #3a3f4a;
-    padding: 22px 26px;
+    border: 22px solid transparent;
+    /* Срез 72, а не 32: у ui_panel рамка ВЛОЖЕННАЯ (внешняя + внутренняя), и
+       мелкий срез оставлял внутреннюю в растягиваемой середине — она лезла
+       поперёк панели полосой между кнопками. Режем за обеими. */
+    border-image: url(/static/ui/ui_panel.png) 66 / 22px / 0 stretch;
+    padding: 16px 20px;
     font-family: monospace;
 }
 .menu-title { color: #e0c07a; font-size: 20px; margin-bottom: 6px; text-align: center; }
@@ -388,8 +465,17 @@ html, body {
 /* ---- Реликварий -------------------------------------------------------- */
 
 .meta-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.btn.tab { padding: 5px 12px; font-size: 12px; }
-.btn.tab.active { border-color: #c8a35a; color: #c8a35a; }
+.btn.tab {
+    padding: 2px 10px;
+    font-size: 12px;
+    min-height: 30px;
+    border: 9px solid transparent;
+    border-image: url(/static/ui/ui_tab.png) 28 fill / 9px / 0 stretch;
+}
+.btn.tab.active {
+    border-image-source: url(/static/ui/ui_tab_active.png);
+    color: var(--gold);
+}
 
 .meta-body {
     display: grid;
@@ -401,9 +487,10 @@ html, body {
 
 .meta-card {
     position: relative;
-    border: 1px solid #3a3f4a;
-    background: #181b22;
-    padding: 10px 12px 30px;
+    border: 10px solid transparent;
+    border-image: url(/static/ui/ui_cell.png) 20 fill / 10px / 0 stretch;
+    background: var(--surface);
+    padding: 4px 6px 24px;
     font-size: 12px;
 }
 .meta-card.owned { opacity: 0.75; }

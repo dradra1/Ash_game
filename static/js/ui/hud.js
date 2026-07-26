@@ -2,12 +2,14 @@
 // Рисуется на том же canvas в экранных координатах (после renderer.end()).
 // Все подписи — только через t('ui.hud.*'), ни одной строки текста в коде.
 
-import { drawIcon } from '../engine/sprites.js';
+import { drawIcon, draw9Slice } from '../engine/sprites.js';
 
 export function createHud(config, t) {
   const h = config.render.hud;
   const pad = h.pad;
 
+  // Полоса: заливка, поверх неё рамка-обойма. HUD на канвасе, поэтому 9-slice
+  // тут свой (draw9Slice), а не border-image — до канваса CSS не достаёт.
   function bar(ctx, x, y, w, hh, frac, bg, fill) {
     ctx.fillStyle = bg;
     ctx.fillRect(x, y, w, hh);
@@ -16,6 +18,8 @@ export function createHud(config, t) {
       ctx.fillStyle = fill;
       ctx.fillRect(x, y, Math.round(w * f), hh);
     }
+    // Нет PNG — остаётся прежний плоский прямоугольник, без ошибок в консоли
+    draw9Slice(ctx, 'ui_bar_frame', x - 3, y - 3, w + 6, hh + 6, 26, 5);
   }
 
   function label(ctx, text, x, y, color, align, font) {
@@ -53,9 +57,18 @@ export function createHud(config, t) {
       const slot = slots[i];
       ctx.fillStyle = h.slot_bg;
       ctx.fillRect(sx, sy, h.slot, h.slot);
-      ctx.strokeStyle = slot && slot.flash > 0 ? h.crit : h.slot_border;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(sx + 0.5, sy + 0.5, h.slot - 1, h.slot - 1);
+      // Гнездо-обойма поверх заливки; нет PNG — прежняя штриховая рамка
+      if (!draw9Slice(ctx, 'ui_slot', sx - 2, sy - 2, h.slot + 4, h.slot + 4, 40, 6)) {
+        ctx.strokeStyle = slot && slot.flash > 0 ? h.crit : h.slot_border;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, h.slot - 1, h.slot - 1);
+      } else if (slot && slot.flash > 0) {
+        // Вспышка после удара: рамку рисует картинка, поэтому подсветку кладём
+        // отдельным контуром, иначе сигнал «оружие сработало» пропал бы.
+        ctx.strokeStyle = h.crit;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, h.slot - 1, h.slot - 1);
+      }
 
       if (slot && slot.cfg) {
         const w = slot.cfg;

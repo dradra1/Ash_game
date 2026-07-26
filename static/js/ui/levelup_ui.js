@@ -64,7 +64,9 @@ export function createLevelUpUi(root, config, t) {
         + `<div class="choice-rarity" style="color:${border}">${rarityLabel(rarity)}</div>`
         + `<div class="choice-name">${c.name}</div>`
         + `<div class="choice-value">+${c.value}${suffix}</div>`;
-      cards[i].style.borderColor = border;
+      // Рамку рисует картинка скина, поэтому цвет редкости уходит в --accent:
+      // его показывает акцентная полоска ::before (см. style.css).
+      cards[i].style.setProperty('--accent', border);
     }
   }
 

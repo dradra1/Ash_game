@@ -95,7 +95,7 @@ export function createShopUi(root, config, t, tip) {
         slotsEl.appendChild(card);
         continue;
       }
-      card.style.borderColor = tierColor(s.cfg.tier);
+      card.style.setProperty('--accent', tierColor(s.cfg.tier));
       card.innerHTML = cardHtml(s.cfg, s.kind)
         + `<div class="card-price">${s.sold ? t('ui.shop.sold') : s.price}</div>`;
 
@@ -103,7 +103,9 @@ export function createShopUi(root, config, t, tip) {
       lockBtn.type = 'button';
       lockBtn.className = 'lock' + (s.locked ? ' on' : '');
       lockBtn.title = t('ui.shop.lock');
-      lockBtn.textContent = s.locked ? '■' : '□';
+      // Замок — рисованная иконка вместо литералов ■/□: они выпадали из
+      // пиксельного оформления и в разных шрифтах выглядели по-разному.
+      lockBtn.innerHTML = iconHtml(s.locked ? 'ui_lock_on' : 'ui_lock_off', 'icon-sm');
       lockBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         focusSlot = i;
@@ -190,7 +192,7 @@ export function createShopUi(root, config, t, tip) {
       const cell = doc.createElement('div');
       cell.className = 'inv-cell' + (s.cfg ? '' : ' empty');
       if (s.cfg) {
-        cell.style.borderColor = tierColor(s.cfg.tier);
+        cell.style.setProperty('--accent', tierColor(s.cfg.tier));
         cell.innerHTML = iconHtml(s.cfg.texture, 'icon-sm')
           + `<div class="inv-name">${s.cfg.name}</div>`;
         const sellBtn = doc.createElement('button');
@@ -224,7 +226,7 @@ export function createShopUi(root, config, t, tip) {
       const cfg = config.items[p.items[i]];
       const cell = doc.createElement('div');
       cell.className = 'inv-cell small';
-      cell.style.borderColor = tierColor(cfg.tier);
+      cell.style.setProperty('--accent', tierColor(cfg.tier));
       cell.innerHTML = iconHtml(cfg.texture, 'icon-sm')
         + `<div class="inv-name">${cfg.name}</div>`;
       const idx = i;

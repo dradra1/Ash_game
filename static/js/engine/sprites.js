@@ -39,6 +39,57 @@ export function drawIcon(ctx, textureId, x, y, size) {
 
 // Рисует кадр dir/frame листа с центром в (x, y), масштабируя до size.
 // Возвращает true, если нарисовано; false — вызывающий рисует плейсхолдер.
+// 9-slice на канвасе: HUD рисуется не в DOM, и border-image до него не достаёт.
+// Углы кладутся как есть, стороны и середина растягиваются. Путь другой, чем у
+// спрайтов: панели живут в /static/ui/, их не адресуют по texture-id из конфига.
+const uiCache = new Map();
+
+export function getUiSprite(name) {
+  if (!name) return null;
+  let s = uiCache.get(name);
+  if (s) return s;
+  if (!globalThis.Image) return null;          // headless: тесты без DOM
+  const img = new globalThis.Image();
+  s = { img, ready: false, failed: false };
+  img.onload = () => { s.ready = true; };
+  img.onerror = () => { s.failed = true; };
+  img.src = '/static/ui/' + name + '.png';
+  uiCache.set(name, s);
+  return s;
+}
+
+export function draw9Slice(ctx, name, x, y, w, h, slice, border) {
+  const s = getUiSprite(name);
+  if (!s || !s.ready || s.failed) return false;
+  const img = s.img;
+  const sw = img.width;
+  const sh = img.height;
+  const c = Math.min(slice, (sw / 2) | 0, (sh / 2) | 0);
+  const b = Math.min(border, (w / 2) | 0, (h / 2) | 0);
+  if (c <= 0 || b <= 0 || w <= 0 || h <= 0) return false;
+
+  const mw = Math.max(0, w - b * 2);
+  const mh = Math.max(0, h - b * 2);
+  const smw = Math.max(1, sw - c * 2);
+  const smh = Math.max(1, sh - c * 2);
+
+  // углы
+  ctx.drawImage(img, 0, 0, c, c, x, y, b, b);
+  ctx.drawImage(img, sw - c, 0, c, c, x + w - b, y, b, b);
+  ctx.drawImage(img, 0, sh - c, c, c, x, y + h - b, b, b);
+  ctx.drawImage(img, sw - c, sh - c, c, c, x + w - b, y + h - b, b, b);
+  // стороны
+  if (mw > 0) {
+    ctx.drawImage(img, c, 0, smw, c, x + b, y, mw, b);
+    ctx.drawImage(img, c, sh - c, smw, c, x + b, y + h - b, mw, b);
+  }
+  if (mh > 0) {
+    ctx.drawImage(img, 0, c, c, smh, x, y + b, b, mh);
+    ctx.drawImage(img, sw - c, c, c, smh, x + w - b, y + b, b, mh);
+  }
+  return true;
+}
+
 export function drawSheet(ctx, textureId, dir, frame, x, y, size) {
   const s = getSprite(textureId);
   if (!s || !s.ready || s.failed) return false;

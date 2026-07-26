@@ -103,7 +103,7 @@ export function createMetaUi(root, config, t, api) {
     const el = doc.createElement('div');
     el.className = 'meta-card' + (opts.owned ? ' owned' : '')
       + (opts.locked ? ' locked-out' : '');
-    el.style.borderColor = opts.color || '#3a3f4a';
+    el.style.setProperty('--accent', opts.color || '#3a3f4a');
     let html = iconHtml(opts.icon, 'icon-lg')
       + `<div class="meta-name" style="color:${opts.color || '#c9c4b8'}">`
       + `${opts.name}</div>`;

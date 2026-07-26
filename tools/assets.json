@@ -1501,5 +1501,135 @@
       "detail": "low detail",
       "prompt": "an expanding shockwave ring with short radial spikes bursting outward from the centre, a motion trail of a weapon swing, pale bone-white with a faint ochre core, fading to nothing at the thin end, NO WEAPON, NO BLADE, NO HAND, no object, just the streak of light left in the air, flat, clean edges, on transparent background"
     }
+  },
+  "ui": {
+    "ui_panel": {
+      "tool": "create_ui_asset",
+      "width": 256,
+      "height": 256,
+      "description": "a heavy dark iron panel frame for a grimdark sci-fi game menu, riveted steel border with a thin tarnished brass inlay and small corner bolts, deep shadowed recess inside, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_tooltip": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 256,
+      "description": "a small plain dark steel tooltip frame, thin single brass hairline border, very restrained, no ornament, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_btn": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a dark steel push button plate for a grimdark sci-fi interface, bevelled riveted edge, dull brass rim, unlit and calm, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_btn_hover": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a dark steel push button plate, bevelled riveted edge, rim lit with warm ochre lamplight, slightly brighter than resting state, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_btn_go": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a dark steel push button plate with a muted moss-green lit rim and green bevel glow, confirmation button, riveted edge, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_btn_danger": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a dark steel push button plate with a dried blood red lit rim and red bevel glow, warning button, riveted edge, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_cell": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a plain dark recessed slot plate, thin steel border, shallow inner shadow, very simple, for a list row, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_card": {
+      "tool": "create_ui_asset",
+      "width": 288,
+      "height": 384,
+      "description": "a tall dark steel card frame with a thin brass edge and a small notch at the top centre, shallow recess inside, for an item card, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_tab": {
+      "tool": "create_ui_asset",
+      "width": 256,
+      "height": 192,
+      "description": "a dark steel tab plate with a bevelled top edge, unlit, muted, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_tab_active": {
+      "tool": "create_ui_asset",
+      "width": 256,
+      "height": 192,
+      "description": "a dark steel tab plate with a bevelled top edge lit with warm ochre gold, selected, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_bar_frame": {
+      "tool": "create_ui_asset",
+      "width": 384,
+      "height": 192,
+      "description": "a narrow dark iron gauge housing, riveted rail along the top and bottom edges, hollow inside, for a horizontal status bar, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    },
+    "ui_slot": {
+      "tool": "create_ui_asset",
+      "width": 192,
+      "height": 192,
+      "description": "a small square dark steel socket frame with bolted corners, hollow centre, for a weapon icon slot, ONE SINGLE FRAME filling the ENTIRE canvas from edge to edge. NOT A UI KIT. NOT A SET OF WIDGETS. NOT A SPRITE SHEET. NO TEXT, NO LETTERS, NO ICONS, NO BUTTONS INSIDE, NO ILLUSTRATION. Border of even thickness on all four sides, symmetrical readable corners, the centre is COMPLETELY FLAT AND EMPTY, designed to be stretched as a nine-slice frame",
+      "color_palette": "dark gunmetal grey, cold steel, rust brown, tarnished brass and dull ochre gold"
+    }
+  },
+  "ui_glyphs": {
+    "ui_lock_on": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "a closed heavy iron padlock, shackle down, worn metal"
+    },
+    "ui_lock_off": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "an open iron padlock, shackle swung up and free, worn metal"
+    },
+    "ui_check": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "a simple thick check mark tick, muted moss green, clean shape"
+    },
+    "ui_star": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "a simple five pointed star, dull ochre gold, flat and clean"
+    },
+    "ui_arrow": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "a simple solid triangular arrow head pointing RIGHT, dull steel, flat and clean"
+    },
+    "ui_copy": {
+      "tool": "create_map_object",
+      "gen": 64,
+      "fit": 32,
+      "view": "high top-down",
+      "prompt": "two small overlapping rectangular plates, a copy symbol, dull steel, flat"
+    }
   }
 }

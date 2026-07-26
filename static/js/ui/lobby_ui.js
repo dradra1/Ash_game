@@ -71,7 +71,7 @@ export function createLobbyUi(root, config, t) {
       const btn = doc.createElement('button');
       btn.type = 'button';
       btn.className = 'inv-cell' + (id === mine ? ' locked' : '');
-      btn.style.borderColor = c.color;
+      btn.style.setProperty('--accent', c.color);
       btn.innerHTML = `<span class="inv-name" style="color:${c.color}">${c.name}</span>`;
       btn.addEventListener('click', () => ctx.lobby.character(id));
       charsEl.appendChild(btn);
