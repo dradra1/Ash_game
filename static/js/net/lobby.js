@@ -57,8 +57,11 @@ export function createLobby(socket) {
     leave() { return call('room:leave'); },
     ready(v) { return call('room:ready', { ready: v }); },
     character(id) { return call('room:character', { character: id }); },
-    setup(arena, danger) { return call('room:setup', { arena, danger }); },
+    setup(arena, danger, curses) {
+      return call('room:setup', { arena, danger, curses });
+    },
     start() { return call('room:start'); },
+    restart() { return call('room:restart'); },
 
     // Замер пинга: круговой ход до сервера. В коопе он же уходит в дебаг-оверлей.
     ping() {

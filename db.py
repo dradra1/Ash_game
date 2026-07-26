@@ -64,6 +64,7 @@ def init_db():
                 character TEXT,
                 arena TEXT,
                 danger INTEGER,
+                curses TEXT DEFAULT '[]',
                 wave INTEGER DEFAULT 0,
                 win INTEGER DEFAULT 0,
                 bosses INTEGER DEFAULT 0,
@@ -71,6 +72,9 @@ def init_db():
                 kills INTEGER DEFAULT 0,
                 score INTEGER DEFAULT 0,
                 relics INTEGER DEFAULT 0,
+                damage_taken INTEGER DEFAULT 0,
+                ash_gained INTEGER DEFAULT 0,
+                shop_buys INTEGER DEFAULT 0,
                 flagged INTEGER DEFAULT 0,
                 started_at REAL NOT NULL,
                 finished_at REAL
@@ -81,9 +85,23 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_runs_finished ON runs(finished_at);
             """
         )
+        _migrate_runs(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def _migrate_runs(conn):
+    """Добавить колонки в существующие БД без потери данных."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    for name, decl in (
+        ("curses", "TEXT DEFAULT '[]'"),
+        ("damage_taken", "INTEGER DEFAULT 0"),
+        ("ash_gained", "INTEGER DEFAULT 0"),
+        ("shop_buys", "INTEGER DEFAULT 0"),
+    ):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE runs ADD COLUMN {name} {decl}")
 
 
 def get_user_by_name(name: str) -> sqlite3.Row | None:
@@ -166,13 +184,16 @@ def start_run(
     danger: int,
     room: str | None,
     players: int = 1,
+    curses: str | None = None,
 ) -> dict:
     conn = get_db()
     try:
         conn.execute(
-            "INSERT INTO runs (run_id, user_id, seed, room, players, character, arena, danger, started_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (run_id, user_id, seed, room, players, character, arena, danger, time.time()),
+            "INSERT INTO runs (run_id, user_id, seed, room, players, character, arena, danger, "
+            "curses, started_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, user_id, seed, room, players, character, arena, danger,
+             curses if curses is not None else "[]", time.time()),
         )
         conn.commit()
         return {"run_id": run_id, "seed": seed}
@@ -197,13 +218,18 @@ def finish_run(
     kills: int,
     score: int,
     relics_gained: int,
+    damage_taken: int = 0,
+    ash_gained: int = 0,
+    shop_buys: int = 0,
 ):
     conn = get_db()
     try:
         conn.execute(
             "UPDATE runs SET wave = ?, win = ?, bosses = ?, time_sec = ?, kills = ?, "
-            "score = ?, relics = ?, finished_at = ? WHERE run_id = ?",
-            (wave, win, bosses, time_sec, kills, score, relics_gained, time.time(), run_id),
+            "score = ?, relics = ?, damage_taken = ?, ash_gained = ?, shop_buys = ?, "
+            "finished_at = ? WHERE run_id = ?",
+            (wave, win, bosses, time_sec, kills, score, relics_gained,
+             damage_taken, ash_gained, shop_buys, time.time(), run_id),
         )
         conn.commit()
     finally:

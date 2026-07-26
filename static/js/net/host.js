@@ -20,8 +20,6 @@ export function createHost(run, transport, config) {
   let window = 0;
   let windowBytes = 0;
 
-  // Ввод от клиентов: применяем к состоянию забега. Хост — авторитет,
-  // клиент может только просить, а не двигать себя в чужой симуляции.
   function onInput(payload) {
     const dec = inputCodec.decode(payload);
     if (!dec) return;
@@ -32,19 +30,29 @@ export function createHost(run, transport, config) {
 
   transport.on(CH.INPUT, onInput);
 
-  // Лавка клиента живёт у хоста: ассортимент и кошелёк — часть авторитетного
-  // состояния. Клиенту уходит снимок, обратно приходят действия.
-  // Отправитель указывает свой индекс сам: авторитет у хоста, доверие внутри
-  // комнаты (ТЗ §2) — подделка индекса даёт лишь возможность потратить свою же долю.
   function onClientEvent(msg) {
-    if (!msg || msg.t !== 'shop_act') return;
-    const player = run.state.players[msg.p];
-    if (!player) return;
-    const shop = run.shopFor(player.id);
-    if (!shop) return;
-    const adapter = localAdapter(run, player, shop, config, () => run.readyUp(player.id));
-    adapter.act(msg.kind, msg.a);
-    sendShopTo(msg.p);
+    if (!msg) return;
+    if (msg.t === 'shop_act') {
+      const player = run.state.players[msg.p];
+      if (!player) return;
+      const shop = run.shopFor(player.id);
+      if (!shop) return;
+      const adapter = localAdapter(run, player, shop, config, () => run.readyUp(player.id));
+      adapter.act(msg.kind, msg.a);
+      sendShopTo(msg.p);
+      return;
+    }
+    if (msg.t === 'levelup_act') {
+      const player = run.state.players[msg.p];
+      if (!player) return;
+      run.applyLevelPick(player.id, msg.idx | 0);
+      sendLevelUpTo(msg.p);
+      return;
+    }
+    if (msg.t === 'pause_req') {
+      run.setPaused(!!msg.on);
+      return;
+    }
   }
 
   transport.on(CH.EVENT, onClientEvent);
@@ -59,17 +67,34 @@ export function createHost(run, transport, config) {
     });
   }
 
+  function sendLevelUpTo(idx) {
+    const player = run.state.players[idx];
+    if (!player) return;
+    const choices = run.choicesFor(player.id);
+    transport.send(CH.EVENT, {
+      t: 'levelup',
+      p: idx,
+      pending: player.pendingLevels,
+      choices: choices,
+      level: player.level,
+    });
+  }
+
   function broadcastShops() {
     for (let i = 0; i < run.state.players.length; i++) sendShopTo(i);
+  }
+
+  function broadcastLevelUps() {
+    for (let i = 0; i < run.state.players.length; i++) sendLevelUpTo(i);
   }
 
   let lastPhase = run.state.phase;
 
   function step(dt) {
-    // Смена фазы на лавку — момент разослать всем их ассортимент
     if (run.state.phase !== lastPhase) {
       lastPhase = run.state.phase;
       if (lastPhase === 'shop') broadcastShops();
+      if (lastPhase === 'levelup') broadcastLevelUps();
     }
 
     acc += dt;
@@ -78,12 +103,10 @@ export function createHost(run, transport, config) {
     acc -= period;
     seq = (seq + 1) & 0xffff;
 
-    // Каждому клиенту — свой срез мира вокруг его персонажа
     const players = run.state.players;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
       const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx);
-      // Копия нужна: буфер кодека переиспользуется, а socket.io отправляет асинхронно
       const copy = packed.slice();
       transport.send(CH.SNAPSHOT, copy);
       stats.bytesOut += copy.byteLength;
@@ -91,7 +114,6 @@ export function createHost(run, transport, config) {
       stats.sent++;
     }
 
-    // Накопленные события забега уходят надёжным каналом
     const events = run.events;
     if (events.length > 0) {
       transport.send(CH.EVENT, { t: MSG_EVENT, list: events.slice() });
@@ -110,5 +132,5 @@ export function createHost(run, transport, config) {
     transport.off(CH.EVENT, onClientEvent);
   }
 
-  return { step, stats, close, types };
+  return { step, stats, close, types, broadcastLevelUps, sendLevelUpTo };
 }

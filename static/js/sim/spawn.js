@@ -109,7 +109,7 @@ export function createSpawner(config) {
       const e = deps.pool.spawn();
       if (!e) break;                                 // пул кончился — тоже деградация
       const typeId = pickType(config_, deps.rng, typeBuf, nTypes);
-      initEnemy(e, config_, typeId, deps.wave, deps.danger, players.length);
+      initEnemy(e, config_, typeId, deps.wave, deps.danger, players.length, deps.curseFx);
       e.x = point.x;
       e.y = point.y;
       const target = nearestAlivePlayer(players, e.x, e.y);

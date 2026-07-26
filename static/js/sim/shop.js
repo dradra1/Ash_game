@@ -56,12 +56,13 @@ export function rollTier(config, wave, luck, rng) {
 
 const TIER_ACC = new Float64Array(8);
 
-export function createShop(config, unlockedWeapons) {
+export function createShop(config, unlockedWeapons, curseFx) {
   const slots = new Array(config.shop.slots);
   for (let i = 0; i < slots.length; i++) {
     slots[i] = { kind: null, id: null, cfg: null, price: 0, locked: false, sold: false };
   }
-  const state = { rerolls: 0, wave: 1 };
+  const fx = curseFx || EMPTY_CURSE;
+  const state = { rerolls: 0, wave: 1, freeRerollsLeft: 0 };
 
   // Пул оружия ограничен открытым метапрогрессией (M6 передаст сюда реальный список)
   const weaponIds = [];
@@ -146,7 +147,13 @@ export function createShop(config, unlockedWeapons) {
     slot.kind = kind;
     slot.id = id;
     slot.cfg = id ? (kind === 'weapon' ? config.weapons[id] : config.items[id]) : null;
-    slot.price = slot.cfg ? priceOf(config, slot.cfg.price, wave, danger) : 0;
+    if (!slot.cfg) {
+      slot.price = 0;
+    } else if (fx.shop_free) {
+      slot.price = 0;
+    } else {
+      slot.price = priceOf(config, slot.cfg.price, wave, danger);
+    }
     slot.sold = false;
   }
 
@@ -154,15 +161,21 @@ export function createShop(config, unlockedWeapons) {
   function open(player, wave, danger, rng, coop) {
     state.wave = wave;
     state.rerolls = 0;
+    state.freeRerollsLeft = fx.free_rerolls || 0;
     rebuildPools(coop);
     for (let i = 0; i < slots.length; i++) fillSlot(slots[i], player, wave, danger, rng);
     return slots;
   }
 
   function reroll(player, danger, rng) {
-    const cost = rerollCost(config, state.rerolls);
-    if (player.ash < cost) return 0;
-    player.ash -= cost;
+    let cost = 0;
+    if (state.freeRerollsLeft > 0) {
+      state.freeRerollsLeft -= 1;
+    } else {
+      cost = rerollCost(config, state.rerolls);
+      if (player.ash < cost) return 0;
+      player.ash -= cost;
+    }
     state.rerolls += 1;
     for (let i = 0; i < slots.length; i++) fillSlot(slots[i], player, state.wave, danger, rng);
     return cost;
@@ -275,3 +288,4 @@ export function merge(player, weaponId, config, onChange) {
 
 const MERGE_COUNTS = {};
 const ITEM_SOURCE_START = 2;
+const EMPTY_CURSE = { shop_free: false, free_rerolls: 0 };

@@ -8,19 +8,21 @@ import { createLoop } from './engine/loop.js';
 import { createInput } from './engine/input.js';
 import { createRenderer } from './engine/render.js';
 import { createLocalTransport, createSocketTransport, CH } from './net/transport.js';
-import { createRun, PHASE_OVER, PHASE_SHOP } from './sim/run.js';
+import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP } from './sim/run.js';
 import { createHost } from './net/host.js';
 import { createNetClient } from './net/client.js';
 import { createLobby, roomFromUrl } from './net/lobby.js';
-import { applyLevelChoice } from './sim/player.js';
 import { createHud } from './ui/hud.js';
 import { createTooltip } from './ui/tooltip.js';
 import { createLevelUpUi } from './ui/levelup_ui.js';
 import { createShopUi } from './ui/shop_ui.js';
 import { localAdapter, remoteAdapter } from './ui/shop_adapter.js';
 import { createLobbyUi } from './ui/lobby_ui.js';
+import { createSetupUi } from './ui/setup_ui.js';
 import { createMetaUi } from './ui/meta_ui.js';
 import { createResultUi } from './ui/result_ui.js';
+import { createPauseUi } from './ui/pause_ui.js';
+import { createAdminUi } from './ui/admin_ui.js';
 import { createParticles } from './engine/particles.js';
 import { createAudio } from './engine/audio.js';
 import { createDebug } from './ui/debug.js';
@@ -60,7 +62,7 @@ async function boot() {
 
   const bootInfo = globalThis.__BOOT__ || {};
   const playerName = bootInfo.name || (profile && profile.name) || 'player';
-  // Открытое метапрогрессией оружие: пул лавки ограничен им
+  const isAdmin = !!bootInfo.admin;
   const unlockedWeapons = (profile && profile.unlocks && profile.unlocks.weapon) || [];
 
   const screens = createScreens(uiRoot, config, t);
@@ -69,10 +71,11 @@ async function boot() {
   const levelUi = createLevelUpUi(uiRoot, config, t);
   const shopUi = createShopUi(uiRoot, config, t, tip);
   const lobbyUi = createLobbyUi(uiRoot, config, t);
+  const setupUi = createSetupUi(uiRoot, config, t);
   const resultUi = createResultUi(uiRoot, config, t);
+  const pauseUi = createPauseUi(uiRoot, config, t);
   const audio = createAudio(config);
   const particles = createParticles(config);
-  // Звук нельзя запустить до жеста пользователя — цепляем на первый же
   doc.addEventListener('pointerdown', () => audio.unlock(), { once: true });
   doc.addEventListener('keydown', () => audio.unlock(), { once: true });
   const metaUi = createMetaUi(uiRoot, config, t, {
@@ -85,7 +88,6 @@ async function boot() {
           body: JSON.stringify({ kind, id }),
         });
       } catch (e) {
-        // fetchJson бросает на не-2xx; вытаскиваем код ошибки из тела
         const res = await fetch('/api/meta/unlock', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
@@ -95,12 +97,22 @@ async function boot() {
       }
     },
   });
+  const adminUi = isAdmin ? createAdminUi(uiRoot, config, t, {
+    async load() { return fetchJson('/api/admin/config'); },
+    async save(section, data) {
+      return fetchJson('/api/admin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section, data }),
+      });
+    },
+  }) : null;
 
   // --- состояние сессии ----------------------------------------------------
   let transport = null;
-  let run = null;            // авторитетная симуляция (у хоста и в соло)
-  let netClient = null;      // приём снапшотов (у не-хоста)
-  let hostNet = null;        // рассылка снапшотов (у хоста в коопе)
+  let run = null;
+  let netClient = null;
+  let hostNet = null;
   let renderer = null;
   let input = null;
   let loop = null;
@@ -111,6 +123,9 @@ async function boot() {
   let runId = null;
   let finished = false;
   let myIndex = 0;
+  let remoteLevelChoices = null;
+  let godOn = false;
+  let lastSetup = null;
 
   const inputPayload = { id: 0, x: 0, y: 0 };
   const debugExtra = { entities: 0, kbs: 0, ping: 0, seed: 0, role: '' };
@@ -119,8 +134,8 @@ async function boot() {
   const animFps = config.render.anim_fps;
   const WALK = '_walk';
 
-  let shopSnap = null;       // последний снимок лавки, присланный хостом
-  let remoteShop = null;     // адаптер лавки клиента
+  let shopSnap = null;
+  let remoteShop = null;
 
   const isHost = () => !netClient;
   const world = () => (netClient ? netClient.state : run.state);
@@ -130,45 +145,174 @@ async function boot() {
     return players[myIndex] || players[0];
   }
 
+  function teardownRun() {
+    if (loop) { try { loop.stop(); } catch (e) { /* */ } }
+    if (hostNet) { try { hostNet.close(); } catch (e) { /* */ } }
+    if (netClient) { try { netClient.close(); } catch (e) { /* */ } }
+    if (input) { try { input.destroy(); } catch (e) { /* */ } }
+    levelUi.hide();
+    shopUi.hide();
+    pauseUi.hide();
+    resultUi.hide();
+    run = null;
+    hostNet = null;
+    netClient = null;
+    remoteLevelChoices = null;
+    shopSnap = null;
+    finished = false;
+    godOn = false;
+  }
+
+  function leaveToMenu() {
+    teardownRun();
+    if (lobby) lobby.leave();
+    transport = null;
+    showMenu();
+  }
+
+  async function restartRun() {
+    pauseUi.hide();
+    resultUi.hide();
+    if (netClient) return; // только хост
+    if (lobby && lobby.room) {
+      const res = await lobby.restart();
+      if (res && res.error) return;
+      // room:start обработает startCoopRun
+      return;
+    }
+    teardownRun();
+    await startSolo(lastSetup);
+  }
+
+  function requestPause(on) {
+    if (netClient) {
+      transport.send(CH.EVENT, { t: 'pause_req', on: !!on });
+      return;
+    }
+    if (run) run.setPaused(!!on);
+  }
+
+  function openPauseMenu() {
+    const host = isHost();
+    if (isAdmin && host && run) {
+      pauseUi.showCheats(true);
+      setupCheatButtons();
+    } else {
+      pauseUi.showCheats(false);
+    }
+    pauseUi.show({
+      canRestart: host,
+      onResume: () => {
+        pauseUi.hide();
+        requestPause(false);
+      },
+      onRestart: () => restartRun(),
+      onMenu: () => leaveToMenu(),
+    });
+  }
+
+  function setupCheatButtons() {
+    const root = pauseUi.cheatsRoot;
+    root.innerHTML = '';
+    const mk = (label, fn) => {
+      const b = doc.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      root.appendChild(b);
+    };
+    mk(t('ui.cheat.ash'), () => run.cheatAddAsh(100));
+    mk(t('ui.cheat.level'), () => {
+      const me = myPlayer();
+      run.cheatLevelUp(me.id);
+    });
+    mk(t('ui.cheat.god'), () => {
+      godOn = !godOn;
+      run.cheatGodMode(myPlayer().id, godOn);
+    });
+    mk(t('ui.cheat.kill'), () => run.cheatKillAll());
+    mk(t('ui.cheat.skip'), () => run.cheatSkipWave());
+  }
+
+  function handleEsc() {
+    if (!run && !netClient) return;
+    const st = world();
+    if (!st || st.phase === PHASE_OVER) return;
+    if (resultUi.visible) return;
+    if (pauseUi.visible) {
+      pauseUi.hide();
+      requestPause(false);
+      return;
+    }
+    requestPause(true);
+    openPauseMenu();
+  }
+
   // --- цикл ---------------------------------------------------------------
   function update(dt) {
     if (input.consumePressed('F3')) debug.toggle();
+    if (input.consumePressed('Escape')) handleEsc();
+    if (isAdmin && input.consumePressed('F4') && isHost() && run) {
+      if (!pauseUi.visible) {
+        requestPause(true);
+        openPauseMenu();
+      }
+    }
+
+    // Синхронизация UI паузы с авторитетным флагом
+    const st = world();
+    if (st && st.paused && !pauseUi.visible && st.phase !== PHASE_OVER && !resultUi.visible) {
+      openPauseMenu();
+    }
+    if (st && !st.paused && pauseUi.visible) {
+      // Хост снял паузу удалённо — закрыть меню
+      // (локальное открытие уже выставило paused)
+    }
 
     if (netClient) {
-      // Не-хост: шлём ввод, крутим интерполяцию и предсказание своего движения
       const me = myPlayer();
-      netClient.step(dt, input.move, (me && me.speed) || config.player.move_speed);
+      if (!st.paused) {
+        netClient.step(dt, input.move, (me && me.speed) || config.player.move_speed);
+      }
 
-      // Лавка клиента приходит снимком от хоста; действия уезжают обратно
+      maybeClientLevelUp();
+      maybeClientResult();
+
       if (netClient.state.phase === PHASE_SHOP && remoteShop) {
         if (!shopUi.visible) shopUi.show(remoteShop);
-      } else if (shopUi.visible) {
+      } else if (shopUi.visible && netClient.state.phase !== PHASE_SHOP) {
         shopUi.hide();
       }
       return;
     }
 
-    const paused = maybeLevelUp();
+    if (run.state.paused) {
+      // Симуляция стоит, но снапшоты/события (в т.ч. pause) продолжают уходить
+      if (hostNet) hostNet.step(dt);
+      drainEvents();
+      return;
+    }
+
+    maybeHostLevelUp();
+
     if (run.state.phase === PHASE_SHOP) {
       if (!shopUi.visible) {
         const me = myPlayer();
         shopUi.show(localAdapter(run, me, run.shopFor(me.id), config,
           () => run.readyUp(me.id)));
       }
-      if (!run.coop) return;         // в соло мир стоит, пока игрок закупается
+      if (!run.coop) return;
     } else if (shopUi.visible) {
       shopUi.hide();
     }
-    if (paused) return;
 
+    // На левелапе симуляция почти стоит (run.step сам гейтит), но phaseTime тикает
     const me = myPlayer();
     inputPayload.id = me.id;
     inputPayload.x = input.move.x;
     inputPayload.y = input.move.y;
     if (hostNet) {
-      // Хост в коопе: свой ввод применяется напрямую. Отправлять его в сокет —
-      // значит вернуть себе же собственный пакет, причём объектом, который
-      // бинарный декодер входа принять не может.
       run.applyInput(me.id, inputPayload);
     } else {
       transport.send(CH.INPUT, inputPayload);
@@ -182,19 +326,19 @@ async function boot() {
       finished = true;
       levelUi.hide();
       shopUi.hide();
+      pauseUi.hide();
       audio.play(run.state.win ? 'levelup' : 'death');
       loop.stop();
       reportRun().then((award) => {
         resultUi.show(run.state, award, {
-          onAgain: () => { resultUi.hide(); startSolo(); },
-          onBack: () => { resultUi.hide(); showMenu(); },
+          canRestart: true,
+          onAgain: () => restartRun(),
+          onBack: () => leaveToMenu(),
         });
       });
     }
   }
 
-  // События симуляции превращаются в звук и партиклы. Очередь разбирается
-  // здесь, а не в sim: симуляция не должна знать ни про звук, ни про экран.
   function drainEvents() {
     const evs = run.events;
     if (!evs.length) return;
@@ -204,25 +348,81 @@ async function boot() {
       else if (e.type === 'boss_spawn') audio.play('boss');
       else if (e.type === 'player_down') audio.play('death');
       else if (e.type === 'shop_open') audio.play('buy');
+      else if (e.type === 'levelup_open') audio.play('levelup');
     }
-    if (!hostNet) evs.length = 0;   // у хоста очередь забирает host.js
+    if (!hostNet) evs.length = 0;
   }
 
-  // В соло левелап ставит игру на паузу, в коопе — нет (ТЗ §5)
-  function maybeLevelUp() {
+  // Левелап только в фазе LEVELUP (конец волны)
+  function maybeHostLevelUp() {
+    if (run.state.phase !== PHASE_LEVELUP) {
+      if (levelUi.visible) levelUi.hide();
+      return;
+    }
     const me = myPlayer();
     if (!me || me.pendingLevels <= 0) {
       if (levelUi.visible) levelUi.hide();
-      return false;
+      return;
     }
     if (!levelUi.visible) {
-      const choices = run.levelUp.roll(me, run.rng);
-      levelUi.show(me, choices, (idx) => {
-        applyLevelChoice(me, config, choices[idx]);
+      showHostLevelChoices(me);
+    }
+  }
+
+  function showHostLevelChoices(me) {
+    const choices = run.choicesFor(me.id);
+    if (!choices) return;
+    levelUi.show(me, choices, (idx) => {
+      run.applyLevelPick(me.id, idx);
+      levelUi.hide();
+      if (me.pendingLevels > 0 && run.state.phase === PHASE_LEVELUP) {
+        showHostLevelChoices(me);
+      }
+    });
+  }
+
+  function maybeClientLevelUp() {
+    if (netClient.state.phase !== PHASE_LEVELUP) {
+      if (levelUi.visible) levelUi.hide();
+      return;
+    }
+    const me = myPlayer();
+    if (!me || me.pendingLevels <= 0 || !remoteLevelChoices) {
+      if (levelUi.visible && (!me || me.pendingLevels <= 0)) levelUi.hide();
+      return;
+    }
+    if (!levelUi.visible) {
+      levelUi.show(me, remoteLevelChoices, (idx) => {
+        transport.send(CH.EVENT, { t: 'levelup_act', p: myIndex, idx });
         levelUi.hide();
       });
     }
-    return !run.coop;
+  }
+
+  function maybeClientResult() {
+    if (finished) return;
+    if (netClient.state.phase !== PHASE_OVER && !netClient.lastRunOver) return;
+    finished = true;
+    levelUi.hide();
+    shopUi.hide();
+    pauseUi.hide();
+    const stats = netClient.lastRunOver || {
+      wave: netClient.state.wave,
+      kills: netClient.state.kills,
+      score: netClient.state.score,
+      time: netClient.state.time,
+      bosses: netClient.state.bosses,
+      win: netClient.state.win,
+    };
+    netClient.state.win = !!stats.win;
+    if (loop) loop.stop();
+    audio.play(stats.win ? 'levelup' : 'death');
+    // Клиент не владеет run_id хоста — реликвии начисляет хост; показываем итог без награды
+    resultUi.show(Object.assign({}, netClient.state, stats), { relics_gained: 0 }, {
+      canRestart: false,
+      onAgain: () => { /* ждём рестарт от хоста */ },
+      onBack: () => leaveToMenu(),
+    });
   }
 
   function render() {
@@ -233,8 +433,6 @@ async function boot() {
     renderer.begin();
     renderer.drawArena(config.arenas[arenaId]);
 
-    // Прах виден только у хоста: подборы в снапшот не входят — их десятки в кадре,
-    // а решает не их вид, а общий котёл, который клиент видит в HUD.
     if (run) {
       const pickups = run.pickupPool;
       for (let i = 0; i < pickups.count; i++) {
@@ -307,10 +505,13 @@ async function boot() {
         body: JSON.stringify({
           run_id: runId, wave: st.wave, win: st.win, bosses: st.bosses || 0,
           time_sec: st.time || 0, kills: st.kills || 0, score: st.score || 0,
+          damage_taken: st.damage_taken || 0,
+          ash_gained: st.ash_gained || 0,
+          shop_buys: st.shop_buys || 0,
         }),
       });
     } catch (e) {
-      return { relics_gained: 0, achievements: [] };   // итог не ушёл, забег закончен
+      return { relics_gained: 0, achievements: [] };
     }
   }
 
@@ -325,7 +526,6 @@ async function boot() {
     });
     debug = createDebug(loop, transport);
     particles.clear();
-    // Хуки для браузерной проверки (tools/smoke.py, tools/coop_test.py)
     globalThis.__RUN__ = run || { state: netClient.state };
     globalThis.__NET__ = netClient || hostNet;
     globalThis.__LOOP__ = loop;
@@ -334,16 +534,19 @@ async function boot() {
   }
 
   // --- соло ---------------------------------------------------------------
-  async function startSolo() {
-    const character = firstKey(config.characters);
-    arenaId = firstKey(config.arenas);
-    const danger = config.danger[0].id;
+  async function startSolo(setup) {
+    teardownRun();
+    const character = (setup && setup.character) || firstKey(config.characters);
+    arenaId = (setup && setup.arena) || firstKey(config.arenas);
+    const danger = setup && setup.danger != null ? setup.danger : config.danger[0].id;
+    const curses = (setup && setup.curses) || [];
+    lastSetup = { character, arena: arenaId, danger, curses };
     let data;
     try {
       data = await fetchJson('/api/run/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ character, arena: arenaId, danger }),
+        body: JSON.stringify({ character, arena: arenaId, danger, curses }),
       });
     } catch (e) {
       return;
@@ -356,10 +559,21 @@ async function boot() {
     run = createRun({
       config, seed: data.seed, transport,
       players: [{ id: transport.id, name: playerName, character }],
-      arena: arenaId, danger, unlocked: unlockedWeapons,
+      arena: arenaId, danger, unlocked: unlockedWeapons, curses,
     });
     debugExtra.seed = data.seed;
     bootEngine([run.arenaW, run.arenaH]);
+  }
+
+  async function openSoloSetup() {
+    let prof = profile;
+    try { prof = await fetchJson('/api/profile'); profile = prof; } catch (e) { /* */ }
+    setupUi.show({
+      mode: 'solo',
+      profile: prof,
+      onConfirm: (s) => startSolo(s),
+      onCancel: showMenu,
+    });
   }
 
   // --- кооп ---------------------------------------------------------------
@@ -380,11 +594,27 @@ async function boot() {
     return socket;
   }
 
-  async function coopCreate() {
+  async function coopCreate(setup) {
     ensureSocket();
-    const res = await lobby.create(firstKey(config.characters));
-    if (res.ok) lobbyUi.show(lobby);
+    const character = firstKey(config.characters);
+    const res = await lobby.create(character);
+    if (!res.ok) return res;
+    if (setup) {
+      await lobby.setup(setup.arena, setup.danger, setup.curses || []);
+    }
+    lobbyUi.show(lobby);
     return res;
+  }
+
+  async function openCoopSetup() {
+    let prof = profile;
+    try { prof = await fetchJson('/api/profile'); profile = prof; } catch (e) { /* */ }
+    setupUi.show({
+      mode: 'coop',
+      profile: prof,
+      onConfirm: (s) => coopCreate(s),
+      onCancel: showMenu,
+    });
   }
 
   async function coopJoin(code) {
@@ -398,11 +628,15 @@ async function boot() {
     const room = lobby.room;
     if (!room || !msg) return;
     lobbyUi.hide();
+    resultUi.hide();
+    pauseUi.hide();
+    teardownRun();
     runId = msg.run_id;
     finished = false;
     myIndex = lobby.you;
     arenaId = room.arena || firstKey(config.arenas);
     const danger = room.danger || 0;
+    const curses = room.curses || [];
     const hostFlag = lobby.isHost;
     const fallbackChar = firstKey(config.characters);
 
@@ -414,28 +648,32 @@ async function boot() {
         id: i, name: p.name, character: p.character || fallbackChar,
       }));
       run = createRun({ config, seed: msg.seed, transport, players,
-        arena: arenaId, danger, unlocked: unlockedWeapons });
+        arena: arenaId, danger, unlocked: unlockedWeapons, curses });
       hostNet = createHost(run, transport, config);
       bootEngine([run.arenaW, run.arenaH]);
     } else {
       netClient = createNetClient(transport, config, myIndex);
-      // Хост присылает снимок лавки адресно; действия уходят обратно событием
       transport.on(CH.EVENT, (msg) => {
-        if (msg && msg.t === 'shop' && msg.p === myIndex) {
+        if (!msg) return;
+        if (msg.t === 'shop' && msg.p === myIndex) {
           shopSnap = msg.snap;
           if (shopUi.visible) shopUi.refresh();
+        } else if (msg.t === 'levelup' && msg.p === myIndex) {
+          remoteLevelChoices = msg.choices;
+          const me = myPlayer();
+          if (me) me.pendingLevels = msg.pending;
+          if (levelUi.visible && remoteLevelChoices) {
+            levelUi.refresh(me, remoteLevelChoices);
+          }
         }
       });
       remoteShop = remoteAdapter(() => shopSnap, (kind, a) => {
         transport.send(CH.EVENT, { t: 'shop_act', p: myIndex, kind, a });
       });
-      // Клиенту нужен тот же размер арены, что посчитал хост
       const scale = 1 + config.coop.arena_per_player * (room.players.length - 1);
       const w = Math.round(config.arena.size[0] * scale);
       const h = Math.round(config.arena.size[1] * scale);
       bootEngine([w, h]);
-      // Имена и персонажи приходят из лобби: гонять их в снапшоте 20 раз в
-      // секунду незачем, они не меняются за забег.
       const sync = () => {
         const ps = netClient.state.players;
         for (let i = 0; i < room.players.length; i++) {
@@ -454,21 +692,21 @@ async function boot() {
     if (renderer) renderer.resize();
   });
 
-  // Ссылка-приглашение сразу открывает лобби нужной комнаты
   const invited = roomFromUrl();
   function showMenu() {
+    setupUi.hide();
     screens.show('menu', {
-      onPlay: startSolo,
-      onCoop: coopCreate,
+      onPlay: openSoloSetup,
+      onCoop: openCoopSetup,
       onJoin: coopJoin,
       onMeta: () => metaUi.show(showMenu),
+      onAdmin: isAdmin && adminUi ? () => adminUi.show(showMenu) : null,
       invited,
     });
   }
   showMenu();
   if (invited) coopJoin(invited);
 
-  // Для сквозного кооп-теста: открыть комнату и войти в неё программно
   globalThis.__COOP__ = { create: coopCreate, join: coopJoin, get lobby() { return lobby; } };
 }
 

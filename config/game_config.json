@@ -1,5 +1,5 @@
 {
-  "content_version": 4,
+  "content_version": 9,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -41,8 +41,9 @@
     "revive_hp_pct": 0.5,
     "shop_timer": 120,
     "friendly_fire": false,
-    "levelup_pauses": false,
-    "gift_enabled": true
+    "levelup_pauses": true,
+    "gift_enabled": true,
+    "levelup_timer": 90
   },
   "render": {
     "sprite_default": 48,
@@ -141,7 +142,9 @@
       "density": 0.85,
       "elite_from": 6,
       "price_mult": 1.0,
-      "reward_mult": 1.0
+      "reward_mult": 1.0,
+      "ash_mult": 1.0,
+      "bosses_final": 1
     },
     {
       "id": 1,
@@ -151,7 +154,9 @@
       "density": 1.0,
       "elite_from": 4,
       "price_mult": 1.0,
-      "reward_mult": 1.35
+      "reward_mult": 1.35,
+      "ash_mult": 0.9,
+      "bosses_final": 1
     },
     {
       "id": 2,
@@ -161,7 +166,9 @@
       "density": 1.25,
       "elite_from": 3,
       "price_mult": 1.1,
-      "reward_mult": 1.8
+      "reward_mult": 1.8,
+      "ash_mult": 0.75,
+      "bosses_final": 1
     },
     {
       "id": 3,
@@ -172,7 +179,22 @@
       "elite_from": 2,
       "price_mult": 1.2,
       "reward_mult": 2.4,
-      "elite_wave_every": 5
+      "elite_wave_every": 5,
+      "ash_mult": 0.6,
+      "bosses_final": 2
+    },
+    {
+      "id": 4,
+      "name": "Анафема",
+      "hp_mult": 2.0,
+      "dmg_mult": 1.8,
+      "density": 1.8,
+      "elite_from": 1,
+      "price_mult": 1.35,
+      "reward_mult": 3.2,
+      "elite_wave_every": 4,
+      "ash_mult": 0.45,
+      "bosses_final": 2
     }
   ],
   "stats": {
@@ -323,7 +345,9 @@
         "steps": [
           2,
           3,
-          4
+          4,
+          5,
+          7
         ]
       },
       "hp_regen": {
@@ -331,55 +355,69 @@
         "steps": [
           1,
           1,
-          2
+          2,
+          2,
+          3
         ]
       },
       "lifesteal_pct": {
         "weight": 4,
         "steps": [
           1,
+          1,
           2,
-          2
+          2,
+          3
         ]
       },
       "damage_pct": {
         "weight": 8,
         "steps": [
+          2,
           3,
           4,
-          6
+          6,
+          8
         ]
       },
       "melee_dmg": {
         "weight": 8,
         "steps": [
           1,
+          1,
           2,
-          3
+          3,
+          4
         ]
       },
       "ranged_dmg": {
         "weight": 8,
         "steps": [
           1,
+          1,
           2,
-          3
+          3,
+          4
         ]
       },
       "elem_dmg": {
         "weight": 6,
         "steps": [
           1,
+          1,
           2,
-          3
+          3,
+          4
         ]
       },
       "attack_speed_pct": {
         "weight": 8,
         "steps": [
+          2,
           3,
           4,
-          6
+          6,
+          8
         ]
       },
       "crit_pct": {
@@ -387,23 +425,29 @@
         "steps": [
           2,
           3,
-          4
+          4,
+          5,
+          7
         ]
       },
       "engineering": {
         "weight": 4,
         "steps": [
           1,
+          1,
           2,
-          2
+          2,
+          3
         ]
       },
       "range": {
         "weight": 5,
         "steps": [
           1,
+          1,
           2,
-          2
+          2,
+          3
         ]
       },
       "armor": {
@@ -411,7 +455,9 @@
         "steps": [
           1,
           1,
-          2
+          2,
+          2,
+          3
         ]
       },
       "dodge_pct": {
@@ -419,23 +465,29 @@
         "steps": [
           2,
           3,
-          4
+          4,
+          5,
+          7
         ]
       },
       "move_speed_pct": {
         "weight": 7,
         "steps": [
+          2,
           3,
           4,
-          5
+          5,
+          7
         ]
       },
       "luck": {
         "weight": 5,
         "steps": [
+          2,
           3,
           4,
-          6
+          6,
+          8
         ]
       },
       "tithe": {
@@ -443,7 +495,9 @@
         "steps": [
           1,
           1,
-          2
+          2,
+          2,
+          3
         ]
       },
       "knockback": {
@@ -451,19 +505,51 @@
         "steps": [
           2,
           3,
-          4
+          4,
+          5,
+          7
         ]
       }
     },
-    "max_rerolls_per_level": 0
+    "max_rerolls_per_level": 0,
+    "rarities": [
+      {
+        "id": "common",
+        "weight": 50
+      },
+      {
+        "id": "uncommon",
+        "weight": 25
+      },
+      {
+        "id": "rare",
+        "weight": 15
+      },
+      {
+        "id": "epic",
+        "weight": 7
+      },
+      {
+        "id": "legendary",
+        "weight": 3
+      }
+    ],
+    "rarity_colors": [
+      "#9aa0a8",
+      "#6a9fc8",
+      "#a86ac8",
+      "#e0a03a",
+      "#e85a3a"
+    ],
+    "luck_rarity_shift": 0.015
   },
   "shop": {
     "slots": 4,
     "weapon_chance": 0.35,
     "reroll_base": 3,
     "reroll_growth": 1.4,
-    "inflation_pct": 0.1,
-    "inflation_flat": 1,
+    "inflation_pct": 0.18,
+    "inflation_flat": 2,
     "sell_pct": 0.5,
     "merge_count": 2,
     "tier_min_wave": {
@@ -506,7 +592,7 @@
     "elite_hp_mult": 6.0,
     "elite_dmg_mult": 1.6,
     "elite_size_mult": 1.8,
-    "elite_ash_mult": 8,
+    "elite_ash_mult": 3,
     "boss_target_random_pct": 0.3
   },
   "meta": {
@@ -644,117 +730,70 @@
     }
   },
   "characters": {
-    "ch_pilgrim": {
-      "name": "Пилигрим",
-      "desc": "Странник без особых даров. Ровные статы — чистый холст.",
-      "faction": "cov",
-      "texture": "ch_pilgrim",
-      "color": "#c8a35a",
+    "ch_artificer": {
+      "color": "#a83a2a",
+      "desc": "Воюет чужими руками — точнее, манипуляторами.",
+      "faction": "forge",
+      "levelup_weights": {
+        "engineering": 2.5,
+        "melee_dmg": 0.3
+      },
+      "name": "Артифекс",
       "sprite": 48,
       "start_weapons": [
-        "w_cleaver_1"
-      ],
-      "stats": {},
-      "levelup_weights": {},
-      "unique": null,
-      "unlock": {
-        "type": "default"
-      }
-    },
-    "ch_zealot": {
-      "name": "Ревнитель",
-      "desc": "Чем ближе к смерти, тем яростнее удары.",
-      "faction": "cov",
-      "texture": "ch_zealot",
-      "color": "#d8b36a",
-      "sprite": 48,
-      "start_weapons": [
-        "w_censer_1"
+        "w_turret_1"
       ],
       "stats": {
-        "melee_dmg": 4,
-        "max_hp_pct": -20
+        "engineering": 5,
+        "max_hp": 99,
+        "ranged_dmg": -5
       },
-      "levelup_weights": {
-        "melee_dmg": 2.0,
-        "ranged_dmg": 0.3,
-        "elem_dmg": 0.5
-      },
+      "texture": "ch_artificer",
       "unique": {
-        "type": "low_hp_haste",
-        "threshold": 0.5,
-        "value": 0.3
+        "type": "repair_between_waves"
       },
       "unlock": {
-        "type": "relics",
-        "cost": 150
+        "cost": 250,
+        "type": "relics"
       }
     },
-    "ch_flagellant": {
-      "name": "Флагеллант",
-      "desc": "Режет себя, чтобы бить сильнее. Считает это сделкой.",
-      "faction": "cov",
-      "texture": "ch_flagellant",
-      "color": "#b08a4a",
+    "ch_broodmate": {
+      "color": "#5aa87a",
+      "desc": "Носит на себе выводок, который дерётся сам.",
+      "faction": "chit",
+      "levelup_weights": {
+        "elem_dmg": 1.2,
+        "move_speed_pct": 1.8
+      },
+      "name": "Выводковый",
       "sprite": 48,
       "start_weapons": [
-        "w_scourge_1"
+        "w_sickle_1"
       ],
       "stats": {
-        "damage_pct": 40,
-        "armor": -1,
-        "max_hp_pct": -15
+        "armor": -2,
+        "move_speed_pct": 15
       },
-      "levelup_weights": {
-        "damage_pct": 2.0,
-        "armor": 0.2
-      },
+      "texture": "ch_broodmate",
       "unique": {
-        "type": "self_harm_stack",
-        "per_sec": 1,
-        "value": 2
+        "per_levels": 5,
+        "type": "larva_companion"
       },
       "unlock": {
-        "type": "relics",
-        "cost": 400,
-        "achievement": "ac_wave10"
-      }
-    },
-    "ch_conductor": {
-      "name": "Хормейстер",
-      "desc": "Сам бьёт слабо, зато рядом с ним бьют все.",
-      "faction": "cov",
-      "texture": "ch_conductor",
-      "color": "#e0c07a",
-      "sprite": 48,
-      "start_weapons": [
-        "w_censer_1"
-      ],
-      "stats": {
-        "damage_pct": -20
-      },
-      "levelup_weights": {
-        "max_hp": 1.5,
-        "armor": 1.5
-      },
-      "unique": {
-        "type": "ally_aura",
-        "radius": 300,
-        "damage_pct": 10,
-        "armor": 1
-      },
-      "unlock": {
-        "type": "relics",
-        "cost": 800,
-        "achievement": "ac_coop4"
+        "cost": 600,
+        "type": "relics"
       }
     },
     "ch_brute": {
-      "name": "Громила",
+      "color": "#6d8f3a",
       "desc": "Чем больше врагов, тем ему веселее.",
       "faction": "scrap",
-      "texture": "ch_brute",
-      "color": "#6d8f3a",
+      "levelup_weights": {
+        "max_hp": 1.5,
+        "melee_dmg": 2.0,
+        "ranged_dmg": 0.0
+      },
+      "name": "Громила",
       "sprite": 64,
       "start_weapons": [
         "w_hammer_1"
@@ -763,160 +802,111 @@
         "max_hp_pct": 30,
         "move_speed_pct": -20
       },
-      "levelup_weights": {
-        "melee_dmg": 2.0,
-        "max_hp": 1.5,
-        "ranged_dmg": 0.0
-      },
+      "texture": "ch_brute",
       "unique": {
         "type": "damage_per_enemy",
         "value": 1
       },
       "unlock": {
-        "type": "relics",
-        "cost": 200
-      }
-    },
-    "ch_scavenger": {
-      "name": "Падальщик",
-      "desc": "Бьёт слабее, зато уходит богаче.",
-      "faction": "scrap",
-      "texture": "ch_scavenger",
-      "color": "#8aa84a",
-      "sprite": 48,
-      "start_weapons": [
-        "w_nailer_1"
-      ],
-      "stats": {
-        "tithe": 4,
-        "damage_pct": -10
-      },
-      "levelup_weights": {
-        "tithe": 2.0,
-        "luck": 1.8
-      },
-      "unique": {
-        "type": "crate_chance",
-        "value": 2.0
-      },
-      "unlock": {
-        "type": "relics",
-        "cost": 350
-      }
-    },
-    "ch_artificer": {
-      "name": "Артифекс",
-      "desc": "Воюет чужими руками — точнее, манипуляторами.",
-      "faction": "forge",
-      "texture": "ch_artificer",
-      "color": "#a83a2a",
-      "sprite": 48,
-      "start_weapons": [
-        "w_turret_1"
-      ],
-      "stats": {
-        "engineering": 5,
-        "ranged_dmg": -5
-      },
-      "levelup_weights": {
-        "engineering": 2.5,
-        "melee_dmg": 0.3
-      },
-      "unique": {
-        "type": "repair_between_waves"
-      },
-      "unlock": {
-        "type": "relics",
-        "cost": 250
+        "cost": 200,
+        "type": "relics"
       }
     },
     "ch_censor": {
-      "name": "Цензор",
+      "color": "#c04a36",
       "desc": "Судит издалека и не берёт ничего, что требует подойти.",
       "faction": "forge",
-      "texture": "ch_censor",
-      "color": "#c04a36",
+      "levelup_weights": {
+        "melee_dmg": 0.0,
+        "range": 1.5,
+        "ranged_dmg": 2.0
+      },
+      "name": "Цензор",
       "sprite": 48,
       "start_weapons": [
         "w_carbine_1"
       ],
       "stats": {
-        "range": 2,
-        "attack_speed_pct": -20
+        "attack_speed_pct": -20,
+        "range": 2
       },
-      "levelup_weights": {
-        "ranged_dmg": 2.0,
-        "range": 1.5,
-        "melee_dmg": 0.0
-      },
+      "texture": "ch_censor",
       "unique": {
         "type": "no_melee"
       },
       "unlock": {
-        "type": "relics",
-        "cost": 450
+        "cost": 450,
+        "type": "relics"
       }
     },
-    "ch_thrall": {
-      "name": "Невольник",
-      "desc": "Быстрый и слабый. Живёт тем, что отнимает.",
-      "faction": "chit",
-      "texture": "ch_thrall",
-      "color": "#4d8f6b",
+    "ch_conductor": {
+      "color": "#e0c07a",
+      "desc": "Сам бьёт слабо, зато рядом с ним бьют все.",
+      "faction": "cov",
+      "levelup_weights": {
+        "armor": 1.5,
+        "max_hp": 1.5
+      },
+      "name": "Хормейстер",
       "sprite": 48,
       "start_weapons": [
-        "w_claws_1"
+        "w_censer_1"
       ],
       "stats": {
-        "attack_speed_pct": 50,
-        "damage_pct": -40
+        "damage_pct": -20
       },
-      "levelup_weights": {
-        "attack_speed_pct": 2.0,
-        "lifesteal_pct": 1.8
-      },
+      "texture": "ch_conductor",
       "unique": {
-        "type": "lifesteal_per_melee",
-        "value": 3
+        "armor": 1,
+        "damage_pct": 10,
+        "radius": 300,
+        "type": "ally_aura"
       },
       "unlock": {
-        "type": "relics",
-        "cost": 300
+        "achievement": "ac_coop4",
+        "cost": 800,
+        "type": "relics"
       }
     },
-    "ch_broodmate": {
-      "name": "Выводковый",
-      "desc": "Носит на себе выводок, который дерётся сам.",
-      "faction": "chit",
-      "texture": "ch_broodmate",
-      "color": "#5aa87a",
+    "ch_flagellant": {
+      "color": "#b08a4a",
+      "desc": "Режет себя, чтобы бить сильнее. Считает это сделкой.",
+      "faction": "cov",
+      "levelup_weights": {
+        "armor": 0.2,
+        "damage_pct": 2.0
+      },
+      "name": "Флагеллант",
       "sprite": 48,
       "start_weapons": [
-        "w_sickle_1"
+        "w_scourge_1"
       ],
       "stats": {
-        "move_speed_pct": 15,
-        "armor": -2
+        "armor": -1,
+        "damage_pct": 40,
+        "max_hp_pct": -15
       },
-      "levelup_weights": {
-        "move_speed_pct": 1.8,
-        "elem_dmg": 1.2
-      },
+      "texture": "ch_flagellant",
       "unique": {
-        "type": "larva_companion",
-        "per_levels": 5
+        "per_sec": 1,
+        "type": "self_harm_stack",
+        "value": 2
       },
       "unlock": {
-        "type": "relics",
-        "cost": 600
+        "achievement": "ac_wave10",
+        "cost": 400,
+        "type": "relics"
       }
     },
     "ch_hierophant": {
-      "name": "Иерофант",
+      "color": "#7a2f8f",
       "desc": "Стихия слушается его охотнее, чем собственное тело.",
       "faction": "rift",
-      "texture": "ch_hierophant",
-      "color": "#7a2f8f",
+      "levelup_weights": {
+        "elem_dmg": 2.5,
+        "melee_dmg": 0.2
+      },
+      "name": "Иерофант",
       "sprite": 48,
       "start_weapons": [
         "w_rod_1"
@@ -925,77 +915,50 @@
         "elem_dmg": 6,
         "melee_dmg": -4
       },
-      "levelup_weights": {
-        "elem_dmg": 2.5,
-        "melee_dmg": 0.2
-      },
+      "texture": "ch_hierophant",
       "unique": {
-        "type": "elem_chain",
-        "targets": 1
+        "targets": 1,
+        "type": "elem_chain"
       },
       "unlock": {
-        "type": "relics",
-        "cost": 400
+        "cost": 400,
+        "type": "relics"
       }
     },
     "ch_hollow": {
-      "name": "Полый",
+      "color": "#9a4aa8",
       "desc": "Начинает без оружия. Зато выбор ему дают вдвое чаще.",
       "faction": "rift",
-      "texture": "ch_hollow",
-      "color": "#9a4aa8",
+      "levelup_weights": {
+        "luck": 2.0
+      },
+      "name": "Полый",
       "sprite": 48,
       "start_weapons": [],
       "stats": {
         "luck": 10
       },
-      "levelup_weights": {
-        "luck": 2.0
-      },
+      "texture": "ch_hollow",
       "unique": {
-        "type": "double_levelup",
-        "slots_lost": 2
+        "slots_lost": 2,
+        "type": "double_levelup"
       },
       "unlock": {
-        "type": "relics",
+        "achievement": "ac_win_d2",
         "cost": 900,
-        "achievement": "ac_win_d2"
-      }
-    },
-    "ch_warden": {
-      "name": "Хранитель Гробниц",
-      "desc": "Медленный и несокрушимый. Лечится только сам собой.",
-      "faction": "tomb",
-      "texture": "ch_warden",
-      "color": "#2fa8a0",
-      "sprite": 64,
-      "start_weapons": [
-        "w_forgedrone_1"
-      ],
-      "stats": {
-        "armor": 5,
-        "move_speed_pct": -25
-      },
-      "levelup_weights": {
-        "armor": 2.0,
-        "max_hp": 1.5,
-        "move_speed_pct": 0.3
-      },
-      "unique": {
-        "type": "only_self_regen",
-        "value": 1
-      },
-      "unlock": {
-        "type": "relics",
-        "cost": 500
+        "type": "relics"
       }
     },
     "ch_mirrorblade": {
-      "name": "Зеркальный клинок",
+      "color": "#4a7fc8",
       "desc": "Хрупкий, но попасть по нему надо ещё суметь.",
       "faction": "mirror",
-      "texture": "ch_mirrorblade",
-      "color": "#4a7fc8",
+      "levelup_weights": {
+        "crit_pct": 2.0,
+        "dodge_pct": 1.8,
+        "max_hp": 0.4
+      },
+      "name": "Зеркальный клинок",
       "sprite": 48,
       "start_weapons": [
         "w_stilettos_1"
@@ -1005,19 +968,143 @@
         "dodge_pct": 10,
         "max_hp_pct": -25
       },
-      "levelup_weights": {
-        "crit_pct": 2.0,
-        "dodge_pct": 1.8,
-        "max_hp": 0.4
-      },
+      "texture": "ch_mirrorblade",
       "unique": {
+        "cooldown": 2.0,
         "type": "crit_iframes",
-        "value": 0.3,
-        "cooldown": 2.0
+        "value": 0.3
       },
       "unlock": {
-        "type": "relics",
-        "cost": 700
+        "cost": 700,
+        "type": "relics"
+      }
+    },
+    "ch_pilgrim": {
+      "color": "#c8a35a",
+      "desc": "Странник без особых даров. Ровные статы — чистый холст.",
+      "faction": "cov",
+      "levelup_weights": {},
+      "name": "Пилигрим",
+      "sprite": 48,
+      "start_weapons": [
+        "w_cleaver_1"
+      ],
+      "stats": {},
+      "texture": "ch_pilgrim",
+      "unique": null,
+      "unlock": {
+        "type": "default"
+      }
+    },
+    "ch_scavenger": {
+      "color": "#8aa84a",
+      "desc": "Бьёт слабее, зато уходит богаче.",
+      "faction": "scrap",
+      "levelup_weights": {
+        "luck": 1.8,
+        "tithe": 2.0
+      },
+      "name": "Падальщик",
+      "sprite": 48,
+      "start_weapons": [
+        "w_nailer_1"
+      ],
+      "stats": {
+        "damage_pct": -10,
+        "tithe": 4
+      },
+      "texture": "ch_scavenger",
+      "unique": {
+        "type": "crate_chance",
+        "value": 2.0
+      },
+      "unlock": {
+        "cost": 350,
+        "type": "relics"
+      }
+    },
+    "ch_thrall": {
+      "color": "#4d8f6b",
+      "desc": "Быстрый и слабый. Живёт тем, что отнимает.",
+      "faction": "chit",
+      "levelup_weights": {
+        "attack_speed_pct": 2.0,
+        "lifesteal_pct": 1.8
+      },
+      "name": "Невольник",
+      "sprite": 48,
+      "start_weapons": [
+        "w_claws_1"
+      ],
+      "stats": {
+        "attack_speed_pct": 50,
+        "damage_pct": -40
+      },
+      "texture": "ch_thrall",
+      "unique": {
+        "type": "lifesteal_per_melee",
+        "value": 3
+      },
+      "unlock": {
+        "cost": 300,
+        "type": "relics"
+      }
+    },
+    "ch_warden": {
+      "color": "#2fa8a0",
+      "desc": "Медленный и несокрушимый. Лечится только сам собой.",
+      "faction": "tomb",
+      "levelup_weights": {
+        "armor": 2.0,
+        "max_hp": 1.5,
+        "move_speed_pct": 0.3
+      },
+      "name": "Хранитель Гробниц",
+      "sprite": 64,
+      "start_weapons": [
+        "w_forgedrone_1"
+      ],
+      "stats": {
+        "armor": 5,
+        "move_speed_pct": -25
+      },
+      "texture": "ch_warden",
+      "unique": {
+        "type": "only_self_regen",
+        "value": 1
+      },
+      "unlock": {
+        "cost": 500,
+        "type": "relics"
+      }
+    },
+    "ch_zealot": {
+      "color": "#d8b36a",
+      "desc": "Чем ближе к смерти, тем яростнее удары.",
+      "faction": "cov",
+      "levelup_weights": {
+        "elem_dmg": 0.5,
+        "melee_dmg": 2.0,
+        "ranged_dmg": 0.3
+      },
+      "name": "Ревнитель",
+      "sprite": 48,
+      "start_weapons": [
+        "w_censer_1"
+      ],
+      "stats": {
+        "max_hp_pct": -20,
+        "melee_dmg": 4
+      },
+      "texture": "ch_zealot",
+      "unique": {
+        "threshold": 0.5,
+        "type": "low_hp_haste",
+        "value": 0.3
+      },
+      "unlock": {
+        "cost": 150,
+        "type": "relics"
       }
     }
   },
@@ -5745,7 +5832,7 @@
       "speed": 62,
       "size": 20,
       "sprite": 48,
-      "ash": 4,
+      "ash": 3,
       "xp": 2,
       "score": 5,
       "arenas": [
@@ -5837,7 +5924,7 @@
       "speed": 100,
       "size": 16,
       "sprite": 48,
-      "ash": 4,
+      "ash": 3,
       "xp": 3,
       "score": 7,
       "arenas": [
@@ -5857,7 +5944,7 @@
       "speed": 66,
       "size": 17,
       "sprite": 48,
-      "ash": 5,
+      "ash": 3,
       "xp": 3,
       "score": 8,
       "arenas": [
@@ -5897,7 +5984,7 @@
       "speed": 56,
       "size": 24,
       "sprite": 64,
-      "ash": 6,
+      "ash": 3,
       "xp": 4,
       "score": 12,
       "arenas": [
@@ -5969,7 +6056,7 @@
       "speed": 74,
       "size": 19,
       "sprite": 48,
-      "ash": 5,
+      "ash": 3,
       "xp": 3,
       "score": 9,
       "arenas": [
@@ -5989,7 +6076,7 @@
       "speed": 88,
       "size": 17,
       "sprite": 48,
-      "ash": 4,
+      "ash": 3,
       "xp": 3,
       "score": 7,
       "arenas": [
@@ -6092,7 +6179,7 @@
       "speed": 48,
       "size": 26,
       "sprite": 64,
-      "ash": 8,
+      "ash": 3,
       "xp": 5,
       "score": 16,
       "arenas": [
@@ -6113,7 +6200,7 @@
       "speed": 58,
       "size": 20,
       "sprite": 48,
-      "ash": 6,
+      "ash": 3,
       "xp": 4,
       "score": 12,
       "arenas": [
@@ -6133,7 +6220,7 @@
       "speed": 62,
       "size": 36,
       "sprite": 64,
-      "ash": 32,
+      "ash": 9,
       "xp": 8,
       "score": 30,
       "arenas": [
@@ -6156,7 +6243,7 @@
       "speed": 84,
       "size": 29,
       "sprite": 64,
-      "ash": 24,
+      "ash": 9,
       "xp": 8,
       "score": 30,
       "arenas": [
@@ -6179,7 +6266,7 @@
       "speed": 56,
       "size": 43,
       "sprite": 64,
-      "ash": 48,
+      "ash": 9,
       "xp": 16,
       "score": 72,
       "arenas": [
@@ -6202,7 +6289,7 @@
       "speed": 132,
       "size": 23,
       "sprite": 64,
-      "ash": 16,
+      "ash": 6,
       "xp": 8,
       "score": 24,
       "arenas": [
@@ -6225,7 +6312,7 @@
       "speed": 48,
       "size": 47,
       "sprite": 64,
-      "ash": 64,
+      "ash": 9,
       "xp": 20,
       "score": 96,
       "arenas": [
@@ -6248,7 +6335,7 @@
       "speed": 58,
       "size": 36,
       "sprite": 64,
-      "ash": 48,
+      "ash": 9,
       "xp": 16,
       "score": 72,
       "arenas": [
@@ -6657,6 +6744,70 @@
         "type": "kills",
         "value": 1000
       }
+    },
+    "ac_kills100": {
+      "name": "Сотня имён",
+      "desc": "Убить 100 врагов за всё время.",
+      "cond": {
+        "type": "kills",
+        "value": 100
+      }
+    },
+    "ac_kills500": {
+      "name": "Пятьсот имён",
+      "desc": "Убить 500 врагов за всё время.",
+      "cond": {
+        "type": "kills",
+        "value": 500
+      }
+    },
+    "ac_ash_gained_5k": {
+      "name": "Пепельный мешок",
+      "desc": "Собрать 5000 праха за всё время.",
+      "cond": {
+        "type": "ash_gained",
+        "value": 5000
+      }
+    },
+    "ac_dmg_taken_5k": {
+      "name": "Изрубленное тело",
+      "desc": "Получить 5000 урона за всё время.",
+      "cond": {
+        "type": "damage_taken",
+        "value": 5000
+      }
+    },
+    "ac_losses_5": {
+      "name": "Пять падений",
+      "desc": "Проиграть 5 забегов.",
+      "cond": {
+        "type": "losses",
+        "value": 5
+      }
+    },
+    "ac_bosses10": {
+      "name": "Десять голов",
+      "desc": "Убить 10 боссов за всё время.",
+      "cond": {
+        "type": "bosses",
+        "value": 10
+      }
+    },
+    "ac_shop_buys_50": {
+      "name": "Торговец пеплом",
+      "desc": "Купить 50 товаров в лавке за всё время.",
+      "cond": {
+        "type": "shop_buys",
+        "value": 50
+      }
+    },
+    "ac_win_d4": {
+      "name": "Анафема снята",
+      "desc": "Победить на сложности «Анафема».",
+      "cond": {
+        "type": "win_danger",
+        "value": 4
+      }
     }
   },
   "audio": {
@@ -6702,7 +6853,7 @@
       "ui.result.defeat": "Забег окончен",
       "ui.result.wave": "Дошли до волны",
       "ui.result.relics": "Реликвий получено",
-      "ui.result.again": "Ещё раз",
+      "ui.result.again": "Начать заново",
       "ui.meta.relics": "Реликвии",
       "ui.meta.unlock": "Открыть",
       "ui.meta.locked": "Закрыто",
@@ -6746,7 +6897,34 @@
       "ui.error.not_unlockable": "Это не открывается",
       "ui.error.bad_kind": "Неизвестный тип",
       "ui.error.bad_id": "Неизвестный идентификатор",
-      "ui.result.flagged": "Результат не сошёлся с проверкой — реликвии не начислены"
+      "ui.result.flagged": "Результат не сошёлся с проверкой — реликвии не начислены",
+      "ui.rarity.common": "Обычный",
+      "ui.rarity.uncommon": "Необычный",
+      "ui.rarity.rare": "Редкий",
+      "ui.rarity.epic": "Эпический",
+      "ui.rarity.legendary": "Легендарный",
+      "ui.pause.restart": "Начать заново",
+      "ui.pause.menu": "В главное меню",
+      "ui.result.menu": "В главное меню",
+      "ui.admin.title": "Админ",
+      "ui.admin.save": "Сохранить",
+      "ui.admin.saved": "Сохранено",
+      "ui.cheat.ash": "+100 праха",
+      "ui.cheat.level": "+уровень",
+      "ui.cheat.god": "Бессмертие",
+      "ui.cheat.kill": "Убить всех",
+      "ui.cheat.skip": "Скип волны",
+      "ui.setup.title": "Настройка забега",
+      "ui.setup.next": "Далее",
+      "ui.setup.back": "Назад",
+      "ui.setup.start": "Начать",
+      "ui.setup.create": "Создать комнату",
+      "ui.setup.curses": "Проклятия",
+      "ui.setup.curses_hint": "Можно не выбирать или взять все открытые.",
+      "ui.setup.curse_locked": "Откроется за ачивку",
+      "ui.setup.none": "Без проклятий",
+      "ui.meta.curses": "Проклятия",
+      "ui.meta.unlocks_curse": "Открывает проклятие"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -6782,7 +6960,7 @@
       "ui.result.defeat": "Run over",
       "ui.result.wave": "Reached wave",
       "ui.result.relics": "Relics earned",
-      "ui.result.again": "Again",
+      "ui.result.again": "Restart",
       "ui.meta.relics": "Relics",
       "ui.meta.unlock": "Unlock",
       "ui.meta.locked": "Locked",
@@ -6826,7 +7004,115 @@
       "ui.error.not_unlockable": "Not unlockable",
       "ui.error.bad_kind": "Unknown kind",
       "ui.error.bad_id": "Unknown id",
-      "ui.result.flagged": "The result failed validation — no relics awarded"
+      "ui.result.flagged": "The result failed validation — no relics awarded",
+      "ui.rarity.common": "Common",
+      "ui.rarity.uncommon": "Uncommon",
+      "ui.rarity.rare": "Rare",
+      "ui.rarity.epic": "Epic",
+      "ui.rarity.legendary": "Legendary",
+      "ui.pause.restart": "Restart",
+      "ui.pause.menu": "Main menu",
+      "ui.result.menu": "Main menu",
+      "ui.admin.title": "Admin",
+      "ui.admin.save": "Save",
+      "ui.admin.saved": "Saved",
+      "ui.cheat.ash": "+100 ash",
+      "ui.cheat.level": "+level",
+      "ui.cheat.god": "God mode",
+      "ui.cheat.kill": "Kill all",
+      "ui.cheat.skip": "Skip wave",
+      "ui.setup.title": "Run setup",
+      "ui.setup.next": "Next",
+      "ui.setup.back": "Back",
+      "ui.setup.start": "Start",
+      "ui.setup.create": "Create room",
+      "ui.setup.curses": "Curses",
+      "ui.setup.curses_hint": "Pick none, or every unlocked curse.",
+      "ui.setup.curse_locked": "Unlocked by achievement",
+      "ui.setup.none": "No curses",
+      "ui.meta.curses": "Curses",
+      "ui.meta.unlocks_curse": "Unlocks curse"
+    }
+  },
+  "admin": {
+    "whitelist": [
+      "dradra1"
+    ]
+  },
+  "curses": {
+    "cu_double_tempo": {
+      "name": "Двойной темп",
+      "desc": "Скорость игроков и врагов ×2.",
+      "unlock_achievement": "ac_kills100",
+      "effects": {
+        "player_move_speed_mult": 2,
+        "enemy_speed_mult": 2
+      }
+    },
+    "cu_swarm": {
+      "name": "Рой",
+      "desc": "Плотность спавна ×1.75, опыт с врагов ×1.25.",
+      "unlock_achievement": "ac_kills500",
+      "effects": {
+        "density_mult": 1.75,
+        "xp_mult": 1.25
+      }
+    },
+    "cu_ashless_tithe": {
+      "name": "Десятина без праха",
+      "desc": "Прах с врагов не падает, +0.5 к десятине.",
+      "unlock_achievement": "ac_kills1000",
+      "effects": {
+        "ash_drop_zero": true,
+        "tithe": 0.5
+      }
+    },
+    "cu_free_market": {
+      "name": "Милость лавки",
+      "desc": "Прах не падает; всё в лавке бесплатно; +1 бесплатный реролл.",
+      "unlock_achievement": "ac_ash_gained_5k",
+      "effects": {
+        "ash_drop_zero": true,
+        "shop_free": true,
+        "free_rerolls": 1
+      }
+    },
+    "cu_blood_gold": {
+      "name": "Кровавое золото",
+      "desc": "Урон врагов +1000%, дроп праха ×5.",
+      "unlock_achievement": "ac_dmg_taken_5k",
+      "effects": {
+        "enemy_dmg_mult": 11,
+        "ash_drop_mult": 5
+      }
+    },
+    "cu_glass_vow": {
+      "name": "Стеклянный обет",
+      "desc": "Макс. HP ×0.5, урон +75%.",
+      "unlock_achievement": "ac_losses_5",
+      "effects": {
+        "max_hp_mult": 0.5,
+        "damage_pct": 75
+      }
+    },
+    "cu_short_rite": {
+      "name": "Ускоренный обряд",
+      "desc": "Длина волны ×0.65, плотность ×1.3.",
+      "unlock_achievement": "ac_bosses10",
+      "effects": {
+        "wave_len_mult": 0.65,
+        "density_mult": 1.3
+      }
+    },
+    "cu_iron_tithe": {
+      "name": "Железная десятина",
+      "desc": "Цены ×2, +1 к десятине, больше реликвий.",
+      "unlock_achievement": "ac_shop_buys_50",
+      "effects": {
+        "shop_price_mult": 2,
+        "tithe": 1,
+        "reward_mult": 1.25
+      }
     }
   }
 }

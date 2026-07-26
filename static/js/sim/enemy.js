@@ -58,7 +58,7 @@ export function scaleSpeed(config, cfg, wave) {
 // Заселение сущности из пула конкретным типом врага
 let nextUid = 1;
 
-export function initEnemy(e, config, typeId, wave, danger, players) {
+export function initEnemy(e, config, typeId, wave, danger, players, curseFx) {
   const cfg = enemyCfg(config, typeId);
   e.uid = nextUid++;
   e.type = typeId;
@@ -67,7 +67,8 @@ export function initEnemy(e, config, typeId, wave, danger, players) {
   e.maxHp = scaleHp(config, cfg, wave, danger, players);
   e.hp = e.maxHp;
   e.dmg = scaleDamage(config, cfg, wave, danger);
-  e.speed = scaleSpeed(config, cfg, wave);
+  const spdMult = curseFx && curseFx.enemy_speed_mult ? curseFx.enemy_speed_mult : 1;
+  e.speed = scaleSpeed(config, cfg, wave) * spdMult;
   e.size = cfg.size;
   e.sprite = cfg.sprite || config.render.sprite_default;
   e.kbResist = cfg.knockback_resist || 0;

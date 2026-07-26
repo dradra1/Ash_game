@@ -78,19 +78,14 @@ export function createLobbyUi(root, config, t) {
     }
   }
 
-  function renderSetup(room, isHost) {
+  function renderSetup(room) {
     setupEl.innerHTML = '';
+    cols[2].textContent = t('ui.select.arena');
+
+    const arena = room.arena && config.arenas[room.arena];
     const arenaRow = doc.createElement('div');
-    for (const id in config.arenas) {
-      const a = config.arenas[id];
-      const btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.className = 'inv-cell' + (room.arena === id ? ' locked' : '');
-      btn.disabled = !isHost;
-      btn.innerHTML = `<span class="inv-name">${a.name}</span>`;
-      btn.addEventListener('click', () => ctx.lobby.setup(id, null));
-      arenaRow.appendChild(btn);
-    }
+    arenaRow.className = 'inv-cell locked';
+    arenaRow.innerHTML = `<span class="inv-name">${arena ? arena.name : '—'}</span>`;
     setupEl.appendChild(arenaRow);
 
     const dTitle = doc.createElement('div');
@@ -98,15 +93,38 @@ export function createLobbyUi(root, config, t) {
     dTitle.textContent = t('ui.select.danger');
     setupEl.appendChild(dTitle);
 
+    let dangerName = '—';
     for (let i = 0; i < config.danger.length; i++) {
-      const d = config.danger[i];
-      const btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.className = 'inv-cell' + (room.danger === d.id ? ' locked' : '');
-      btn.disabled = !isHost;
-      btn.innerHTML = `<span class="inv-name">${d.name}</span>`;
-      btn.addEventListener('click', () => ctx.lobby.setup(null, d.id));
-      setupEl.appendChild(btn);
+      if (config.danger[i].id === room.danger) {
+        dangerName = config.danger[i].name;
+        break;
+      }
+    }
+    const dRow = doc.createElement('div');
+    dRow.className = 'inv-cell locked';
+    dRow.innerHTML = `<span class="inv-name">${dangerName}</span>`;
+    setupEl.appendChild(dRow);
+
+    const curses = room.curses || [];
+    if (curses.length || (config.curses && Object.keys(config.curses).length)) {
+      const cTitle = doc.createElement('div');
+      cTitle.className = 'col-title';
+      cTitle.textContent = t('ui.setup.curses');
+      setupEl.appendChild(cTitle);
+      if (!curses.length) {
+        const none = doc.createElement('div');
+        none.className = 'inv-cell empty';
+        none.innerHTML = `<span class="inv-name">${t('ui.setup.none')}</span>`;
+        setupEl.appendChild(none);
+      } else {
+        for (let i = 0; i < curses.length; i++) {
+          const c = config.curses && config.curses[curses[i]];
+          const row = doc.createElement('div');
+          row.className = 'inv-cell locked';
+          row.innerHTML = `<span class="inv-name">${c ? c.name : curses[i]}</span>`;
+          setupEl.appendChild(row);
+        }
+      }
     }
   }
 
@@ -122,13 +140,10 @@ export function createLobbyUi(root, config, t) {
     readyBtn.textContent = t('ui.lobby.ready');
     startBtn.textContent = t('ui.lobby.start');
     startBtn.style.display = isHost ? '' : 'none';
-    // Хост может форсировать старт; остальные ждут
-    const allReady = room.players.every((p) => p.ready || p.gone);
-    startBtn.disabled = !allReady && room.players.length > 1 ? false : false;
 
     renderPlayers(room, you);
     renderCharacters(room, you);
-    renderSetup(room, isHost);
+    renderSetup(room);
   }
 
   copyBtn.addEventListener('click', () => {

@@ -65,12 +65,14 @@ export function createSnapshotCodec(config) {
 
   // Разобранный снапшот переиспользуется: клиент читает его каждый кадр
   const decoded = {
-    seq: 0, wave: 1, phase: 0, phaseTime: 0,
+    seq: 0, wave: 1, phase: 0, phaseTime: 0, paused: false,
     players: [], playerCount: 0,
     enemies: [], enemyCount: 0,
   };
   for (let i = 0; i < maxPlayers; i++) {
-    decoded.players.push({ idx: 0, x: 0, y: 0, hpPct: 0, dir: 0, level: 1, alive: true });
+    decoded.players.push({
+      idx: 0, x: 0, y: 0, hpPct: 0, dir: 0, level: 1, alive: true, pendingLevels: 0,
+    });
   }
   for (let i = 0; i < maxEntities; i++) {
     decoded.enemies.push({ uid: 0, type: 0, x: 0, y: 0, hpPct: 0, dir: 0 });
@@ -86,7 +88,9 @@ export function createSnapshotCodec(config) {
     view.setUint8(0, MSG_SNAPSHOT);
     view.setUint16(1, seq & 0xffff);
     view.setUint8(3, state.wave & 0xff);
-    view.setUint8(4, PHASE_CODE[state.phase] || 0);
+    let phaseByte = PHASE_CODE[state.phase] || 0;
+    if (state.paused) phaseByte |= PHASE_PAUSE_BIT;
+    view.setUint8(4, phaseByte);
     const pt = isFinite(state.phaseTime) ? Math.max(0, Math.round(state.phaseTime * 10)) : 0xffff;
     view.setUint16(5, Math.min(0xffff, pt));
     view.setUint8(7, state.players.length);
@@ -100,7 +104,7 @@ export function createSnapshotCodec(config) {
       view.setUint8(o + 5, p.maxHp > 0 ? Math.round((p.hp / p.maxHp) * 255) : 0);
       view.setUint8(o + 6, (p.dir & 3) | (p.alive ? 4 : 0));
       view.setUint8(o + 7, Math.min(255, p.level));
-      view.setUint8(o + 8, 0);
+      view.setUint8(o + 8, Math.min(255, p.pendingLevels || 0));
       o += SNAP_PLAYER;
     }
 
@@ -142,7 +146,9 @@ export function createSnapshotCodec(config) {
     if (v.getUint8(0) !== MSG_SNAPSHOT) return null;
     decoded.seq = v.getUint16(1);
     decoded.wave = v.getUint8(3);
-    decoded.phase = v.getUint8(4);
+    const phaseRaw = v.getUint8(4);
+    decoded.paused = (phaseRaw & PHASE_PAUSE_BIT) !== 0;
+    decoded.phase = phaseRaw & ~PHASE_PAUSE_BIT;
     const pt = v.getUint16(5);
     decoded.phaseTime = pt === 0xffff ? Infinity : pt / 10;
     decoded.playerCount = v.getUint8(7);
@@ -159,6 +165,7 @@ export function createSnapshotCodec(config) {
       p.dir = d & 3;
       p.alive = (d & 4) !== 0;
       p.level = v.getUint8(o + 7);
+      p.pendingLevels = v.getUint8(o + 8);
       o += SNAP_PLAYER;
     }
     for (let k = 0; k < decoded.enemyCount; k++) {
@@ -201,8 +208,11 @@ function toBuffer(data) {
   return data;
 }
 
-export const PHASE_CODE = { intro: 0, wave: 1, collect: 2, shop: 3, over: 4 };
-export const PHASE_NAME = ['intro', 'wave', 'collect', 'shop', 'over'];
+export const PHASE_CODE = {
+  intro: 0, wave: 1, collect: 2, shop: 3, over: 4, levelup: 5,
+};
+export const PHASE_NAME = ['intro', 'wave', 'collect', 'shop', 'over', 'levelup'];
+export const PHASE_PAUSE_BIT = 0x80;
 
 // Таблица «id типа врага → индекс» строится один раз из конфига: гонять строки
 // по сети на 20 Гц незачем.

@@ -3,6 +3,7 @@ import os
 import re
 import secrets
 import time
+from typing import Optional
 from functools import wraps
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
 )
 from flask_socketio import SocketIO, join_room, leave_room
@@ -90,6 +92,52 @@ def login_required(view):
     return wrapped
 
 
+def is_admin_user(user) -> bool:
+    if user is None:
+        return False
+    whitelist = (get_config().get("admin") or {}).get("whitelist") or []
+    return user["name"] in whitelist
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "user_id" not in session:
+            return jsonify({"error": "auth_required"}), 401
+        user = current_user()
+        if not is_admin_user(user):
+            return jsonify({"error": "forbidden"}), 403
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+_FORBIDDEN_WORDS = (
+    "warhammer", "40000", "40 000", "40k", "space marine", "astartes",
+    "imperium", "emperor", "ork", "tyranid", "necron", "eldar", "adeptus",
+    "mechanicus", "inquisition", "inquisitor", "bolter", "chainsword",
+    "servo-skull", "aquila", "double-headed eagle", "skull and cog",
+)
+
+
+def _contains_forbidden(obj) -> Optional[str]:
+    """Вернуть запрещённое слово, если оно встретилось в строках объекта."""
+    stack = [obj]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            stack.extend(cur.values())
+            stack.extend(cur.keys())
+        elif isinstance(cur, (list, tuple)):
+            stack.extend(cur)
+        elif isinstance(cur, str):
+            low = cur.lower()
+            for w in _FORBIDDEN_WORDS:
+                if w in low:
+                    return w
+    return None
+
+
 def current_user() -> db.sqlite3.Row | None:
     uid = session.get("user_id")
     if uid is None:
@@ -109,7 +157,19 @@ def root():
     if user is None:
         session.clear()
         return redirect("/login")
-    return render_template("index.html", boot={"name": user["name"]})
+    return render_template(
+        "index.html",
+        boot={"name": user["name"], "admin": is_admin_user(user)},
+    )
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        APP_ROOT / "static",
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
 
 
 @app.route("/login")
@@ -189,8 +249,76 @@ def api_profile():
             "upgrades": db.get_user_upgrades(user["id"]),
             "achievements": db.get_user_achievements(user["id"]),
             "best": db.get_user_best(user["id"]),
+            "admin": is_admin_user(user),
         }
     )
+
+
+@app.route("/api/admin/me")
+@login_required
+def api_admin_me():
+    user = current_user()
+    return jsonify({"admin": is_admin_user(user)})
+
+
+@app.route("/api/admin/config", methods=["GET"])
+@admin_required
+def api_admin_config_get():
+    cfg = get_config()
+    return jsonify({
+        "characters": cfg.get("characters", {}),
+        "weapons": cfg.get("weapons", {}),
+        "achievements": cfg.get("achievements", {}),
+        "curses": cfg.get("curses", {}),
+        "meta": {"upgrades": (cfg.get("meta") or {}).get("upgrades", [])},
+        "content_version": cfg.get("content_version"),
+    })
+
+
+@app.route("/api/admin/config", methods=["PUT"])
+@admin_required
+def api_admin_config_put():
+    data = request.get_json(silent=True) or {}
+    section = data.get("section")
+    payload = data.get("data")
+    if section not in ("characters", "weapons", "achievements", "curses", "meta.upgrades"):
+        return jsonify({"error": "bad_section"}), 400
+    if payload is None:
+        return jsonify({"error": "missing_data"}), 400
+
+    forbidden = _contains_forbidden(payload)
+    if forbidden:
+        return jsonify({"error": "forbidden_word", "word": forbidden}), 400
+
+    cfg = get_config()
+    if section == "meta.upgrades":
+        if not isinstance(payload, list):
+            return jsonify({"error": "bad_data"}), 400
+        cfg.setdefault("meta", {})["upgrades"] = payload
+    else:
+        if not isinstance(payload, dict):
+            return jsonify({"error": "bad_data"}), 400
+        cfg[section] = payload
+
+    cfg["content_version"] = int(cfg.get("content_version") or 0) + 1
+
+    text = json.dumps(cfg, ensure_ascii=False, indent=2) + "\n"
+    LIVE_CONFIG.write_text(text, encoding="utf-8")
+    # Зеркало в репо-сид, чтобы патчи и деплой не расходились
+    try:
+        REPO_CONFIG.write_text(text, encoding="utf-8")
+    except OSError:
+        pass
+
+    reload_config()
+    return jsonify({"ok": True, "content_version": get_config()["content_version"],
+                    "config": {
+                        "characters": get_config().get("characters", {}),
+                        "weapons": get_config().get("weapons", {}),
+                        "achievements": get_config().get("achievements", {}),
+                        "curses": get_config().get("curses", {}),
+                        "meta": {"upgrades": get_config().get("meta", {}).get("upgrades", [])},
+                    }})
 
 
 @app.route("/api/run/start", methods=["POST"])
@@ -207,6 +335,7 @@ def run_start():
     danger = data.get("danger")
     room = data.get("room")
     players = data.get("players", 1)
+    curses = data.get("curses") or []
 
     if not character or not arena or danger is None:
         return jsonify({"error": "missing_fields"}), 400
@@ -223,6 +352,7 @@ def run_start():
             danger=int(danger),
             room=room,
             players=int(players),
+            curses=json.dumps(list(curses)),
         )
     )
 
@@ -252,6 +382,9 @@ def run_finish():
     time_sec = max(0.0, float(data.get("time_sec", 0)))
     kills = max(0, int(data.get("kills", 0)))
     score = max(0, int(data.get("score", 0)))
+    damage_taken = max(0, int(data.get("damage_taken", 0)))
+    ash_gained = max(0, int(data.get("ash_gained", 0)))
+    shop_buys = max(0, int(data.get("shop_buys", 0)))
     players = run["players"] or 1
 
     cfg = get_config()
@@ -259,13 +392,15 @@ def run_finish():
     # помечается флагом: реликвий не даёт и в лидерборд не идёт (ТЗ §2).
     reasons = meta.check_run(cfg, run, wave, win, bosses, time_sec, kills, score, players)
     if reasons:
-        db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, 0)
+        db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, 0,
+                      damage_taken, ash_gained, shop_buys)
         db.flag_run(run_id, ",".join(reasons))
         return jsonify({"relics_gained": 0, "unlocks": [], "achievements": [],
                         "flagged": reasons})
 
     relics = meta.award_relics(cfg, run, wave, win, bosses, players)
-    db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics)
+    db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics,
+                  damage_taken, ash_gained, shop_buys)
 
     conn = db.get_db()
     try:
@@ -480,7 +615,7 @@ def on_room_character(data):
 @socketio.on("room:setup")
 def on_room_setup(data):
     d = data or {}
-    room = rooms.set_setup(_sid(), d.get("arena"), d.get("danger"))
+    room = rooms.set_setup(_sid(), d.get("arena"), d.get("danger"), d.get("curses"))
     if room is None:
         return {"error": "not_host"}
     _broadcast(room, "setup")
@@ -504,12 +639,41 @@ def on_room_start(_data=None):
     db.start_run(user_id=user["id"], run_id=run_id, seed=seed,
                  character=room.players[_sid()].get("character"),
                  arena=room.arena, danger=room.danger, room=room.code,
-                 players=len(room.players))
+                 players=len(room.players),
+                 curses=json.dumps(list(room.curses or [])))
     room, err = rooms.start(_sid(), seed, run_id)
     if err:
         return {"error": err}
     socketio.emit("room:start", {"seed": seed, "run_id": run_id,
                                  "room": room.public()}, room=room.code)
+    return {"ok": True, "seed": seed, "run_id": run_id}
+
+
+@socketio.on("room:restart")
+def on_room_restart(_data=None):
+    """Перезапуск забега в той же комнате (хост)."""
+    user = current_user()
+    if user is None:
+        return {"error": "auth_required"}
+    room = rooms.of(_sid())
+    if room is None:
+        return {"error": "no_room"}
+    if room.host_sid != _sid():
+        return {"error": "not_host"}
+
+    run_id = secrets.token_urlsafe(12)
+    seed = secrets.randbits(32)
+    db.start_run(user_id=user["id"], run_id=run_id, seed=seed,
+                 character=room.players[_sid()].get("character"),
+                 arena=room.arena, danger=room.danger, room=room.code,
+                 players=len(room.players),
+                 curses=json.dumps(list(room.curses or [])))
+    room, err = rooms.restart(_sid(), seed, run_id)
+    if err:
+        return {"error": err}
+    socketio.emit("room:start", {"seed": seed, "run_id": run_id,
+                                 "room": room.public(), "restart": True},
+                  room=room.code)
     return {"ok": True, "seed": seed, "run_id": run_id}
 
 

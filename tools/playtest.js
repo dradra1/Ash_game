@@ -13,7 +13,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRun, PHASE_SHOP, PHASE_OVER } from '../static/js/sim/run.js';
-import { applyLevelChoice } from '../static/js/sim/player.js';
 import { buy, mergeable, merge, freeSlotIndex, rerollCost } from '../static/js/sim/shop.js';
 import { refreshStats } from '../static/js/sim/player.js';
 
@@ -83,17 +82,20 @@ function playOne(seed) {
   let wavePrev = { kills: 0, wave: 1 };
 
   while (run.state.phase !== PHASE_OVER && guard++ < limit) {
-    // --- левелап: берём по приоритету
-    while (p.pendingLevels > 0) {
-      const choices = run.levelUp.roll(p, run.rng);
-      let pick = 0;
-      let best = 1e9;
-      for (let i = 0; i < choices.length; i++) {
-        const rank = PRIORITY.indexOf(choices[i].stat);
-        const score = rank < 0 ? 100 : rank;
-        if (score < best) { best = score; pick = i; }
+    // --- левелап: только в фазе LEVELUP (конец волны)
+    if (run.state.phase === 'levelup') {
+      while (p.pendingLevels > 0 && run.state.phase === 'levelup') {
+        const choices = run.choicesFor(p.id) || run.levelUp.roll(p, run.rng);
+        let pick = 0;
+        let best = 1e9;
+        for (let i = 0; i < choices.length; i++) {
+          const rank = PRIORITY.indexOf(choices[i].stat);
+          const score = rank < 0 ? 100 : rank;
+          if (score < best) { best = score; pick = i; }
+        }
+        run.applyLevelPick(p.id, pick);
       }
-      applyLevelChoice(p, config, choices[pick]);
+      continue;
     }
 
     // --- лавка: слить что можно, купить что по карману, объявить готовность

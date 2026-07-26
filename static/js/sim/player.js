@@ -86,6 +86,7 @@ export function addXp(player, config, amount) {
 // Урон игроку с учётом уклонения, брони и i-frames. Возвращает нанесённый урон.
 export function hurtPlayer(player, config, rng, amount) {
   if (!player.alive || player.iframes > 0) return 0;
+  if (player._god) return 0;
   if (rng.float() < dodgeChance(config, player.stats)) return 0;
   const taken = amount * armorFactor(config, player.stats.armor);
   player.hp -= taken;

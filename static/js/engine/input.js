@@ -13,7 +13,10 @@ const DIRS = {
   KeyD: [1, 0], ArrowRight: [1, 0],
 };
 
-const PREVENT = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Space: 1, F3: 1 };
+const PREVENT = {
+  ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1,
+  Space: 1, F3: 1, Escape: 1, F4: 1,
+};
 
 export function createInput(canvas, config) {
   const JOYSTICK_RADIUS =

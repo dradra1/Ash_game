@@ -26,7 +26,7 @@ export function createResultUi(root, config, t) {
   const backBtn = panel.querySelector('.back');
 
   againBtn.textContent = t('ui.result.again');
-  backBtn.textContent = t('ui.common.back');
+  backBtn.textContent = t('ui.result.menu');
 
   let handlers = {};
 
@@ -58,6 +58,8 @@ export function createResultUi(root, config, t) {
       titleEl.textContent = win ? t('ui.result.victory') : t('ui.result.defeat');
       titleEl.style.color = win ? '#a8d07a' : '#c34b4b';
 
+      againBtn.style.display = handlers.canRestart === false ? 'none' : '';
+
       rowsEl.innerHTML =
         row(t('ui.result.wave'), state.wave + ' / ' + config.run.waves)
         + row(t('ui.result.kills'), state.kills || 0)
@@ -70,7 +72,6 @@ export function createResultUi(root, config, t) {
 
       let html = '';
       if (award && award.flagged && award.flagged.length) {
-        // Честнее сказать прямо, чем молча не начислить
         html += `<div class="result-flag">${t('ui.result.flagged')}</div>`;
       }
       const achs = (award && award.achievements) || [];
@@ -79,10 +80,13 @@ export function createResultUi(root, config, t) {
         if (a) html += `<div class="result-award">★ ${a.name} — ${a.desc}</div>`;
       }
       awardsEl.innerHTML = html;
-
       panel.style.display = '';
     },
-    hide() { panel.style.display = 'none'; },
-    get visible() { return panel.style.display !== 'none'; },
+    hide() {
+      panel.style.display = 'none';
+    },
+    get visible() {
+      return panel.style.display !== 'none';
+    },
   };
 }

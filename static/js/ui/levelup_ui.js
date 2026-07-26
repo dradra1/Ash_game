@@ -1,7 +1,6 @@
 // Модалка левелапа: config.level.choices вариантов улучшения статов.
-//
-// В соло игра ставится на паузу (это решает main.js по флагу pausesGame),
-// в коопе модалка висит поверх боя и выбор можно отложить — очередь копится.
+// Показывается в фазе LEVELUP (конец волны) для всех игроков.
+// Редкость карточки — от ordinary до legendary, цвет из конфига.
 
 import { statsHtml, iconHtml } from './tooltip.js';
 
@@ -41,6 +40,10 @@ export function createLevelUpUi(root, config, t) {
     cards.push(card);
   }
 
+  function rarityLabel(id) {
+    return t('ui.rarity.' + id);
+  }
+
   function render(player, choices) {
     title.textContent = t('ui.levelup.title') + ' — ' + t('ui.hud.level') + ' ' + player.level;
     queueLabel.textContent = player.pendingLevels > 1
@@ -48,12 +51,20 @@ export function createLevelUpUi(root, config, t) {
       : t('ui.levelup.pick');
     for (let i = 0; i < cards.length; i++) {
       const c = choices[i];
+      if (!c) {
+        cards[i].style.display = 'none';
+        continue;
+      }
+      cards[i].style.display = '';
       const suffix = c.kind === 'pct' ? '%' : '';
+      const rarity = c.rarity || 'common';
+      const border = c.color || '#9aa0a8';
       cards[i].innerHTML =
         iconHtml(c.texture, 'icon-lg')
-        + `<div class="choice-name" style="color:${c.color}">${c.name}</div>`
+        + `<div class="choice-rarity" style="color:${border}">${rarityLabel(rarity)}</div>`
+        + `<div class="choice-name">${c.name}</div>`
         + `<div class="choice-value">+${c.value}${suffix}</div>`;
-      cards[i].style.borderColor = c.color;
+      cards[i].style.borderColor = border;
     }
   }
 
@@ -65,6 +76,11 @@ export function createLevelUpUi(root, config, t) {
     },
     hide() {
       panel.style.display = 'none';
+      onPick = null;
+    },
+    refresh(player, choices) {
+      if (panel.style.display === 'none') return;
+      render(player, choices);
     },
     get visible() {
       return panel.style.display !== 'none';

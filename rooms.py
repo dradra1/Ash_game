@@ -13,7 +13,8 @@ import time
 
 class Room:
     __slots__ = ("code", "host_sid", "players", "created_at", "touched_at",
-                 "state", "content_version", "arena", "danger", "seed", "run_id")
+                 "state", "content_version", "arena", "danger", "curses",
+                 "seed", "run_id")
 
     def __init__(self, code, content_version):
         self.code = code
@@ -25,6 +26,7 @@ class Room:
         self.content_version = content_version
         self.arena = None
         self.danger = 0
+        self.curses = []
         self.seed = None
         self.run_id = None
 
@@ -36,6 +38,7 @@ class Room:
             "state": self.state,
             "arena": self.arena,
             "danger": self.danger,
+            "curses": list(self.curses),
             "content_version": self.content_version,
             "players": [
                 {
@@ -186,8 +189,8 @@ class Rooms:
             room.touched_at = time.time()
             return room
 
-    def set_setup(self, sid, arena, danger):
-        """Арену и сложность выбирает хост."""
+    def set_setup(self, sid, arena, danger, curses=None):
+        """Арену, сложность и проклятия выбирает хост (обычно до лобби)."""
         with self._lock:
             room = self.of(sid)
             if room is None or room.host_sid != sid:
@@ -196,6 +199,8 @@ class Rooms:
                 room.arena = arena
             if danger is not None:
                 room.danger = int(danger)
+            if curses is not None:
+                room.curses = list(curses)
             room.touched_at = time.time()
             return room
 
@@ -209,6 +214,22 @@ class Rooms:
             room.state = "running"
             room.seed = seed
             room.run_id = run_id
+            room.touched_at = time.time()
+            return room, None
+
+    def restart(self, sid, seed, run_id):
+        """Хост перезапускает забег в той же комнате (пауза / поражение)."""
+        with self._lock:
+            room = self.of(sid)
+            if room is None or room.host_sid != sid:
+                return None, "not_host"
+            if room.state not in ("running", "over"):
+                return None, "not_running"
+            room.state = "running"
+            room.seed = seed
+            room.run_id = run_id
+            for p in room.players.values():
+                p["ready"] = False
             room.touched_at = time.time()
             return room, None
 

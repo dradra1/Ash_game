@@ -82,8 +82,10 @@ def test_only_host_starts_and_configures():
     room = r.create("host", "Хост", 1)
     r.join("guest", room.code, "Гость", 2)
     assert r.set_setup("guest", "ar_hive", 2) is None, "не-хост не настраивает забег"
-    assert r.set_setup("host", "ar_hive", 2) is not None
+    assert r.set_setup("host", "ar_hive", 2, ["cu_swarm"]) is not None
     assert room.arena == "ar_hive" and room.danger == 2
+    assert room.curses == ["cu_swarm"]
+    assert room.public()["curses"] == ["cu_swarm"]
     assert r.start("guest", 1, "x")[1] == "not_host"
     assert r.start("host", 1, "x")[1] is None
 

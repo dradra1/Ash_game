@@ -35,6 +35,7 @@ export function createMetaUi(root, config, t, api) {
     ['weapons', 'ui.shop.inventory'],
     ['upgrades', 'ui.meta.upgrades'],
     ['achievements', 'ui.meta.achievements'],
+    ['curses', 'ui.meta.curses'],
   ];
   let tab = 'factions';
   let profile = null;
@@ -194,13 +195,44 @@ export function createMetaUi(root, config, t, api) {
     }
   }
 
+  function curseForAchievement(achId) {
+    const curses = config.curses || {};
+    for (const id in curses) {
+      if (curses[id].unlock_achievement === achId) return curses[id];
+    }
+    return null;
+  }
+
   function renderAchievements() {
     for (const id in config.achievements) {
       const a = config.achievements[id];
       const done = hasAch(id);
+      const curse = curseForAchievement(id);
+      let sub = a.desc;
+      if (curse) {
+        sub += ` · ${t('ui.meta.unlocks_curse')}: ${curse.name}`;
+      }
       bodyEl.appendChild(card({
         name: a.name, color: done ? '#a8d07a' : '#7a7568',
-        owned: done, sub: a.desc,
+        owned: done, sub,
+      }));
+    }
+  }
+
+  function renderCurses() {
+    const curses = config.curses || {};
+    for (const id in curses) {
+      const c = curses[id];
+      const open = hasAch(c.unlock_achievement);
+      const ach = config.achievements[c.unlock_achievement];
+      bodyEl.appendChild(card({
+        name: c.name,
+        color: open ? '#c8a35a' : '#7a7568',
+        owned: open,
+        sub: c.desc,
+        body: `<div class="meta-line${open ? ' done' : ''}">`
+          + `${t('ui.setup.curse_locked')}: ${ach ? ach.name : c.unlock_achievement}`
+          + `${open ? ' ✓' : ''}</div>`,
       }));
     }
   }
@@ -231,6 +263,7 @@ export function createMetaUi(root, config, t, api) {
     else if (tab === 'characters') renderCharacters();
     else if (tab === 'weapons') renderWeapons();
     else if (tab === 'upgrades') renderUpgrades();
+    else if (tab === 'curses') renderCurses();
     else renderAchievements();
   }
 

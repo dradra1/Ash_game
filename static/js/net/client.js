@@ -20,7 +20,7 @@ export function createNetClient(transport, config, myIndex) {
   // Мир глазами клиента. Ровно та же форма, что у state в sim/run.js, чтобы
   // рендер и HUD не знали, кто мы — хост или клиент.
   const state = {
-    wave: 1, phase: 'intro', phaseTime: 0, time: 0,
+    wave: 1, phase: 'intro', phaseTime: 0, time: 0, paused: false,
     players: [], pot: 0, kills: 0, score: 0, bosses: 0, win: false,
     shopOpen: false, bossUid: -1,
   };
@@ -71,6 +71,7 @@ export function createNetClient(transport, config, myIndex) {
     state.wave = dec.wave;
     state.phase = PHASE_NAME[dec.phase] || 'wave';
     state.phaseTime = dec.phaseTime;
+    state.paused = !!dec.paused;
 
     ensurePlayers(dec.playerCount);
     for (let i = 0; i < dec.playerCount; i++) {
@@ -83,6 +84,7 @@ export function createNetClient(transport, config, myIndex) {
       p.dir = src.dir;
       p.alive = src.alive;
       p.level = src.level;
+      p.pendingLevels = src.pendingLevels || 0;
       p.maxHp = 100;
       p.hp = src.hpPct * 100;
       if (i === myIndex) {
@@ -122,11 +124,21 @@ export function createNetClient(transport, config, myIndex) {
     }
   }
 
+  let lastRunOver = null;
+
   function onEvent(payload) {
-    if (!payload || !payload.list) return;
-    for (let i = 0; i < payload.list.length; i++) {
-      const ev = payload.list[i];
-      if (ev.type === 'run_over') state.win = ev.a === 1;
+    if (!payload) return;
+    // Адресные события лавки / левелапа обрабатывает main.js через свой listener
+    if (payload.list) {
+      for (let i = 0; i < payload.list.length; i++) {
+        const ev = payload.list[i];
+        if (ev.type === 'run_over') {
+          state.win = ev.a === 1;
+          lastRunOver = ev.b || { win: state.win };
+        } else if (ev.type === 'pause') {
+          state.paused = ev.a === 1;
+        }
+      }
     }
   }
 
@@ -200,7 +212,12 @@ export function createNetClient(transport, config, myIndex) {
     transport.off(CH.EVENT, onEvent);
   }
 
-  return { state, enemies, step, stats, close, get ready() { return ready; } };
+  return {
+    state, enemies, step, stats, close,
+    get ready() { return ready; },
+    get lastRunOver() { return lastRunOver; },
+    clearRunOver() { lastRunOver = null; },
+  };
 }
 
 function byteLength(p) {

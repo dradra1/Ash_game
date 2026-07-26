@@ -68,6 +68,16 @@ test('оружие бьёт само и враги гибнут, прах и о�
   assert.ok(run.state.pot > 0 || run.pickupPool.count > 0, 'прах должен падать');
 });
 
+function drainLevelUps(run) {
+  if (run.state.phase !== 'levelup') return;
+  for (let i = 0; i < run.state.players.length; i++) {
+    const p = run.state.players[i];
+    while (p.pendingLevels > 0 && run.state.phase === 'levelup') {
+      run.applyLevelPick(p.id, 0);
+    }
+  }
+}
+
 test('три волны проходятся, номер волны растёт', () => {
   const run = newRun({ danger: 0 });
   const p = run.state.players[0];
@@ -77,6 +87,7 @@ test('три волны проходятся, номер волны растёт
   while (run.state.wave < 4 && guard < 200000) {
     run.step(config.sim.dt);
     p.hp = 1e9;
+    drainLevelUps(run);
     // Лавка ждёт игрока: без «готов» забег стоит, это и есть задуманное поведение
     if (run.state.phase === 'shop') run.readyUp(p.id);
     guard++;
@@ -93,6 +104,7 @@ test('лавка открывается между волнами и ждёт г
   while (run.state.phase !== 'shop' && guard < stop) {
     run.step(config.sim.dt);
     p.hp = 1e9;
+    drainLevelUps(run);
     guard++;
   }
   assert.equal(run.state.phase, 'shop', 'лавка должна открыться после первой волны');

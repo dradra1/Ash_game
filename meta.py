@@ -24,7 +24,30 @@ def award_relics(config, run_row, wave, win, bosses, players):
     reward_mult = config["danger"][danger]["reward_mult"]
     coop_mult = 1 + f["coop_per_player"] * max(0, players - 1)
     base = f["per_wave"] * wave + f["win"] * (1 if win else 0) + f["per_boss"] * bosses
-    return int(round(base * reward_mult * coop_mult))
+    curse_mult = curse_reward_mult(config, run_row)
+    return int(round(base * reward_mult * coop_mult * curse_mult))
+
+
+def curse_reward_mult(config, run_row):
+    """Произведение reward_mult выбранных проклятий (дефолт 1)."""
+    raw = run_row["curses"] if "curses" in run_row.keys() else None
+    if not raw:
+        return 1.0
+    import json
+    try:
+        ids = json.loads(raw) if isinstance(raw, str) else list(raw)
+    except (TypeError, ValueError):
+        return 1.0
+    mult = 1.0
+    table = config.get("curses") or {}
+    for cid in ids:
+        entry = table.get(cid)
+        if not entry:
+            continue
+        m = (entry.get("effects") or {}).get("reward_mult")
+        if m:
+            mult *= float(m)
+    return mult
 
 
 def first_clear_bonus(config, conn, user_id, run_row, win):
@@ -54,9 +77,10 @@ def first_clear_bonus(config, conn, user_id, run_row, win):
 # Ресимуляции нет и быть не может: мир считает браузер. Поэтому проверяем не
 # «так ли всё было», а «могло ли так быть в принципе» (ТЗ §2).
 
-def min_run_time(config, wave):
+def min_run_time(config, wave, wave_len_mult=1.0):
     """Сумма длительностей пройденных волн — быстрее физически не бывает."""
     r = config["run"]
+    mult = wave_len_mult if wave_len_mult and wave_len_mult > 0 else 1.0
     total = 0.0
     for w in range(1, max(1, wave) + 1):
         boss = r["boss_waves"].get(str(w))
@@ -66,8 +90,29 @@ def min_run_time(config, wave):
             length = min(r["wave_len_cap"], r["wave_len_base"] + r["wave_len_step"] * (w - 1))
             if boss and boss.get("len_bonus"):
                 length += boss["len_bonus"]
-        total += length + r["wave_intro_sec"] + r["wave_end_collect_sec"]
+        total += length * mult + r["wave_intro_sec"] + r["wave_end_collect_sec"]
     return total
+
+
+def run_wave_len_mult(config, run_row):
+    raw = run_row["curses"] if run_row is not None and "curses" in run_row.keys() else None
+    if not raw:
+        return 1.0
+    import json
+    try:
+        ids = json.loads(raw) if isinstance(raw, str) else list(raw)
+    except (TypeError, ValueError):
+        return 1.0
+    mult = 1.0
+    table = config.get("curses") or {}
+    for cid in ids:
+        entry = table.get(cid)
+        if not entry:
+            continue
+        m = (entry.get("effects") or {}).get("wave_len_mult")
+        if m:
+            mult *= float(m)
+    return mult
 
 
 def max_plausible_kills(config, wave, players):
@@ -110,11 +155,27 @@ def check_run(config, run_row, wave, win, bosses, time_sec, kills, score, player
     if bosses < 0 or bosses > MAX_BOSSES_PER_RUN:
         reasons.append("boss_count")
 
-    need = min_run_time(config, min(wave, waves_total))
+    wlm = run_wave_len_mult(config, run_row)
+    need = min_run_time(config, min(wave, waves_total), wlm)
     if time_sec + TIME_SLACK < need:
         reasons.append("too_fast")
 
-    cap_kills = max_plausible_kills(config, min(wave, waves_total), players)
+    # Плотность проклятий может раздуть убийства — учитываем max density_mult
+    dens_extra = 1.0
+    table = config.get("curses") or {}
+    raw = run_row["curses"] if run_row is not None and "curses" in run_row.keys() else None
+    if raw:
+        import json
+        try:
+            ids = json.loads(raw) if isinstance(raw, str) else list(raw)
+            for cid in ids:
+                m = ((table.get(cid) or {}).get("effects") or {}).get("density_mult")
+                if m:
+                    dens_extra *= float(m)
+        except (TypeError, ValueError):
+            pass
+
+    cap_kills = int(max_plausible_kills(config, min(wave, waves_total), players) * dens_extra)
     if kills > cap_kills:
         reasons.append("too_many_kills")
 
@@ -143,11 +204,17 @@ def check_achievements(config, conn, user_id):
     stats = conn.execute(
         "SELECT COALESCE(MAX(wave), 0) AS best_wave, "
         "COALESCE(SUM(win), 0) AS wins, "
+        "COALESCE(SUM(CASE WHEN win = 0 THEN 1 ELSE 0 END), 0) AS losses, "
         "COALESCE(SUM(bosses), 0) AS bosses, "
         "COALESCE(SUM(kills), 0) AS kills, "
+        "COALESCE(SUM(COALESCE(damage_taken, 0)), 0) AS damage_taken, "
+        "COALESCE(SUM(COALESCE(ash_gained, 0)), 0) AS ash_gained, "
+        "COALESCE(SUM(COALESCE(shop_buys, 0)), 0) AS shop_buys, "
         "COALESCE(MAX(CASE WHEN win = 1 THEN danger END), -1) AS best_danger, "
         "COALESCE(MAX(CASE WHEN win = 1 THEN players END), 0) AS best_coop "
-        "FROM runs WHERE user_id = ? AND flagged = 0", (user_id,)).fetchone()
+        "FROM runs WHERE user_id = ? AND flagged = 0 AND finished_at IS NOT NULL",
+        (user_id,),
+    ).fetchone()
 
     fresh = []
     for aid, ach in config.get("achievements", {}).items():
@@ -162,6 +229,10 @@ def check_achievements(config, conn, user_id):
             or (kind == "win_coop" and stats["best_coop"] >= value)
             or (kind == "bosses" and stats["bosses"] >= value)
             or (kind == "kills" and stats["kills"] >= value)
+            or (kind == "damage_taken" and stats["damage_taken"] >= value)
+            or (kind == "ash_gained" and stats["ash_gained"] >= value)
+            or (kind == "losses" and stats["losses"] >= value)
+            or (kind == "shop_buys" and stats["shop_buys"] >= value)
         )
         if ok:
             fresh.append(aid)
@@ -235,4 +306,4 @@ TIME_SLACK = 5.0
 WALL_SLACK = 30.0
 KILL_SLACK = 1.5
 SCORE_SLACK = 1.2
-MAX_BOSSES_PER_RUN = 4
+MAX_BOSSES_PER_RUN = 6

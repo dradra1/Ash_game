@@ -4,6 +4,10 @@ import { loadConfig } from './fixture.js';
 import { createRng } from '../../static/js/engine/rng.js';
 import { createPlayer, addXp, applyLevelChoice, xpToNext } from '../../static/js/sim/player.js';
 import { createLevelUp } from '../../static/js/sim/level.js';
+import { createLocalTransport } from '../../static/js/net/transport.js';
+import {
+  createRun, PHASE_COLLECT, PHASE_LEVELUP, PHASE_SHOP, PHASE_WAVE,
+} from '../../static/js/sim/run.js';
 
 const config = loadConfig();
 
@@ -25,16 +29,16 @@ test('накопление опыта поднимает уровень и ко�
   addXp(p, config, need);
   assert.equal(p.level, 2);
   assert.equal(p.pendingLevels, 1);
-  // разом на несколько уровней
   addXp(p, config, 100000);
   assert.ok(p.level > 3);
   assert.ok(p.pendingLevels > 1, 'очередь выборов должна копиться');
 });
 
-test('генерируется ровно config.level.choices различных вариантов', () => {
+test('генерируется ровно config.level.choices различных вариантов с редкостью', () => {
   const p = player();
   const lu = createLevelUp(config);
   const rng = createRng(3);
+  const rarities = new Set((config.level.rarities || []).map((r) => r.id));
   for (let i = 0; i < 200; i++) {
     const choices = lu.roll(p, rng);
     assert.equal(choices.length, config.level.choices);
@@ -44,9 +48,17 @@ test('генерируется ровно config.level.choices различны�
       assert.ok(c.value > 0);
       assert.ok(c.name && c.texture, 'вариант должен нести имя и иконку из конфига');
       assert.ok(!seen.has(c.stat), 'варианты не должны повторяться');
+      assert.ok(c.rarity, 'должна быть редкость');
+      if (rarities.size) assert.ok(rarities.has(c.rarity), c.rarity);
       seen.add(c.stat);
     }
   }
+});
+
+test('легендарная ступень даёт больше обычной', () => {
+  const entry = config.level.pool.max_hp;
+  assert.ok(entry.steps.length >= 5, 'steps должны быть длины 5');
+  assert.ok(entry.steps[4] > entry.steps[0]);
 });
 
 test('веса персонажа смещают выбор: Цензор почти не видит ближний урон', () => {
@@ -105,7 +117,53 @@ test('прибавка max_hp лечит на ту же величину', () =>
 
 test('левелап детерминирован по сиду', () => {
   const p = player();
-  const a = createLevelUp(config).roll(p, createRng(555)).map((c) => c.stat + c.value).join();
-  const b = createLevelUp(config).roll(p, createRng(555)).map((c) => c.stat + c.value).join();
+  const a = createLevelUp(config).roll(p, createRng(555)).map((c) => c.stat + c.value + c.rarity).join();
+  const b = createLevelUp(config).roll(p, createRng(555)).map((c) => c.stat + c.value + c.rarity).join();
   assert.equal(a, b);
+});
+
+test('после collect с pendingLevels открывается phase levelup, затем shop', () => {
+  const transport = createLocalTransport();
+  const arena = Object.keys(config.arenas)[0];
+  const danger = config.danger[0].id;
+  const run = createRun({
+    config, seed: 42, transport,
+    players: [{ id: 0, name: 'p', character: 'ch_pilgrim' }],
+    arena, danger, unlocked: [],
+  });
+  // Накинуть уровней
+  addXp(run.state.players[0], config, 100000);
+  assert.ok(run.state.players[0].pendingLevels > 0);
+
+  run.state.phase = PHASE_COLLECT;
+  run.state.phaseTime = 0;
+  run.step(0.016);
+
+  assert.equal(run.state.phase, PHASE_LEVELUP);
+
+  // Разобрать все выборы
+  while (run.state.players[0].pendingLevels > 0 && run.state.phase === PHASE_LEVELUP) {
+    assert.ok(run.applyLevelPick(0, 0));
+  }
+  assert.equal(run.state.phase, PHASE_SHOP);
+});
+
+test('пауза останавливает step', () => {
+  const transport = createLocalTransport();
+  const arena = Object.keys(config.arenas)[0];
+  const danger = config.danger[0].id;
+  const run = createRun({
+    config, seed: 7, transport,
+    players: [{ id: 0, name: 'p', character: 'ch_pilgrim' }],
+    arena, danger, unlocked: [],
+  });
+  run.state.phase = PHASE_WAVE;
+  run.state.phaseTime = 10;
+  run.setPaused(true);
+  const t0 = run.state.phaseTime;
+  run.step(0.5);
+  assert.equal(run.state.phaseTime, t0);
+  run.setPaused(false);
+  run.step(0.5);
+  assert.ok(run.state.phaseTime < t0);
 });

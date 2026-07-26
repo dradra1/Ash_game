@@ -41,11 +41,32 @@ def test_relics_follow_the_config_formula(app_env):
     _app, _db, meta = app_env
     c = cfg(app_env)
     f = c["meta"]["relic_formula"]
-    run = {"danger": 1, "character": None, "arena": None, "id": 1, "started_at": 0}
+    run = {"danger": 1, "character": None, "arena": None, "id": 1, "started_at": 0,
+           "curses": "[]"}
     got = meta.award_relics(c, run, wave=20, win=True, bosses=2, players=1)
     expect = round((f["per_wave"] * 20 + f["win"] + f["per_boss"] * 2)
                    * c["danger"][1]["reward_mult"])
     assert got == expect
+
+
+def test_curse_reward_mult_boosts_relics(app_env):
+    _app, _db, meta = app_env
+    c = cfg(app_env)
+    base_run = {"danger": 1, "id": 1, "started_at": 0, "curses": "[]"}
+    cursed = {"danger": 1, "id": 1, "started_at": 0,
+              "curses": '["cu_iron_tithe"]'}
+    plain = meta.award_relics(c, base_run, 10, True, 1, 1)
+    boosted = meta.award_relics(c, cursed, 10, True, 1, 1)
+    assert boosted > plain
+    assert abs(boosted / plain - 1.25) < 0.02
+
+
+def test_five_danger_tiers_exist(app_env):
+    c = cfg(app_env)
+    assert len(c["danger"]) == 5
+    assert c["danger"][4]["id"] == 4
+    assert c["danger"][3]["bosses_final"] == 2
+    assert "curses" in c and "cu_double_tempo" in c["curses"]
 
 
 def test_higher_danger_pays_more(app_env):
@@ -196,6 +217,34 @@ def test_achievement_is_granted_by_the_server(client, app_env):
     assert "ac_wave10" in res["achievements"]
     profile = client.get("/api/profile").get_json()
     assert any(a["id"] == "ac_wave10" for a in profile["achievements"])
+
+
+def test_kills100_and_damage_taken_achievements(client, app_env):
+    started = start_run(client)
+    c = cfg(app_env)
+    need = app_env[2].min_run_time(c, 5)
+    backdate(app_env[1], started["run_id"], need + 60)
+    res = client.post("/api/run/finish", json={
+        "run_id": started["run_id"], "wave": 5, "win": False, "bosses": 0,
+        "time_sec": need + 20, "kills": 120, "score": 400,
+        "damage_taken": 5000, "ash_gained": 100, "shop_buys": 0,
+    }).get_json()
+    assert "ac_kills100" in res["achievements"]
+    assert "ac_dmg_taken_5k" in res["achievements"]
+
+
+def test_losses_achievement(client, app_env):
+    c = cfg(app_env)
+    for _ in range(5):
+        started = start_run(client)
+        need = app_env[2].min_run_time(c, 3)
+        backdate(app_env[1], started["run_id"], need + 30)
+        client.post("/api/run/finish", json={
+            "run_id": started["run_id"], "wave": 3, "win": False, "bosses": 0,
+            "time_sec": need + 10, "kills": 20, "score": 50,
+        })
+    profile = client.get("/api/profile").get_json()
+    assert any(a["id"] == "ac_losses_5" for a in profile["achievements"])
 
 
 # --- Покупки --------------------------------------------------------------

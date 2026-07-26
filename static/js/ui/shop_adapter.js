@@ -13,11 +13,16 @@ export function localAdapter(run, player, shop, config, onReady) {
     slots: () => shop.slots,
     player: () => player,
     wave: () => run.state.wave + 1,
-    rerollCost: () => rerollCost(config, shop.state.rerolls),
+    rerollCost: () => {
+      if (shop.state.freeRerollsLeft > 0) return 0;
+      return rerollCost(config, shop.state.rerolls);
+    },
 
     act(kind, a) {
       if (kind === 'buy') {
-        return buy(player, shop, a, config, () => refreshStats(player, config));
+        const res = buy(player, shop, a, config, () => refreshStats(player, config));
+        if (res === 'ok' && run.noteShopBuy) run.noteShopBuy();
+        return res;
       }
       if (kind === 'reroll') {
         shop.reroll(player, run.danger, run.rng);
@@ -96,6 +101,6 @@ export function shopSnapshot(run, player, shop, config) {
     stats: Object.assign({}, player.stats),
     ash: player.ash,
     wave: run.state.wave + 1,
-    rerollCost: rerollCost(config, shop.state.rerolls),
+    rerollCost: shop.state.freeRerollsLeft > 0 ? 0 : rerollCost(config, shop.state.rerolls),
   };
 }
