@@ -3,10 +3,21 @@ import os
 import pytest
 
 
+def _seed_copy(tmp_path):
+    """Копия репо-сида на выброс: приложение не должно писать в рабочую копию."""
+    import pathlib
+    import shutil
+    src = pathlib.Path(__file__).resolve().parents[2] / "config" / "game_config.json"
+    dst = tmp_path / "seed_game_config.json"
+    shutil.copyfile(src, dst)
+    return dst
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     data_dir = tmp_path / "data"
     monkeypatch.setenv("ASH_DATA", str(data_dir))
+    monkeypatch.setenv("ASH_REPO_CONFIG", str(_seed_copy(tmp_path)))
 
     # Удаляем модуль из кэша, чтобы каждый тест получал свежую БД.
     for mod in ["app", "db"]:

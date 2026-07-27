@@ -9,9 +9,20 @@ import os
 import pytest
 
 
+def _seed_copy(tmp_path):
+    """Копия репо-сида на выброс: приложение не должно писать в рабочую копию."""
+    import pathlib
+    import shutil
+    src = pathlib.Path(__file__).resolve().parents[2] / "config" / "game_config.json"
+    dst = tmp_path / "seed_game_config.json"
+    shutil.copyfile(src, dst)
+    return dst
+
+
 @pytest.fixture
 def app_env(tmp_path, monkeypatch):
     monkeypatch.setenv("ASH_DATA", str(tmp_path))
+    monkeypatch.setenv("ASH_REPO_CONFIG", str(_seed_copy(tmp_path)))
     import importlib
     import db as db_mod
     import meta as meta_mod

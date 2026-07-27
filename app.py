@@ -26,7 +26,13 @@ from rooms import Rooms
 
 APP_ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("ASH_DATA", "data"))
-REPO_CONFIG = APP_ROOT / "config" / "game_config.json"
+# Репо-сид переопределяется переменной окружения по одной причине: админская запись
+# конфига зеркалит его обратно в сид (см. /api/admin/config), а тесты гоняют
+# настоящее приложение. Без подмены каждый прогон pytest переписывал бы
+# config/game_config.json в рабочей копии и накручивал content_version — ровно это
+# и происходило, пока drift не всплыл в git diff.
+REPO_CONFIG = Path(os.environ.get("ASH_REPO_CONFIG")
+                   or APP_ROOT / "config" / "game_config.json")
 LIVE_CONFIG = DATA_DIR / "game_config.json"
 SECRET_KEY_FILE = DATA_DIR / "secret_key"
 
