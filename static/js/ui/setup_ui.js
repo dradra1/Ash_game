@@ -196,8 +196,12 @@ export function createSetupUi(root, config, t, tip) {
         btn.className = 'inv-cell' + (pick.danger === d.id ? ' locked' : '');
         const ash = d.ash_mult != null ? d.ash_mult : 1;
         const bosses = d.bosses_final != null ? d.bosses_final : 1;
+        // Множитель реликвий — единственная причина лезть на высокую сложность,
+        // и до сих пор его нигде не было видно: игрок выбирал вслепую.
+        const relics = d.reward_mult != null ? Math.round(d.reward_mult * 100) / 100 : 1;
         btn.innerHTML = `<span class="inv-name">${d.name}</span>`
           + `<span class="meta-sub">HP×${d.hp_mult} · прах×${ash}`
+          + ` · ${t('ui.select.relic_mult')}×${relics}`
           + (bosses > 1 ? ` · боссов×${bosses}` : '') + '</span>';
         btn.addEventListener('click', () => { pick.danger = d.id; render(); });
         grid.appendChild(btn);

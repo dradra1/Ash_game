@@ -89,6 +89,32 @@ def test_higher_danger_pays_more(app_env):
             > meta.award_relics(c, run0, 10, False, 1, 1))
 
 
+def test_danger_reward_follows_the_configured_step(app_env):
+    """Множитель реликвий за сложность — геометрическая прогрессия от одной ручки.
+
+    До этого пять чисел стояли в таблице сами по себе (1.0 / 1.35 / 1.8 / 2.4 / 3.2)
+    и правились на глаз. Теперь meta.relic_formula.danger_step задаёт шаг, а
+    danger[i].reward_mult обязан быть step^i — иначе таблица и ручка разъехались.
+    """
+    c = cfg(app_env)
+    step = c["meta"]["relic_formula"]["danger_step"]
+    assert step > 1, "шаг обязан РАСТИТЬ награду с ростом сложности"
+    for i, d in enumerate(c["danger"]):
+        assert abs(d["reward_mult"] - step ** i) < 1e-4, f"сложность {i}"
+
+
+def test_each_danger_step_pays_exactly_the_step(app_env):
+    _app, _db, meta = app_env
+    c = cfg(app_env)
+    step = c["meta"]["relic_formula"]["danger_step"]
+    # Волна побольше, чтобы округление до целых не съедало разницу
+    pay = [meta.award_relics(c, {"danger": i, "id": 1, "started_at": 0}, 20, True, 2, 1)
+           for i in range(len(c["danger"]))]
+    for i in range(1, len(pay)):
+        assert pay[i] > pay[i - 1], f"сложность {i} платит не больше предыдущей"
+        assert abs(pay[i] / pay[i - 1] - step) < 0.01, f"шаг между {i - 1} и {i}"
+
+
 def test_coop_gives_a_small_bonus_not_a_farm(app_env):
     _app, _db, meta = app_env
     c = cfg(app_env)
@@ -337,5 +363,42 @@ def test_relics_never_go_negative(client, app_env):
     price = c["factions"]["scrap"]["unlock"]["cost"]
     give_relics(app_env, client, price - 1)
     res = client.post("/api/meta/unlock", json={"kind": "faction", "id": "scrap"})
+    assert res.status_code == 402
+    assert client.get("/api/profile").get_json()["relics"] == price - 1
+
+
+# --- Арены ----------------------------------------------------------------
+
+def test_arena_can_be_unlocked_for_relics(client, app_env):
+    """Регресс: механизм открытия арен работал, а купить их было нечем.
+
+    Цена в конфиге, kind "arena" на сервере и профильные unlocks.arena существовали
+    с самого начала, но в Реликварии не было вкладки арен — то есть до этой покупки
+    игрок не мог добраться никак. Тест держит серверную половину; вкладку добавили
+    в ui/meta_ui.js.
+    """
+    c = cfg(app_env)
+    price = c["arenas"]["ar_ash"]["unlock"]["cost"]
+    give_relics(app_env, client, price)
+    res = client.post("/api/meta/unlock", json={"kind": "arena", "id": "ar_ash"})
+    assert res.status_code == 200, res.get_json()
+    assert res.get_json()["spent"] == price
+    profile = client.get("/api/profile").get_json()
+    assert "ar_ash" in profile["unlocks"]["arena"]
+    assert profile["relics"] == 0
+
+
+def test_arena_prices_are_the_declared_ones(app_env):
+    c = cfg(app_env)
+    assert c["arenas"]["ar_ash"]["unlock"]["cost"] == 300
+    assert c["arenas"]["ar_tomb"]["unlock"]["cost"] == 600
+    assert (c["arenas"]["ar_hive"]["unlock"]["type"] == "default"), "первая арена бесплатна"
+
+
+def test_arena_needs_the_full_price(client, app_env):
+    c = cfg(app_env)
+    price = c["arenas"]["ar_tomb"]["unlock"]["cost"]
+    give_relics(app_env, client, price - 1)
+    res = client.post("/api/meta/unlock", json={"kind": "arena", "id": "ar_tomb"})
     assert res.status_code == 402
     assert client.get("/api/profile").get_json()["relics"] == price - 1

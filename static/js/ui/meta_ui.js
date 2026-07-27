@@ -33,6 +33,7 @@ export function createMetaUi(root, config, t, api) {
     ['factions', 'ui.meta.factions'],
     ['characters', 'ui.select.character'],
     ['weapons', 'ui.shop.inventory'],
+    ['arenas', 'ui.meta.arenas'],
     ['upgrades', 'ui.meta.upgrades'],
     ['achievements', 'ui.meta.achievements'],
     ['curses', 'ui.meta.curses'],
@@ -103,7 +104,9 @@ export function createMetaUi(root, config, t, api) {
     const el = doc.createElement('div');
     el.className = 'meta-card' + (opts.owned ? ' owned' : '')
       + (opts.locked ? ' locked-out' : '');
-    el.style.setProperty('--accent', opts.color || '#3a3f4a');
+    // accent отдельно от color: у арен «цвет» — это цвет ЗЕМЛИ, тёмно-бурый по
+    // определению, и написанное им название не читалось.
+    el.style.setProperty('--accent', opts.accent || opts.color || '#3a3f4a');
     let html = iconHtml(opts.icon, 'icon-lg')
       + `<div class="meta-name" style="color:${opts.color || '#c9c4b8'}">`
       + `${opts.name}</div>`;
@@ -162,6 +165,29 @@ export function createMetaUi(root, config, t, api) {
         locked: !factionOpen && !owned,
         price: priceOf('character', id),
         onBuy: () => buy('character', id),
+      }));
+    }
+  }
+
+  // Арены. Механизм открытия был готов с самого начала — цена в конфиге, kind
+  // "arena" на сервере, серые карточки в преран-мастере, — не было только этой
+  // вкладки, то есть купить арену было физически нечем.
+  function renderArenas() {
+    for (const id in config.arenas) {
+      const a = config.arenas[id];
+      const owned = isDefault(a) || owns('arena', id);
+      const enemies = (a.enemy_pool || []).length;
+      const bossMid = config.bosses[a.boss_mid];
+      const bossFinal = config.bosses[a.boss_final];
+      // Показываем то, ради чего арену покупают: свой бестиарий и свои боссы.
+      let body = `<div class="meta-line">${t('ui.meta.arena_enemies')}: ${enemies}</div>`;
+      if (bossMid) body += `<div class="meta-line">${bossMid.name}</div>`;
+      if (bossFinal) body += `<div class="meta-line">${bossFinal.name}</div>`;
+      bodyEl.appendChild(card({
+        name: a.name, accent: a.ground_color, owned,
+        sub: a.desc, body,
+        price: priceOf('arena', id),
+        onBuy: () => buy('arena', id),
       }));
     }
   }
@@ -278,6 +304,7 @@ export function createMetaUi(root, config, t, api) {
     if (tab === 'factions') renderFactions();
     else if (tab === 'characters') renderCharacters();
     else if (tab === 'weapons') renderWeapons();
+    else if (tab === 'arenas') renderArenas();
     else if (tab === 'upgrades') renderUpgrades();
     else if (tab === 'curses') renderCurses();
     else renderAchievements();

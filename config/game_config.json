@@ -1,5 +1,5 @@
 {
-  "content_version": 36,
+  "content_version": 38,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -187,7 +187,7 @@
       "density": 1.0,
       "elite_from": 4,
       "price_mult": 1.0,
-      "reward_mult": 1.35,
+      "reward_mult": 1.2,
       "ash_mult": 0.9,
       "bosses_final": 1
     },
@@ -199,7 +199,7 @@
       "density": 1.25,
       "elite_from": 3,
       "price_mult": 1.1,
-      "reward_mult": 1.8,
+      "reward_mult": 1.44,
       "ash_mult": 0.75,
       "bosses_final": 1
     },
@@ -211,7 +211,7 @@
       "density": 1.5,
       "elite_from": 2,
       "price_mult": 1.2,
-      "reward_mult": 2.4,
+      "reward_mult": 1.728,
       "elite_wave_every": 5,
       "ash_mult": 0.6,
       "bosses_final": 2
@@ -224,7 +224,7 @@
       "density": 1.8,
       "elite_from": 1,
       "price_mult": 1.35,
-      "reward_mult": 3.2,
+      "reward_mult": 2.0736,
       "elite_wave_every": 4,
       "ash_mult": 0.45,
       "bosses_final": 2
@@ -652,7 +652,8 @@
       "per_wave": 3,
       "win": 25,
       "per_boss": 8,
-      "coop_per_player": 0.05
+      "coop_per_player": 0.05,
+      "danger_step": 1.2
     },
     "first_clear_bonus": 50,
     "weapon_unlock_price": {
@@ -7039,7 +7040,7 @@
       "boss_final": "b_ash_titan",
       "unlock": {
         "type": "relics",
-        "cost": 400
+        "cost": 300
       },
       "props": [
         {
@@ -7146,7 +7147,7 @@
       "boss_final": "b_barrow_lord",
       "unlock": {
         "type": "relics",
-        "cost": 1000
+        "cost": 600
       },
       "props": [
         {
@@ -7564,7 +7565,10 @@
       "ui.audio.muted": "Без звука",
       "ui.audio.credits": "Треки и авторы",
       "ui.pause.audio": "Звук",
-      "ui.error.run_start": "Забег не запустился — попробуй ещё раз"
+      "ui.error.run_start": "Забег не запустился — попробуй ещё раз",
+      "ui.meta.arenas": "Арены",
+      "ui.select.relic_mult": "реликвии",
+      "ui.meta.arena_enemies": "Врагов в пуле"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -7694,7 +7698,10 @@
       "ui.audio.muted": "Muted",
       "ui.audio.credits": "Tracks and authors",
       "ui.pause.audio": "Sound",
-      "ui.error.run_start": "Could not start the run — try again"
+      "ui.error.run_start": "Could not start the run — try again",
+      "ui.meta.arenas": "Arenas",
+      "ui.select.relic_mult": "relics",
+      "ui.meta.arena_enemies": "Enemy pool"
     }
   },
   "admin": {
