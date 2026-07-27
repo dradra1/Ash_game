@@ -1,5 +1,5 @@
 {
-  "content_version": 35,
+  "content_version": 36,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -7563,7 +7563,8 @@
       "ui.audio.sfx": "Эффекты",
       "ui.audio.muted": "Без звука",
       "ui.audio.credits": "Треки и авторы",
-      "ui.pause.audio": "Звук"
+      "ui.pause.audio": "Звук",
+      "ui.error.run_start": "Забег не запустился — попробуй ещё раз"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -7692,7 +7693,8 @@
       "ui.audio.sfx": "Effects",
       "ui.audio.muted": "Muted",
       "ui.audio.credits": "Tracks and authors",
-      "ui.pause.audio": "Sound"
+      "ui.pause.audio": "Sound",
+      "ui.error.run_start": "Could not start the run — try again"
     }
   },
   "admin": {

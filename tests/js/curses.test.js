@@ -10,6 +10,8 @@ import { createPlayer } from '../../static/js/sim/player.js';
 import { createRng } from '../../static/js/engine/rng.js';
 import { waveLength } from '../../static/js/sim/run.js';
 import { spawnBudget } from '../../static/js/sim/spawn.js';
+import { createRun } from '../../static/js/sim/run.js';
+import { stubTransport, makePlayers } from './fixture.js';
 
 const config = loadConfig();
 
@@ -86,4 +88,45 @@ test('emptyCurseFx нейтрален', () => {
   const e = emptyCurseFx();
   assert.equal(e.reward_mult, 1);
   assert.equal(e.shop_free, false);
+});
+
+// Регресс: с ЛЮБЫМ выбранным проклятием забег не создавался вовсе. В createRun
+// локальная функция статистики сущностей называлась `refreshStats` и затеняла
+// импортированный пересчёт статов игрока; ветка «наложить моды проклятий» звала не
+// ту функцию и падала в TDZ. Игрок видел это как «выбрал проклятия, нажал „Дальше“
+// — и вернулся в главное меню»: экран мастера прятался, а забег не стартовал.
+//
+// Тесты этого не ловили, потому что все проверки проклятий были на чистых формулах
+// и ни одна не собирала настоящий забег с непустым списком.
+test('забег создаётся с любым проклятием и переживает первые секунды', () => {
+  const ids = Object.keys(config.curses);
+  const mk = (curses) => createRun({
+    config, seed: 42, transport: stubTransport(),
+    players: makePlayers(1, Object.keys(config.characters)[0]),
+    arena: Object.keys(config.arenas)[0], danger: 0, curses,
+  });
+  for (const id of ids) {
+    const run = mk([id]);
+    for (let i = 0; i < 120; i++) run.step(config.sim.dt);
+    assert.deepEqual(run.state.curses, [id], `проклятие ${id} не доехало до состояния`);
+  }
+  const all = mk(ids);
+  for (let i = 0; i < 120; i++) all.step(config.sim.dt);
+  assert.equal(all.state.curses.length, ids.length);
+});
+
+// Та же поломка молча съедала бы и сам эффект: моды проклятия накладываются
+// пересчётом статов, и если он не вызвался, «Стеклянный обет» не режет HP.
+test('моды проклятия доезжают до статов игрока', () => {
+  const mk = (curses) => createRun({
+    config, seed: 7, transport: stubTransport(),
+    players: makePlayers(1, Object.keys(config.characters)[0]),
+    arena: Object.keys(config.arenas)[0], danger: 0, curses,
+  });
+  const plain = mk([]).state.players[0];
+  const cursed = mk(['cu_glass_vow']).state.players[0];
+  assert.ok(cursed.maxHp < plain.maxHp,
+    `max_hp_mult 0.5 не применён: ${cursed.maxHp} против ${plain.maxHp}`);
+  assert.equal(cursed.hp, cursed.maxHp, 'HP не подтянут под новый максимум');
+  assert.ok(cursed.stats.damage_pct > plain.stats.damage_pct, 'damage_pct не применён');
 });

@@ -136,7 +136,13 @@ export function createSetupUi(root, config, t, tip) {
 
   function renderCurses() {
     bodyEl.innerHTML = '';
-    hintEl.textContent = t('ui.setup.curses_hint');
+    // На остальных шагах в подсказке стоит НАЗВАНИЕ шага («Персонаж», «Арена»),
+    // а здесь стояло только пояснение — единственный экран мастера без заголовка.
+    hintEl.textContent = t('ui.setup.curses');
+    const note = doc.createElement('div');
+    note.className = 'meta-sub';
+    note.textContent = t('ui.setup.curses_hint');
+    bodyEl.appendChild(note);
     const grid = doc.createElement('div');
     grid.className = 'setup-grid';
     const curses = config.curses || {};

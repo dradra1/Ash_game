@@ -710,6 +710,16 @@ async function boot() {
     const danger = setup && setup.danger != null ? setup.danger : config.danger[0].id;
     const curses = (setup && setup.curses) || [];
     lastSetup = { character, arena: arenaId, danger, curses };
+    // Осечка старта не должна выглядеть как «мастер закрылся и всё». Панель
+    // мастера к этому моменту уже спрятана, поэтому единственный способ хоть
+    // что-то сказать игроку — вернуть меню и написать причину в нём.
+    const failToMenu = (e) => {
+      if (e) console.error('старт забега не удался:', e);
+      teardownRun();
+      showMenu();
+      screens.error(t('ui.error.run_start'));
+    };
+
     let data;
     try {
       data = await fetchJson('/api/run/start', {
@@ -718,21 +728,28 @@ async function boot() {
         body: JSON.stringify({ character, arena: arenaId, danger, curses }),
       });
     } catch (e) {
+      failToMenu(e);
       return;
     }
     runId = data.run_id;
     finished = false;
     myIndex = 0;
 
-    transport = createLocalTransport();
-    run = createRun({
-      config, seed: data.seed, transport,
-      players: [{ id: transport.id, name: playerName, character }],
-      arena: arenaId, danger, unlocked: unlockedWeapons, curses, onImpact,
-    });
-    debugExtra.seed = data.seed;
-    arenaLayout = run.layout;
-    bootEngine([run.arenaW, run.arenaH]);
+    // Сборка забега тоже под присмотром: именно здесь ронял игру выбор проклятий,
+    // и молчаливый возврат в меню скрывал настоящую ошибку до разбора вручную.
+    try {
+      transport = createLocalTransport();
+      run = createRun({
+        config, seed: data.seed, transport,
+        players: [{ id: transport.id, name: playerName, character }],
+        arena: arenaId, danger, unlocked: unlockedWeapons, curses, onImpact,
+      });
+      debugExtra.seed = data.seed;
+      arenaLayout = run.layout;
+      bootEngine([run.arenaW, run.arenaH]);
+    } catch (e) {
+      failToMenu(e);
+    }
   }
 
   async function openSoloSetup() {

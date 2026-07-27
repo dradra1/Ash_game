@@ -726,8 +726,13 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     return snap;
   }
 
+  // Имя НЕ `refreshStats`: так называется импортированный пересчёт статов игрока
+  // (`sim/player.js`), и локальное объявление затеняло его во всём теле createRun.
+  // Из-за этого пересчёт статов после наложения проклятий (см. выше) попадал сюда,
+  // натыкался на ещё не инициализированный `stats` и валил создание забега — то
+  // есть игра с выбранными проклятиями не запускалась вовсе.
   const stats = { entities: 0, enemies: 0, projectiles: 0, pickups: 0 };
-  function refreshStats() {
+  function refreshRunStats() {
     stats.enemies = enemyPool.count;
     stats.projectiles = projPool.count;
     stats.pickups = pickupPool.count;
@@ -792,7 +797,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   spawnBreakables();
 
   return {
-    state, step, applyInput, snapshot, stats, refreshStats, events, spawns,
+    state, step, applyInput, snapshot, stats, refreshStats: refreshRunStats, events, spawns,
     enemyPool, projPool, pickupPool, rng,
     startWave, endRun, openShop, openLevelUp, readyUp, shopFor, levelUp, coop,
     economy, wallet, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,

@@ -97,6 +97,13 @@ export function createScreens(root, config, t) {
   const screens = {
     current: 'menu',
 
+    // Показать причину прямо в меню. Нужно на случай осечки старта забега: мастер
+    // настройки к этому моменту уже спрятался, и без строчки текста игрок видит
+    // только необъяснимый возврат в меню.
+    error(text) {
+      errEl.textContent = text || '';
+    },
+
     show(name, data) {
       screens.current = name;
       if (name === 'menu') {
