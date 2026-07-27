@@ -56,27 +56,93 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     }
   }
 
-  // История предсказанных позиций по номеру ввода. Нужна, чтобы сравнивать
-  // авторитетную позицию с нашей ТОГДАШНЕЙ, а не с текущей. Кольцо фиксированного
-  // размера: аллокаций в кадре быть не должно.
-  const HISTORY = 64;
-  const history = [];
-  for (let i = 0; i < HISTORY; i++) history.push({ seq: -1, x: 0, y: 0 });
-  let historyAt = 0;
+  // История ПРИМЕНЁННЫХ КАДРОВ, а не позиций. Каждый кадр запоминает, каким вводом
+  // и за какое dt мы двигались; по подтверждённому номеру ввода хвост истории
+  // проигрывается заново поверх авторитетной позиции.
+  //
+  // Раньше здесь лежали позиции, и ошибка считалась как «позиция хоста минус наша
+  // позиция В МОМЕНТ ОТПРАВКИ этого ввода». Эти две точки не совпадают даже при
+  // идеальной сети: получив ввод, хост крутит его ещё несколько тиков, пока не
+  // приедет следующий. Разница уходила в corr и подталкивала игрока вперёд, а после
+  // отпускания клавиши — назад. Это и есть «желе».
+  const HISTORY = 256;                    // ~4 с при 60 fps
+  const frames = [];
+  for (let i = 0; i < HISTORY; i++) frames.push({ seq: -1, dt: 0, ix: 0, iy: 0, speed: 0 });
+  let framesAt = 0;
 
-  function notePrediction(seq, x, y) {
-    const h = history[historyAt];
-    h.seq = seq;
-    h.x = x;
-    h.y = y;
-    historyAt = (historyAt + 1) % HISTORY;
+  // Скорость запоминается вместе с вводом: она меняется по ходу забега (предметы,
+  // левелап), и переигрывать старый кадр текущей скоростью — значит заново развести
+  // предсказание с авторитетом ровно в тот момент, когда игрок что-то купил.
+  function noteFrame(frameSeq, dt, ix, iy, speed) {
+    const f = frames[framesAt];
+    f.seq = frameSeq;
+    f.dt = dt;
+    f.ix = ix;
+    f.iy = iy;
+    f.speed = speed;
+    framesAt = (framesAt + 1) % HISTORY;
   }
 
-  function recallPrediction(seq) {
+  // Номера ввода 16-битные и заворачиваются: сравнивать их обычным «>» нельзя.
+  function seqNewer(a, b) {
+    return a !== b && ((a - b) & 0xffff) < 0x8000;
+  }
+
+  // Ввод едет по сети как int8 (шаг 1/127). Предсказывать надо ТЕМ ЖЕ числом,
+  // которое увидит хост, иначе на диагоналях клиент и хост считают разную скорость
+  // и расхождение копится на ровном месте.
+  function quantize(v) {
+    return Math.max(-127, Math.min(127, Math.round(v * 127))) / 127;
+  }
+
+  // Шаг движения игрока — копия sim/player.js. Любое расхождение с ним снова
+  // разведёт предсказание с авторитетом, поэтому порядок операций тот же:
+  // нормализация ввода → сдвиг → препятствия → стены.
+  const scratch = { x: 0, y: 0, radius: config.player.radius };
+
+  function integrate(ent, ix, iy, speed, dt) {
+    let nx = ix;
+    let ny = iy;
+    const len = Math.sqrt(nx * nx + ny * ny);
+    if (len > 1) { nx /= len; ny /= len; }
+    const vx = nx * speed;
+    const vy = ny * speed;
+    if (vx === 0 && vy === 0) return;
+    ent.x += vx * dt;
+    ent.y += vy * dt;
+    if (propIndex) separateFromProps(ent, config.player.radius, propIndex, null);
+    const pad = config.arena.wall_padding;
+    if (ent.x < pad) ent.x = pad;
+    else if (ent.x > arenaW - pad) ent.x = arenaW - pad;
+    if (ent.y < pad) ent.y = pad;
+    else if (ent.y > arenaH - pad) ent.y = arenaH - pad;
+  }
+
+  // Пересборка предсказания от авторитетной позиции: ставим то, что прислал хост,
+  // и заново проигрываем все кадры с вводом новее подтверждённого.
+  function reconcile(p, srcX, srcY, ackSeq) {
+    const wasX = p.simX;
+    const wasY = p.simY;
+    scratch.x = srcX;
+    scratch.y = srcY;
     for (let i = 0; i < HISTORY; i++) {
-      if (history[i].seq === seq) return history[i];
+      const f = frames[(framesAt + i) % HISTORY];
+      if (f.seq < 0 || !seqNewer(f.seq, ackSeq)) continue;
+      integrate(scratch, f.ix, f.iy, f.speed, f.dt);
     }
-    return null;
+    p.simX = scratch.x;
+    p.simY = scratch.y;
+    // Остаток гасим ВИЗУАЛЬНО: симуляция уже стоит там, где сказал хост, а на
+    // экране игрок доезжает до неё за SMOOTH_TIME вместо рывка.
+    const dx = wasX - p.simX;
+    const dy = wasY - p.simY;
+    if (dx * dx + dy * dy > teleport * teleport) {
+      p.smoothX = 0;
+      p.smoothY = 0;
+    } else {
+      p.smoothX = dx;
+      p.smoothY = dy;
+    }
   }
 
   // Экипировка от хоста: редкое надёжное сообщение (покупка, левелап, старт волны).
@@ -157,6 +223,13 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
   let inputAcc = 0;
   let seq = 0;
   let ready = false;
+  let started = false;        // пришёл ли первый снапшот со своей позицией
+  // Ввод, которым предсказываем. Берётся В МОМЕНТ ОТПРАВКИ и держится до следующей:
+  // хост увидит ровно эту последовательность, и предсказывать надо ей же. Живой
+  // ввод между отправками свежее того, что уедет по сети, и прогноз по нему
+  // расходится с авторитетом на каждом нажатии и отпускании клавиши.
+  let heldIx = 0;
+  let heldIy = 0;
 
   function ensurePlayers(n) {
     while (state.players.length < n) {
@@ -171,8 +244,10 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         alive: true, level: 1, ash: 0,
         slots: [], items: [], stats: {}, input: { x: 0, y: 0 },
         pendingLevels: 0, xp: 0, xpNext: 1,
-        // Остаток измеренной ошибки предсказания, гасится в step()
-        corrX: 0, corrY: 0,
+        // simX/simY — предсказанная ИСТИНА (её пересобирает reconcile), smoothX/Y —
+        // визуальный остаток, который гасится за SMOOTH_TIME. На экран идёт сумма:
+        // симуляция не должна дёргаться ради красоты, а картинка — рвано прыгать.
+        simX: 0, simY: 0, smoothX: 0, smoothY: 0,
         swingSeq: -1, swingId: null, swingAngle: 0, swingT: 0, swingLen: 0.22,
       });
     }
@@ -253,23 +328,20 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         }
       }
       if (i === myIndex) {
-        // Свой персонаж. Ошибку предсказания меряем не по текущей позиции (она
-        // ушла вперёд на RTT и «ошибкой» не является), а по той, в которой мы были
-        // на момент ввода, который хост только что учёл. Если предсказание верное,
-        // ошибка нулевая и подтягивать НЕЧЕГО — именно постоянное подтягивание к
-        // устаревшей позиции и ощущалось как движение по льду.
-        const past = recallPrediction(src.ackSeq);
-        const dx = src.x - (past ? past.x : p.x);
-        const dy = src.y - (past ? past.y : p.y);
-        if (dx * dx + dy * dy > teleport * teleport) {
-          // Разошлись слишком сильно (телепорт, отбрасывание, пропуск пачки пакетов)
+        // Свой персонаж: не «подтягиваемся» к присланной точке, а ПЕРЕСОБИРАЕМ
+        // предсказание от неё, проиграв заново весь ввод, который хост ещё не учёл.
+        // Пока предсказание совпадает с авторитетом, пересборка не двигает игрока
+        // вообще — а именно постоянная поправка «на глазок» и давала желе.
+        if (!started) {
+          started = true;
+          p.simX = src.x;
+          p.simY = src.y;
           p.x = src.x;
           p.y = src.y;
-          p.corrX = 0;
-          p.corrY = 0;
+          p.smoothX = 0;
+          p.smoothY = 0;
         } else {
-          p.corrX = dx;
-          p.corrY = dy;
+          reconcile(p, src.x, src.y, src.ackSeq);
         }
       } else {
         // Чужие: интерполяция между снапшотами (prevPos → tx/ty за snapPeriod)
@@ -335,9 +407,10 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     if (inputAcc >= inputPeriod) {
       inputAcc -= inputPeriod;
       seq = (seq + 1) & 0xffff;
-      transport.send(CH.INPUT, inputCodec.encode(myIndex, seq, input.x, input.y, 0).slice(0));
-      const me = state.players[myIndex];
-      if (me) notePrediction(seq, me.x, me.y);
+      // Квантуем ДО отправки и предсказываем тем же числом, что уедет по сети
+      heldIx = quantize(input.x);
+      heldIy = quantize(input.y);
+      transport.send(CH.INPUT, inputCodec.encode(myIndex, seq, heldIx, heldIy, 0).slice(0));
     }
 
     stepProjectiles(dt);
@@ -359,33 +432,32 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
       if (i === myIndex) {
-        // Предсказание: двигаемся сами, потом мягко сходимся с хостом
+        // Предсказание: тот же шаг, что у хоста, тем же вводом, что ему отправлен.
+        // Каждый кадр уходит в историю — по ней реконсиляция пересоберёт позицию,
+        // когда придёт подтверждение.
         if (p.alive) {
-          p.vx = input.x * moveSpeed;
-          p.vy = input.y * moveSpeed;
-          p.x += p.vx * dt;
-          p.y += p.vy * dt;
-          if (propIndex) separateFromProps(p, config.player.radius, propIndex, null);
-          // Те же стены, что и у хоста (sim/player.js): без клампа предсказание
-          // уходило сквозь стену, и реконсиляция дёргала игрока обратно.
-          const pad = config.arena.wall_padding;
-          if (p.x < pad) p.x = pad;
-          else if (p.x > arenaW - pad) p.x = arenaW - pad;
-          if (p.y < pad) p.y = pad;
-          else if (p.y > arenaH - pad) p.y = arenaH - pad;
+          const speed = moveSpeed || p.speed;
+          noteFrame(seq, dt, heldIx, heldIy, speed);
+          scratch.x = p.simX;
+          scratch.y = p.simY;
+          integrate(scratch, heldIx, heldIy, speed, dt);
+          p.simX = scratch.x;
+          p.simY = scratch.y;
+          p.vx = heldIx * speed;
+          p.vy = heldIy * speed;
           if (p.vx !== 0 || p.vy !== 0) {
             if (p.vx * p.vx > p.vy * p.vy) p.dir = p.vx > 0 ? 1 : 3;
             else p.dir = p.vy > 0 ? 0 : 2;
             p.animT += dt;
           }
         }
-        // Гасим измеренную ошибку предсказания, а не расстояние до устаревшей цели.
-        // Верное предсказание даёт corr ≈ 0, и игрок не «плывёт».
-        const c = Math.min(1, RECONCILE * dt * 60);
-        p.x += p.corrX * c;
-        p.y += p.corrY * c;
-        p.corrX -= p.corrX * c;
-        p.corrY -= p.corrY * c;
+        // Визуальный остаток гаснет за фиксированное ВРЕМЯ, а не «долю за кадр»:
+        // так сглаживание одинаково на 60 и на 144 fps.
+        const c = SMOOTH_TIME > 0 ? Math.min(1, dt / SMOOTH_TIME) : 1;
+        p.smoothX -= p.smoothX * c;
+        p.smoothY -= p.smoothY * c;
+        p.x = p.simX + p.smoothX;
+        p.y = p.simY + p.smoothY;
       } else {
         const nx = p.prevX + (p.tx - p.prevX) * k;
         const ny = p.prevY + (p.ty - p.prevY) * k;
@@ -445,10 +517,10 @@ function byteLength(p) {
   return p.byteLength !== undefined ? p.byteLength : 64;
 }
 
-// Скорость гашения измеренной ошибки предсказания. Больше — жёстче дёргает при
-// расхождении, меньше — дольше «плывёт». Применяется к ошибке, а не к расстоянию
-// до устаревшей позиции хоста, поэтому при верном предсказании не работает вовсе.
-const RECONCILE = 0.12;
+// За сколько секунд гаснет ВИДИМЫЙ остаток расхождения после пересборки
+// предсказания. Симуляция к этому моменту уже стоит на авторитетной позиции;
+// это чисто косметика, чтобы редкие поправки не выглядели рывком.
+const SMOOTH_TIME = 0.1;
 
 // Та же длительность подсветки иконки оружия, что в sim/weapon.js: у клиента
 // слоты приходят лоадаутом, а таймеры тикают локально.

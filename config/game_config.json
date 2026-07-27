@@ -1,5 +1,5 @@
 {
-  "content_version": 38,
+  "content_version": 39,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -20,7 +20,7 @@
   },
   "net": {
     "snapshot_hz": 20,
-    "input_hz": 30,
+    "input_hz": 60,
     "view_radius": 900,
     "max_entities_per_snapshot": 120,
     "teleport_threshold": 96,
