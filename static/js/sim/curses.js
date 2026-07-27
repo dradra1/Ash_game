@@ -5,7 +5,7 @@ const MULT_KEYS = [
   'max_hp_mult', 'ash_drop_mult', 'shop_price_mult', 'wave_len_mult', 'xp_mult',
   'reward_mult',
 ];
-const FLAT_KEYS = ['tithe', 'damage_pct', 'free_rerolls'];
+const FLAT_KEYS = ['tithe', 'damage_pct', 'free_rerolls', 'ash_per_kill'];
 
 export function emptyCurseFx() {
   return {
@@ -22,6 +22,9 @@ export function emptyCurseFx() {
     tithe: 0,
     damage_pct: 0,
     free_rerolls: 0,
+    // Прах прямо в котёл за каждое убийство, без пикапа на полу: так работает
+    // «Десятина без праха», где на землю не падает ничего.
+    ash_per_kill: 0,
     ash_drop_zero: false,
     shop_free: false,
     ids: [],

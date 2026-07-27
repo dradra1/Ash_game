@@ -194,7 +194,7 @@ CHARACTERS = {
                      unlock={"type": "relics", "cost": 200}),
     "ch_scavenger": dict(name="Падальщик", faction="scrap", color="#8aa84a",
                          desc="Бьёт слабее, зато уходит богаче.",
-                         start=["w_nailer_1"], stats={"tithe": 4, "damage_pct": -10},
+                         start=["w_nailer_1"], stats={"tithe": 8, "damage_pct": -10},
                          weights={"tithe": 2.0, "luck": 1.8},
                          unique={"type": "crate_chance", "value": 2.0},
                          unlock={"type": "relics", "cost": 350}),

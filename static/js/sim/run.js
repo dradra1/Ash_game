@@ -207,23 +207,31 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
         owner.kills += 1;
         owner.score += e.score;
       }
-      const tithe = owner ? owner.stats.tithe : 0;
-      // Десятина — ДОЛЯ от праха врага, а не плоская добавка к каждому убийству.
-      // Плоская добавка и разгоняла позднюю экономику: убийств за волну сотни, и
-      // при 40 накопленной десятины враг ценой 3 приносил 43 — доход к 16-й волне
-      // улетал в 3182 при цели 686.
-      const titheMult = tithe * config.stats.tithe_scale;
-      // Множитель дропа компенсирует деление котла на число игроков,
-      // wave_ash_mult приводит кривую дохода к целевой (см. patch_config_income).
-      const raw = curseFx.ash_drop_zero
-        ? e.ash * titheMult          // базовый прах обнулён проклятием, десятина капает
-        : e.ash * (1 + titheMult);
-      const ashAmount = raw * economy.dropMultiplier()
-        * dangerCfg.ash_mult * curseFx.ash_drop_mult * economy.waveMult(state.wave);
       const xpAmount = e.xp * curseFx.xp_mult;
-      const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
-      // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
-      if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+      // ash_drop_zero значит «на пол не падает НИЧЕГО». Раньше он обнулял только
+      // базовый прах, а доля десятины продолжала капать с каждого убийства — и
+      // проклятие, обещавшее пустой пол, всё равно сыпало деньги.
+      if (curseFx.ash_drop_zero) {
+        // Прах прямо в котёл, минуя пол. Множитель дропа тут обязателен: убийств
+        // в коопе больше в budgetScale раз, и без компенсации доход на голову
+        // вырос бы вместе с числом игроков.
+        if (curseFx.ash_per_kill > 0) {
+          const gain = curseFx.ash_per_kill * economy.dropMultiplier();
+          economy.add(gain);
+          state.ash_gained += gain;
+          syncAsh();
+        }
+        // Пикапа нет вовсе. Опыт от этого не страдает: он начисляется ниже
+        // напрямую каждому игроку, поле xp у пикапа при подборе не читается.
+      } else {
+        // Множитель дропа компенсирует деление котла на число игроков,
+        // wave_ash_mult приводит кривую дохода к целевой (см. patch_config_income).
+        const ashAmount = e.ash * economy.dropMultiplier()
+          * dangerCfg.ash_mult * curseFx.ash_drop_mult * economy.waveMult(state.wave);
+        const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
+        // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
+        if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+      }
       // Опыт в коопе НЕ делится: каждый получает полный XP со всех убийств
       for (let i = 0; i < state.players.length; i++) {
         if (state.players[i].alive) addXp(state.players[i], config, xpAmount);
@@ -392,6 +400,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     state.phase = PHASE_INTRO;
     state.phaseTime = config.run.wave_intro_sec;
     healEveryone();
+    payTithe();
     spawnBreakables();
     spawner.reset();
     spawnDeps.wave = n;
@@ -418,6 +427,29 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       }
       p.regenAcc = 0;
     }
+  }
+
+  // Десятина: плоская выплата в котёл на старте каждой волны, равная сумме стата
+  // по всем участникам.
+  //
+  // Раньше это была доля от праха каждого убитого — стат, который невозможно ни
+  // увидеть, ни посчитать: прибавка растворялась в дропе, а её вклад зависел от
+  // сложности, волны и проклятий разом. Теперь это понятная строка дохода.
+  //
+  // dropMultiplier тут НЕ нужен, в отличие от дропа с убийств: доход персональный,
+  // а не с врагов. Сумма по игрокам, поделённая котлом на N, и так возвращает
+  // каждому его собственную десятину — компенсировать нечего.
+  function payTithe() {
+    const scale = config.stats.tithe_scale;
+    let total = 0;
+    for (let i = 0; i < state.players.length; i++) {
+      total += state.players[i].stats.tithe;
+    }
+    total *= scale;
+    if (total <= 0) return;
+    economy.add(total);
+    state.ash_gained += total;
+    syncAsh();
   }
 
   // Ломаемые объекты встают заново каждую волну на своих детерминированных точках.
@@ -448,8 +480,14 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     if (reward.type === 'heal') {
       if (owner) owner.hp = Math.min(owner.maxHp, owner.hp + value);
     } else if (reward.type === 'ash') {
-      const drop = dropAsh(pickupPool, e.x, e.y, value * economy.dropMultiplier(), 0, config);
-      if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+      // Урна с прахом обязана уважать ash_drop_zero наравне с врагами: пока она
+      // звала dropAsh напрямую, «Милость лавки» обещала пустой пол, а прах
+      // продолжал сыпаться из ломаемых объектов. Событие о разбитии всё равно
+      // уходит — оно про эффект разлёта, а не про награду.
+      if (!curseFx.ash_drop_zero) {
+        const drop = dropAsh(pickupPool, e.x, e.y, value * economy.dropMultiplier(), 0, config);
+        if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+      }
     } else if (reward.type === 'push' || reward.type === 'pull') {
       const sign = reward.type === 'push' ? 1 : -1;
       const radius = reward.radius || 0;
@@ -594,6 +632,13 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   function openShop() {
     state.phase = PHASE_SHOP;
     state.shopOpen = true;
+    // «Милость лавки»: весь ассортимент бесплатный, поэтому остаток на счету не
+    // значит ничего, а накопленные крохи только путают. Гейт именно по shop_free,
+    // а не по ash_drop_zero: у «Десятины без праха» прах — настоящий доход.
+    if (curseFx.shop_free) {
+      economy.zero();
+      syncAsh();
+    }
     state.phaseTime = coop ? config.coop.shop_timer : Infinity;
     for (const k in ready) delete ready[k];
     // Выбывших поднимает healEveryone на старте следующей волны — здесь только ассортимент.
@@ -793,7 +838,9 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   // Первая волна не проходит через startWave: её состояние выставлено прямо в
   // литерале state, а startWave зовётся только на переходах между волнами. Значит
   // и объекты на ней надо поставить руками, иначе вся первая волна — единственная
-  // за забег без единого мини-ивента.
+  // за забег без единого мини-ивента. По той же причине здесь платится десятина:
+  // персонаж со стартовым статом (Падальщик) иначе пропустил бы первую выплату.
+  payTithe();
   spawnBreakables();
 
   return {

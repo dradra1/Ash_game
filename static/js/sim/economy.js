@@ -90,8 +90,21 @@ export function createEconomy(config, playerCount) {
     state.penalties += Math.max(0, state.pot - state.penalties) * coop.death_penalty;
   }
 
+  // Обнулить всё, что накопилось. Нужно проклятию «Милость лавки»: там весь
+  // ассортимент бесплатный, и остаток на счету не значит ничего.
+  //
+  // `spent` чистится обязательно: доля считается как (котёл − штрафы)/N − потрачено,
+  // и один обнулённый котёл оставил бы потратившему отрицательный баланс на весь
+  // остаток забега — то есть штраф за то, что он что-то купил.
+  function zero() {
+    state.pot = 0;
+    state.penalties = 0;
+    for (const id in state.spent) delete state.spent[id];
+  }
+
   return {
-    state, add, shareOf, spend, refund, gift, onDeath, dropMultiplier, waveMult, solo,
+    state, add, shareOf, spend, refund, gift, onDeath, zero,
+    dropMultiplier, waveMult, solo,
   };
 }
 

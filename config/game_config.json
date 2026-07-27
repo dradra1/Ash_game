@@ -1,5 +1,5 @@
 {
-  "content_version": 40,
+  "content_version": 41,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -370,7 +370,7 @@
         "texture": "st_tithe",
         "kind": "flat",
         "color": "#b0a070",
-        "desc": "Прибавка к праху с каждого убитого врага."
+        "desc": "Прах в начале каждой волны — столько, сколько накоплено стата."
       },
       "knockback": {
         "name": "Отбрасывание",
@@ -382,7 +382,7 @@
     },
     "range_step_px": 20,
     "lifesteal_heal": 3,
-    "tithe_scale": 0.04
+    "tithe_scale": 1.0
   },
   "level": {
     "xp_formula": {
@@ -1073,7 +1073,7 @@
       ],
       "stats": {
         "damage_pct": -10,
-        "tithe": 4
+        "tithe": 8
       },
       "texture": "ch_scavenger",
       "unique": {
@@ -5113,7 +5113,7 @@
       "price": 11,
       "tags": [],
       "stats": {
-        "tithe": 1
+        "tithe": 2
       },
       "effect": null,
       "coop_only": false
@@ -5402,7 +5402,7 @@
       "price": 29,
       "tags": [],
       "stats": {
-        "tithe": 2
+        "tithe": 4
       },
       "effect": {
         "trigger": "wave_end",
@@ -5466,7 +5466,7 @@
       "price": 25,
       "tags": [],
       "stats": {
-        "tithe": 1,
+        "tithe": 2,
         "luck": 4
       },
       "effect": null,
@@ -5780,7 +5780,7 @@
       "price": 56,
       "tags": [],
       "stats": {
-        "tithe": 4,
+        "tithe": 8,
         "luck": 6,
         "max_hp": -6
       },
@@ -5935,7 +5935,7 @@
       "price": 118,
       "tags": [],
       "stats": {
-        "tithe": 8,
+        "tithe": 16,
         "luck": 10,
         "damage_pct": -8
       },
@@ -6116,7 +6116,7 @@
       "price": 117,
       "tags": [],
       "stats": {
-        "tithe": 5,
+        "tithe": 10,
         "damage_pct": -5
       },
       "effect": {
@@ -7731,11 +7731,11 @@
     },
     "cu_ashless_tithe": {
       "name": "Десятина без праха",
-      "desc": "Прах с врагов не падает, +0.5 к десятине.",
+      "desc": "Прах на пол не падает; 0.5 праха за каждое убийство.",
       "unlock_achievement": "ac_kills1000",
       "effects": {
         "ash_drop_zero": true,
-        "tithe": 0.5
+        "ash_per_kill": 0.5
       }
     },
     "cu_free_market": {
@@ -7777,11 +7777,11 @@
     },
     "cu_iron_tithe": {
       "name": "Железная десятина",
-      "desc": "Цены ×2, +1 к десятине, больше реликвий.",
+      "desc": "Цены ×2, +2 к десятине, больше реликвий.",
       "unlock_achievement": "ac_shop_buys_50",
       "effects": {
         "shop_price_mult": 2,
-        "tithe": 1,
+        "tithe": 2,
         "reward_mult": 1.25
       }
     }

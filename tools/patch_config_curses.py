@@ -116,11 +116,13 @@ CURSES = {
     },
     "cu_ashless_tithe": {
         "name": "Десятина без праха",
-        "desc": "Прах с врагов не падает, +0.5 к десятине.",
+        "desc": "Прах на пол не падает; 0.5 праха за каждое убийство.",
         "unlock_achievement": "ac_kills1000",
         "effects": {
+            # Не `tithe`: десятина теперь платит раз в волну, и +0.5 к ней никто
+            # бы не заметил. ash_per_kill идёт прямо в котёл, минуя пол.
             "ash_drop_zero": True,
-            "tithe": 0.5,
+            "ash_per_kill": 0.5,
         },
     },
     "cu_free_market": {
@@ -162,11 +164,11 @@ CURSES = {
     },
     "cu_iron_tithe": {
         "name": "Железная десятина",
-        "desc": "Цены ×2, +1 к десятине, больше реликвий.",
+        "desc": "Цены ×2, +2 к десятине, больше реликвий.",
         "unlock_achievement": "ac_shop_buys_50",
         "effects": {
             "shop_price_mult": 2,
-            "tithe": 1,
+            "tithe": 2,
             "reward_mult": 1.25,
         },
     },
