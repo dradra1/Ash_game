@@ -188,6 +188,7 @@ async function boot() {
   const debugExtra = { entities: 0, kbs: 0, ping: 0, seed: 0, role: '' };
   const ashColor = config.render.ash_color;
   const ashSize = config.render.ash_size;
+  const ashTexture = config.render.ash_texture;
   const animFps = config.render.anim_fps;
   const projScale = config.render.projectile_scale;
   const WALK = '_walk';
@@ -590,11 +591,15 @@ async function boot() {
     renderer.drawArena(config.arenas[arenaId]);
     if (arenaLayout) renderer.drawProps(arenaLayout.props);
 
+    // Прах на полу — обычный объект мира: одна картинка без направлений, с
+    // деградацией в цветной квадрат, пока текстуры нет. Пикапы не ездят по сети,
+    // поэтому у подключившегося клиента (run === null) пол пуст — давняя дыра,
+    // закрывать её надо снапшотом, а не здесь.
     if (run) {
       const pickups = run.pickupPool;
       for (let i = 0; i < pickups.count; i++) {
         const p = pickups.items[i];
-        renderer.drawDot(p.x, p.y, ashSize / 2, ashColor);
+        renderer.drawObject(ashTexture, p.x, p.y, ashSize, ashColor);
       }
     }
 

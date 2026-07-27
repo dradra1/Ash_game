@@ -1,5 +1,5 @@
 {
-  "content_version": 39,
+  "content_version": 40,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -76,7 +76,7 @@
       "pad": 12
     },
     "ash_color": "#c8a35a",
-    "ash_size": 8,
+    "ash_size": 16,
     "projectile_size_min": 3,
     "anim_fps": 8,
     "weapon_size": 26,
@@ -94,7 +94,8 @@
     },
     "projectile_scale": 3.2,
     "weapon_rest_dist": 0.55,
-    "weapon_rest_spread": 0.42
+    "weapon_rest_spread": 0.42,
+    "ash_texture": "pk_ash"
   },
   "arena": {
     "size": [
