@@ -41,6 +41,33 @@ export function iconHtml(textureId, cls) {
   return `<img src="/static/textures/${textureId}.png" class="icon${c}" alt="" onerror="this.remove()">`;
 }
 
+// Карточка персонажа для подсказки: как выглядит, чем отличается, с чем начинает.
+// Одна на оба экрана выбора — лобби и соло-визард показывали только имя, хотя всё
+// это лежит в config.characters и просто не доходило до игрока.
+//
+// Спрайт вырезается из листа стойки: лист — 4 строки (S,E,N,W) по стороне,
+// равной высоте/4 (конвенция ASSETS.md §5, та же арифметика, что в engine/sprites.js).
+// Берём кадр 0 строки 0 — вид с юга, лицом к игроку.
+export function characterTipHtml(config, id, t) {
+  const c = config.characters[id];
+  if (!c) return '';
+  const face = c.texture
+    ? `<div class="tip-face" style="background-image:url(/static/textures/${c.texture}.png)"></div>`
+    : '';
+  let weapons = '';
+  const start = c.start_weapons || [];
+  for (let i = 0; i < start.length; i++) {
+    const w = config.weapons[start[i]];
+    if (w) weapons += `<div class="card-line">${iconHtml(w.texture, 'icon-xs')}${w.name}</div>`;
+  }
+  return `<div class="tip-head">${face}`
+    + `<div class="card-name" style="color:${c.color}">${c.name}</div></div>`
+    + (c.desc ? `<div class="card-desc">${c.desc}</div>` : '')
+    + `<div class="col-title">${t('ui.select.traits')}</div>`
+    + statsHtml(config, c.stats)
+    + (weapons ? `<div class="col-title">${t('ui.select.start_weapons')}</div>${weapons}` : '');
+}
+
 // Разметка описания статов сущности: «+4 Ближний урон», «−20% Здоровье»
 export function statsHtml(config, stats) {
   if (!stats) return '';

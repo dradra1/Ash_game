@@ -2,8 +2,9 @@
 // (за хостом), предупреждение об отвале хоста, кнопки «Готов» и «Начать забег».
 
 import { inviteLink } from '../net/lobby.js';
+import { characterTipHtml } from './tooltip.js';
 
-export function createLobbyUi(root, config, t) {
+export function createLobbyUi(root, config, t, tip) {
   const doc = root.ownerDocument;
 
   const panel = doc.createElement('div');
@@ -74,6 +75,9 @@ export function createLobbyUi(root, config, t) {
       btn.style.setProperty('--accent', c.color);
       btn.innerHTML = `<span class="inv-name" style="color:${c.color}">${c.name}</span>`;
       btn.addEventListener('click', () => ctx.lobby.character(id));
+      // Особенности и внешность по наведению: до этого в лобби было только имя,
+      // и выбирать приходилось вслепую.
+      if (tip) tip.bind(btn, () => characterTipHtml(config, id, t));
       charsEl.appendChild(btn);
     }
   }
@@ -139,13 +143,32 @@ export function createLobbyUi(root, config, t) {
     renderSetup(room);
   }
 
+  // Кнопка возвращает свою подпись: раньше она навсегда подменялась сырой ссылкой,
+  // и повторно нажать «скопировать» было уже не на что. Отказ буфера обмена
+  // (нет https, нет разрешения) больше не проглатывается молча — показываем ссылку,
+  // чтобы её можно было выделить руками.
+  let copyTimer = 0;
+  function flashCopy(text) {
+    copyBtn.textContent = text;
+    if (copyTimer) doc.defaultView.clearTimeout(copyTimer);
+    copyTimer = doc.defaultView.setTimeout(() => {
+      copyBtn.textContent = t('ui.lobby.copy');
+      copyTimer = 0;
+    }, COPY_FLASH_MS);
+  }
+
   copyBtn.addEventListener('click', () => {
     const room = ctx && ctx.lobby.room;
     if (!room) return;
     const link = inviteLink(room.code);
     const nav = doc.defaultView.navigator;
-    if (nav && nav.clipboard) nav.clipboard.writeText(link).catch(() => {});
-    copyBtn.textContent = link;
+    if (nav && nav.clipboard) {
+      nav.clipboard.writeText(link)
+        .then(() => flashCopy(t('ui.lobby.copied')))
+        .catch(() => flashCopy(link));
+    } else {
+      flashCopy(link);
+    }
   });
 
   readyBtn.addEventListener('click', () => {
@@ -167,3 +190,6 @@ export function createLobbyUi(root, config, t) {
     refresh: render,
   };
 }
+
+// Сколько держится подпись «скопировано» / сама ссылка на кнопке
+const COPY_FLASH_MS = 2000;

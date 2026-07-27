@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Патч: секция input для геймпада (deadzone + кнопки Standard Gamepad).
 
+Нумерация — Standard Gamepad Mapping: 0=A, 1=B, 2=X, 3=Y, 4=LB, 9=Start,
+12–15 — крестовина (вверх, вниз, влево, вправо).
+
 Идемпотентен, пишет в обе копии конфига (CLAUDE.md §3.2).
 
     tools/patch_config_gamepad.py --apply
@@ -14,16 +17,22 @@ REPO = os.path.join(ROOT, "config", "game_config.json")
 LIVE = os.path.join(os.environ.get("ASH_DATA", os.path.join(ROOT, "data")),
                     "game_config.json")
 
-CONTENT_VERSION = 10
+CONTENT_VERSION = 32
 
 INPUT = {
     "gamepad_deadzone": 0.25,
     "gamepad_buttons": {
         "buy": 0,
+        # B — «назад» в меню: единственная кнопка, которую игрок ищет вслепую.
+        "cancel": 1,
         "lock": 2,
         "merge": 3,
         "reroll": 4,
         "ready": 9,
+        # Крестовина целиком: вверх/вниз для списков меню (ui/focus.js),
+        # влево/вправо для слотов лавки (shop_ui.handleInput).
+        "focus_up": 12,
+        "focus_down": 13,
         "focus_prev": 14,
         "focus_next": 15,
     },

@@ -2,7 +2,7 @@
 // и продажей, сетка предметов, панель статов, кнопка «Готов».
 // Геймпад: фокус слота + buy/lock/merge/reroll/ready через input.consumePressed.
 
-import { mergeable } from '../sim/shop.js';
+import { mergeable, mergeAfterBuy } from '../sim/shop.js';
 import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createShopUi(root, config, t, tip) {
@@ -23,7 +23,8 @@ export function createShopUi(root, config, t, tip) {
     + '<div class="col"><div class="col-title"></div><div class="inv-weapons"></div></div>'
     + '<div class="col"><div class="col-title"></div><div class="inv-items"></div></div>'
     + '<div class="col"><div class="col-title"></div><div class="stat-list"></div></div>'
-    + '</div>';
+    + '</div>'
+    + '<div class="shop-allies"></div>';
   root.appendChild(panel);
 
   const q = (sel) => panel.querySelector(sel);
@@ -36,6 +37,7 @@ export function createShopUi(root, config, t, tip) {
   const weaponsEl = q('.inv-weapons');
   const itemsEl = q('.inv-items');
   const statsEl = q('.stat-list');
+  const alliesEl = q('.shop-allies');
 
   cols[0].textContent = t('ui.shop.inventory');
   cols[1].textContent = t('ui.shop.items');
@@ -73,7 +75,8 @@ export function createShopUi(root, config, t, tip) {
     if (kind === 'weapon') {
       return head + tierRow
         + `<div class="card-line">${t('ui.class.' + cfg.class)}</div>`
-        + `<div class="card-line">${Math.round(cfg.damage)} / ${cfg.cooldown.toFixed(2)}с</div>`;
+        + `<div class="card-line">${Math.round(cfg.damage)} / `
+        + `${cfg.cooldown.toFixed(2)}${t('ui.unit.sec')}</div>`;
     }
     return head + tierRow + statsHtml(config, cfg.stats)
       + (cfg.desc ? `<div class="card-desc">${cfg.desc}</div>` : '');
@@ -118,15 +121,31 @@ export function createShopUi(root, config, t, tip) {
         const idx = i;
         card.addEventListener('click', () => {
           focusSlot = idx;
-          const res = ctx.act('buy', idx);
-          if (res === 'poor') flash(card, t('ui.shop.cant_afford'));
-          else if (res === 'full') flash(card, t('ui.shop.slots_full'));
-          else renderAll();
+          buyAt(idx, false, card);
         });
+
+        // Покупка со слиянием: если этот ствол добирает пару до merge_count и у
+        // семейства есть следующий тир, вторая кнопка делает покупку и слияние
+        // одним действием. Иначе приходилось покупать в свободный слот, а при
+        // забитом инвентаре покупка вообще отказывала — хотя слияние его освобождает.
+        if (canBuyMerge(s)) {
+          const mergeBtn = doc.createElement('button');
+          mergeBtn.type = 'button';
+          mergeBtn.className = 'mini merge buy-merge';
+          mergeBtn.textContent = t('ui.shop.buy_merge');
+          mergeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            focusSlot = idx;
+            buyAt(idx, true, card);
+          });
+          card.appendChild(mergeBtn);
+          const next = config.weapons[s.cfg.next_tier];
+          if (next) tip.bind(mergeBtn, () => cardHtml(next, 'weapon'));
+        }
       }
-      if (s.kind === 'item') {
-        tip.bind(card, () => cardHtml(s.cfg, s.kind));
-      }
+      // Тултип теперь и на оружии: раньше он висел только на предметах, и характеристики
+      // ствола нельзя было посмотреть, не купив его.
+      tip.bind(card, () => cardHtml(s.cfg, s.kind));
       slotsEl.appendChild(card);
     }
   }
@@ -145,15 +164,26 @@ export function createShopUi(root, config, t, tip) {
     return slotsEl.children[focusSlot] || null;
   }
 
+  function canBuyMerge(slot) {
+    if (!ctx || !slot || slot.sold || slot.kind !== 'weapon') return false;
+    return mergeAfterBuy(ctx.player(), slot, config);
+  }
+
+  function buyAt(idx, withMerge, card) {
+    const res = ctx.act(withMerge ? 'buy_merge' : 'buy', idx);
+    const node = card || focusedCard();
+    if (res === 'poor' && node) flash(node, t('ui.shop.cant_afford'));
+    else if (res === 'full' && node) flash(node, t('ui.shop.slots_full'));
+    else renderAll();
+  }
+
   function doBuy() {
     const slots = ctx.slots();
     const s = slots[focusSlot];
     if (!s || s.sold || !s.cfg) return;
-    const res = ctx.act('buy', focusSlot);
-    const card = focusedCard();
-    if (res === 'poor' && card) flash(card, t('ui.shop.cant_afford'));
-    else if (res === 'full' && card) flash(card, t('ui.shop.slots_full'));
-    else renderAll();
+    // С геймпада кнопка покупки сама выбирает слияние, когда оно возможно:
+    // отдельной кнопки под «купить и объединить» на паде нет.
+    buyAt(focusSlot, canBuyMerge(s), focusedCard());
   }
 
   function doLock() {
@@ -179,8 +209,33 @@ export function createShopUi(root, config, t, tip) {
 
   function doReady() {
     tip.hide();
-    panel.style.display = 'none';
     ctx.act('ready');
+    // Не прячем панель: в коопе фаза держится, пока не готовы все, и на следующем
+    // же кадре main.js открывал её заново. Вместо этого переходим в режим ожидания —
+    // видно, кого ждём. В соло фаза сменится сразу и панель закроет сам main.js.
+    renderAll();
+  }
+
+  // Ростер союзников: кто уже готов, а кто ещё выбирает. Ключ ui.shop.waiting
+  // лежал в конфиге и не использовался ни одной строкой кода.
+  function renderAllies() {
+    const allies = ctx.allies ? ctx.allies() : [];
+    if (!allies || allies.length < 2) {
+      alliesEl.innerHTML = '';
+      alliesEl.style.display = 'none';
+      return;
+    }
+    alliesEl.style.display = '';
+    let html = `<div class="col-title">${t('ui.shop.waiting')}</div><div class="ally-row">`;
+    for (let i = 0; i < allies.length; i++) {
+      const a = allies[i];
+      const chCfg = a.character ? config.characters[a.character] : null;
+      const color = chCfg ? chCfg.color : '#c9c4b8';
+      html += `<span class="ally${a.ready ? ' on' : ''}">`
+        + `${iconHtml(a.ready ? 'ui_lock_on' : 'ui_lock_off', 'icon-xs')}`
+        + `<span style="color:${color}">${a.name}</span></span>`;
+    }
+    alliesEl.innerHTML = html + '</div>';
   }
 
   function renderInventory() {
@@ -244,23 +299,37 @@ export function createShopUi(root, config, t, tip) {
     }
   }
 
+  // Показываем ВСЕ статы, включая нулевые: иначе игрок не знает, что стат вообще
+  // существует, пока случайно его не возьмёт. Нулевые приглушены, а описание
+  // каждого приходит подсказкой при наведении.
   function renderStats() {
     const p = ctx.player();
-    let html = '';
+    statsEl.innerHTML = '';
     const order = config.stats.order;
     for (let i = 0; i < order.length; i++) {
       const key = order[i];
       const meta = config.stats.meta[key];
-      const v = p.stats[key];
-      if (v === 0) continue;
+      if (!meta) continue;
+      const v = p.stats[key] || 0;
       const suffix = meta.kind === 'pct' ? '%' : '';
+      const row = doc.createElement('div');
+      row.className = 'stat-row' + (v === 0 ? ' zero' : '');
       // Иконка живёт внутри span с названием, а не рядом: .stat-row — это flex
       // со space-between, и третий ребёнок растащил бы строку по краям.
-      html += `<div class="stat-row"><span style="color:${meta.color}">`
+      row.innerHTML = `<span style="color:${meta.color}">`
         + `${iconHtml(meta.texture, 'icon-xs')}${meta.name}</span>`
-        + `<span>${Math.round(v * 100) / 100}${suffix}</span></div>`;
+        + `<span>${Math.round(v * 100) / 100}${suffix}</span>`;
+      tip.bind(row, () => statTipHtml(key, meta, v, suffix));
+      statsEl.appendChild(row);
     }
-    statsEl.innerHTML = html;
+  }
+
+  function statTipHtml(key, meta, v, suffix) {
+    return `<div class="card-name" style="color:${meta.color}">`
+      + `${iconHtml(meta.texture, 'icon-sm')}${meta.name}</div>`
+      + `<div class="card-line">${t('ui.shop.current')}: `
+      + `${Math.round(v * 100) / 100}${suffix}</div>`
+      + (meta.desc ? `<div class="card-desc">${meta.desc}</div>` : '');
   }
 
   function renderTop() {
@@ -269,8 +338,11 @@ export function createShopUi(root, config, t, tip) {
     ashEl.textContent = t('ui.hud.ash') + ': ' + Math.floor(p.ash);
     const cost = ctx.rerollCost();
     rerollBtn.textContent = t('ui.shop.reroll') + ' (' + cost + ')';
-    rerollBtn.disabled = p.ash < cost;
-    goBtn.textContent = t('ui.shop.go');
+    const waiting = ctx.meReady ? ctx.meReady() : false;
+    rerollBtn.disabled = p.ash < cost || waiting;
+    goBtn.textContent = waiting ? t('ui.shop.waiting') : t('ui.shop.go');
+    goBtn.disabled = waiting;
+    panel.classList.toggle('waiting', waiting);
   }
 
   function renderAll() {
@@ -279,6 +351,7 @@ export function createShopUi(root, config, t, tip) {
     renderSlots();
     renderInventory();
     renderStats();
+    renderAllies();
   }
 
   rerollBtn.addEventListener('click', () => {

@@ -7,7 +7,13 @@ import { separateFromProps, slideAlong } from './arena.js';
 export const AI_CHASE = 0;
 export const AI_SHOOTER = 1;
 
-const AI_CODE = { chase: AI_CHASE, shooter: AI_SHOOTER };
+// Неподвижная цель без атаки: ломаемые объекты арены. Они живут в пуле врагов
+// намеренно — так им бесплатно достаются HP, наведение оружия, урон от всех
+// снарядов, снапшот и кооп-синхронизация, и не приходится дублировать всё это
+// вторым пулом со своей сеткой и своими сообщениями.
+export const AI_STATIC = 2;
+
+const AI_CODE = { chase: AI_CHASE, shooter: AI_SHOOTER, static: AI_STATIC };
 
 // Нормаль последнего выталкивания. Один объект на модуль: аллокация на кадр при
 // 450 врагах — прямое нарушение бюджета (CLAUDE.md §4).
@@ -17,13 +23,14 @@ const PROP_TOUCH = 0.5;          // враг «толще» своего рад�
 // Запись врага может лежать и в config.enemies, и в config.bosses — боссы это те же
 // сущности с фазами и своим дропом, а не отдельная ветка кода.
 export function enemyCfg(config, id) {
-  return config.enemies[id] || config.bosses[id];
+  return config.enemies[id] || config.bosses[id]
+    || (config.breakables && config.breakables[id]);
 }
 
 export function makeEnemy() {
   return {
     uid: 0,                 // стабильный идентификатор: индексы пула переиспользуются
-    boss: false, phase: 0, baseSpeed: 0, baseDmg: 0, baseCd: 1,
+    boss: false, breakable: false, phase: 0, baseSpeed: 0, baseDmg: 0, baseCd: 1,
     type: null, cfg: null, ai: AI_CHASE,
     x: 0, y: 0, vx: 0, vy: 0,
     hp: 0, maxHp: 0, dmg: 0, speed: 0, size: 0, sprite: 0,
@@ -37,6 +44,7 @@ export function makeEnemy() {
 
 export function resetEnemy(e) {
   e.alive = false;
+  e.boss = false; e.breakable = false;
   e.vx = 0; e.vy = 0;
   e.kbX = 0; e.kbY = 0;
   e.targetId = -1; e.retargetT = 0; e.atkCd = 0; e.contactCd = 0;
@@ -83,6 +91,7 @@ export function initEnemy(e, config, typeId, wave, danger, players, curseFx) {
   e.xp = cfg.xp;
   e.score = cfg.score;
   e.boss = !!cfg.boss;
+  e.breakable = !!cfg.breakable;
   e.phase = 0;
   e.baseSpeed = e.speed;
   e.baseDmg = e.dmg;
@@ -122,6 +131,14 @@ export function stepEnemies(pool, dt, deps) {
 
   for (let i = 0; i < pool.count; i++) {
     const e = pool.items[i];
+
+    // Ломаемый объект: стоит на месте, никого не ищет и не бьёт. Выходим до
+    // наведения и до контактного урона — иначе бочка «кусала» бы пробегающего.
+    if (e.ai === AI_STATIC) {
+      e.vx = 0;
+      e.vy = 0;
+      continue;
+    }
 
     // Перевыбор цели — раз в retarget_interval, а не каждый кадр:
     // каждый кадр это и дёргает врага, и стоит CPU на толпе в 450 штук.

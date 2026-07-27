@@ -79,7 +79,7 @@ function playOne(seed) {
   let rerolled = 0;
   // Поволновой срез: без него баланс правится на ощупь
   const perWave = [];
-  let wavePrev = { kills: 0, wave: 1 };
+  let wavePrev = { kills: 0, wave: 1, gained: 0 };
 
   while (run.state.phase !== PHASE_OVER && guard++ < limit) {
     // --- левелап: только в фазе LEVELUP (конец волны)
@@ -108,12 +108,20 @@ function playOne(seed) {
           hp: Math.ceil(p.hp),
           maxHp: p.maxHp,
           ash: Math.floor(p.ash),
+          // Доход ИМЕННО ЗА ЭТУ ВОЛНУ. Остаток в кошельке (ash) для баланса не
+          // годится: он зависит от того, что бот успел купить. Целевая кривая из
+          // ТЗ задана как «сколько игрок получает за волну».
+          income: Math.round(run.state.ash_gained - wavePrev.gained),
           level: p.level,
           weapons: p.slots.filter((s) => s.cfg).length,
           items: p.items.length,
           dmg: Math.round(p.stats.damage_pct),
         });
-        wavePrev = { kills: run.state.kills, wave: run.state.wave + 1 };
+        wavePrev = {
+          kills: run.state.kills,
+          wave: run.state.wave + 1,
+          gained: run.state.ash_gained,
+        };
       }
       const shop = run.shopFor(p.id);
       if (process.env.PT_DEBUG) {
@@ -136,7 +144,7 @@ function playOne(seed) {
           if (needWeapons && pri === 0 && s.kind !== 'weapon') continue;
           if (s.kind === 'weapon' && freeSlotIndex(p) < 0) continue;
           if (p.ash < s.price) continue;
-          const res = buy(p, shop, i, config, () => refreshStats(p, config));
+          const res = buy(p, shop, i, config, run.wallet, () => refreshStats(p, config));
           if (res === 'ok') bought++;
           else if (process.env.PT_DEBUG) console.log('  отказ', s.kind, s.id, s.price, res, 'прах', Math.floor(p.ash));
         }
@@ -150,7 +158,7 @@ function playOne(seed) {
         const canBuy = p.ash >= cheapest;
         const worthIt = canBuy ? p.ash >= cost + cheapest : p.ash >= cost * 2;
         if (!worthIt) break;
-        if (shop.reroll(p, run.danger, run.rng) > 0) rerolled++;
+        if (shop.reroll(p, run.danger, run.rng, run.wallet) > 0) rerolled++;
       }
       run.readyUp(p.id);
       continue;
@@ -238,11 +246,12 @@ for (let i = 0; i < RUNS; i++) {
       + `, уровень ${r.level}, боссов ${r.bosses}, убийств ${r.kills}`
       + `, очки ${r.score}, куплено ${r.bought}, рероллов ${r.rerolled}`);
     if (RUNS === 1) {
-      console.log('  волна | убил | остал | HP     | прах | ур | ор | пр');
+      console.log('  волна | убил | остал | HP     | доход | прах | ур | ор | пр');
       for (const w of r.perWave) {
         console.log(`  ${String(w.wave).padStart(5)} | ${String(w.kills).padStart(4)} `
           + `| ${String(w.alive).padStart(5)} | ${(w.hp + '/' + w.maxHp).padStart(6)} `
-          + `| ${String(w.ash).padStart(4)} | ${String(w.level).padStart(2)} `
+          + `| ${String(w.income).padStart(5)} | ${String(w.ash).padStart(4)} `
+          + `| ${String(w.level).padStart(2)} `
           + `| ${String(w.weapons).padStart(2)} | ${String(w.items).padStart(2)}`);
       }
       console.log(`  оружие: ${r.weapons.join(', ') || '—'}`);

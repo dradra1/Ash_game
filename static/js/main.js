@@ -28,8 +28,17 @@ import { createAdminUi } from './ui/admin_ui.js';
 import { createParticles } from './engine/particles.js';
 import { createRng } from './engine/rng.js';
 import { createAudio } from './engine/audio.js';
+import { createAudioUi } from './ui/audio_ui.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
+import { createFocusNav } from './ui/focus.js';
+
+// Сколько игроков уже отчитались готовыми в лавке
+function countReady(run) {
+  let n = 0;
+  for (const k in run.state.ready) if (run.state.ready[k]) n++;
+  return n;
+}
 
 function firstKey(obj) {
   for (const k in obj) return k;
@@ -73,11 +82,40 @@ async function boot() {
   const tip = createTooltip(uiRoot);
   const levelUi = createLevelUpUi(uiRoot, config, t);
   const shopUi = createShopUi(uiRoot, config, t, tip);
-  const lobbyUi = createLobbyUi(uiRoot, config, t);
-  const setupUi = createSetupUi(uiRoot, config, t);
+  const lobbyUi = createLobbyUi(uiRoot, config, t, tip);
+  const setupUi = createSetupUi(uiRoot, config, t, tip);
   const resultUi = createResultUi(uiRoot, config, t);
   const pauseUi = createPauseUi(uiRoot, config, t);
   const audio = createAudio(config);
+  const audioUi = createAudioUi(uiRoot, config, t, audio);
+  // Ввод создаётся ОДИН раз на всё время жизни страницы, а не на забег. Раньше он
+  // жил вместе с игровым циклом, и до старта забега опрашивать геймпад было некому:
+  // в меню, лобби и настройках пад не работал вовсе (ui/focus.js §1).
+  const input = createInput(canvas, config);
+  const focusNav = createFocusNav(uiRoot, input);
+  focusNav.start();
+
+  // Какая музыка играет сейчас. Боевые треки чередуются по номеру волны, чтобы за
+  // забег не приелся один луп; сам список — из config.audio.playlist, не из кода.
+  function musicFor(phase, wave, bossWave) {
+    const pl = (config.audio && config.audio.playlist) || {};
+    if (bossWave && pl.boss) return pl.boss;
+    if (phase === PHASE_SHOP || phase === PHASE_LEVELUP) return pl.shop || pl.menu;
+    const list = pl.wave;
+    if (Array.isArray(list) && list.length) return list[(wave - 1) % list.length];
+    return list || pl.menu;
+  }
+
+  let musicWave = -1;
+  let musicPhase = null;
+  function syncMusic(state) {
+    if (!state) return;
+    const boss = !!config.run.boss_waves[String(state.wave)];
+    if (state.wave === musicWave && state.phase === musicPhase) return;
+    musicWave = state.wave;
+    musicPhase = state.phase;
+    audio.playMusic(musicFor(state.phase, state.wave, boss));
+  }
   const particles = createParticles(config);
   // Отдельный ГПСЧ для косметики. Тянуть искры из rng забега нельзя: тогда забег
   // в браузере и тот же сид в tools/playtest.js разошлись бы, а сервер валидирует
@@ -129,7 +167,6 @@ async function boot() {
   let netClient = null;
   let hostNet = null;
   let renderer = null;
-  let input = null;
   let loop = null;
   let debug = null;
   let lobby = null;
@@ -137,6 +174,9 @@ async function boot() {
   let arenaId = null;
   let arenaLayout = null;
   const pose = makePose();       // одна на весь рендер: поза считается десятки раз за кадр
+  // Спрайт оружия нарисован горизонтально (ASSETS.md §5), поэтому в позе покоя
+  // его доворачивают на четверть оборота — как tilt у дуговых кривых замаха.
+  const HALF_PI = Math.PI / 2;
   let runId = null;
   let finished = false;
   let myIndex = 0;
@@ -154,6 +194,8 @@ async function boot() {
 
   let shopSnap = null;
   let remoteShop = null;
+  // Сколько игроков уже нажали «Готов» в текущей лавке; -1 — лавка закрыта
+  let lastReadyCount = -1;
 
   const isHost = () => !netClient;
   const world = () => (netClient ? netClient.state : run.state);
@@ -167,7 +209,6 @@ async function boot() {
     if (loop) { try { loop.stop(); } catch (e) { /* */ } }
     if (hostNet) { try { hostNet.close(); } catch (e) { /* */ } }
     if (netClient) { try { netClient.close(); } catch (e) { /* */ } }
-    if (input) { try { input.destroy(); } catch (e) { /* */ } }
     levelUi.hide();
     shopUi.hide();
     pauseUi.hide();
@@ -227,6 +268,12 @@ async function boot() {
       },
       onRestart: () => restartRun(),
       onMenu: () => leaveToMenu(),
+      // Настройки звука прямо из паузы: громкость правят по ходу игры, а не
+      // заранее, и гонять ради этого в главное меню незачем.
+      onAudio: () => {
+        pauseUi.hide();
+        audioUi.show(() => openPauseMenu());
+      },
     });
   }
 
@@ -270,10 +317,18 @@ async function boot() {
 
   // --- цикл ---------------------------------------------------------------
   function update(dt) {
-    if (input) input.poll();
+    input.poll();
+
+    // Музыка следует за фазой и волной: смена трека — только по факту изменения,
+    // иначе каждый кадр перезапускал бы луп.
+    syncMusic(netClient ? netClient.state : (run && run.state));
 
     if (input.consumePressed('F3')) debug.toggle();
     if (input.consumePressed('Escape')) handleEsc();
+    // Start на паде — тот же Escape. Без него забег, начатый геймпадом, нельзя
+    // даже поставить на паузу: пришлось бы тянуться к клавиатуре. В лавке эта же
+    // кнопка означает «готов», поэтому там её разбирает shop_ui.
+    if (!shopUi.visible && input.consumePressed('GamepadReady')) handleEsc();
     if (isAdmin && input.consumePressed('F4') && isHost() && run) {
       if (!pauseUi.visible) {
         requestPause(true);
@@ -324,10 +379,19 @@ async function boot() {
         shopUi.show(localAdapter(run, me, run.shopFor(me.id), config,
           () => run.readyUp(me.id)));
       }
+      // Ростер готовности у хоста меняется от чужих действий. Перерисовываем не
+      // каждый кадр (это убило бы наведение и подсказки), а только когда число
+      // отчитавшихся реально изменилось.
+      const readyNow = countReady(run);
+      if (readyNow !== lastReadyCount) {
+        lastReadyCount = readyNow;
+        shopUi.refresh();
+      }
       if (shopUi.visible) shopUi.handleInput(input);
       if (!run.coop) return;
     } else if (shopUi.visible) {
       shopUi.hide();
+      lastReadyCount = -1;
     }
 
     // На левелапе симуляция почти стоит (run.step сам гейтит), но phaseTime тикает
@@ -474,14 +538,38 @@ async function boot() {
       config.render.weapon_size * pose.scale, a + pose.tilt, left);
   }
 
+  // Поза покоя: оружие видно ВСЕГДА, веером вокруг игрока по последнему прицелу.
+  //
+  // Раньше ствол рисовался только во время замаха, а замах короче перезарядки в
+  // разы (у пики 0.18 с против 1.05 с — спрайт на экране 17% времени). Игрок стоял
+  // с пустыми руками и вздрагивал оружием раз в секунду, что и читалось как
+  // «оружие блокируется перед атакой».
+  function drawRest(p, size, w, angle, idx, count) {
+    const reach = size * config.render.weapon_reach;
+    const spread = config.render.weapon_rest_spread;
+    const a = angle + (idx - (count - 1) / 2) * spread;
+    const x = p.x + Math.cos(a) * config.render.weapon_rest_dist * reach;
+    const y = p.y + Math.sin(a) * config.render.weapon_rest_dist * reach;
+    const left = Math.cos(angle) < 0;
+    renderer.drawSprite(w.texture, x, y, config.render.weapon_size, a + HALF_PI, left);
+  }
+
   function drawWeapons(p, size) {
     // Хост знает слоты целиком и рисует все замахи сразу. Клиенту слоты соседей
     // неизвестны: до него доходит пульс из снапшота — одно оружие и один угол.
     if (p.slots && p.slots.length) {
+      let held = 0;
+      for (let s = 0; s < p.slots.length; s++) if (p.slots[s].cfg) held++;
+      let idx = 0;
       for (let s = 0; s < p.slots.length; s++) {
         const slot = p.slots[s];
-        if (!slot.cfg || slot.swingT <= 0 || slot.cfg.shape.type !== 'arc') continue;
-        drawSwing(p, size, slot.cfg, slot.lastAngle, 1 - slot.swingT / slot.swingLen);
+        if (!slot.cfg) continue;
+        const seat = idx++;
+        if (slot.swingT > 0 && slot.cfg.shape.type === 'arc') {
+          drawSwing(p, size, slot.cfg, slot.lastAngle, 1 - slot.swingT / slot.swingLen);
+        } else {
+          drawRest(p, size, slot.cfg, slot.lastAngle, seat, held);
+        }
       }
       return;
     }
@@ -599,7 +687,6 @@ async function boot() {
   function bootEngine(arenaSize) {
     renderer = createRenderer(canvas, config, arenaSize);
     renderer.setArenaLayout(arenaLayout);
-    input = createInput(canvas, config);
     loop = createLoop({
       dt: config.sim.dt,
       maxCatchup: config.sim.max_catchup_steps,
@@ -743,10 +830,13 @@ async function boot() {
       const h = Math.round(config.arena.size[1] * scale);
       arenaLayout = buildArenaLayout(config, arenaId, msg.seed, w, h);
       netClient = createNetClient(transport, config, myIndex,
-        createPropIndex(arenaLayout, config));
+        createPropIndex(arenaLayout, config), w, h);
       transport.on(CH.EVENT, (msg) => {
         if (!msg) return;
-        if (msg.t === 'shop' && msg.p === myIndex) {
+        if (msg.t === 'loadout') {
+          // Экипировка приходит на всех: свою рисует HUD, чужую — замахи соседей
+          netClient.applyLoadout(msg.p, msg.snap);
+        } else if (msg.t === 'shop' && msg.p === myIndex) {
           shopSnap = msg.snap;
           if (shopUi.visible) shopUi.refresh();
         } else if (msg.t === 'levelup' && msg.p === myIndex) {
@@ -768,7 +858,9 @@ async function boot() {
           if (!ps[i]) continue;
           ps[i].name = room.players[i].name;
           ps[i].character = room.players[i].character || fallbackChar;
-          ps[i].speed = config.player.move_speed;
+          // speed НЕ трогаем: его ставит applyLoadout по реальным статам игрока.
+          // Раньше здесь раз в секунду возвращалась базовая скорость, и любой
+          // предмет на move_speed_pct разъезжал предсказание с симуляцией хоста.
         }
       };
       sync();
@@ -791,11 +883,23 @@ async function boot() {
 
   function showMenu() {
     setupUi.hide();
+    // Меню — тоже фаза со своей музыкой. Сбрасываем метку последней синхронизации:
+    // иначе возврат в тот же номер волны после рестарта не переключил бы трек.
+    musicWave = -1;
+    musicPhase = null;
+    audio.playMusic((config.audio && config.audio.playlist)
+      ? config.audio.playlist.menu : null);
     screens.show('menu', {
       onPlay: openSoloSetup,
       onCoop: openCoopSetup,
       onJoin: coopJoin,
       onMeta: () => metaUi.show(showMenu),
+      onAudio: () => {
+        // Любое имя, кроме 'menu', прячет панель меню — настройки открываются
+        // поверх пустого экрана, а кнопка «Назад» возвращает сюда же.
+        screens.show('audio');
+        audioUi.show(showMenu);
+      },
       onAdmin: isAdmin && adminUi ? () => adminUi.show(showMenu) : null,
       onLogout: doLogout,
       invited,

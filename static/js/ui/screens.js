@@ -34,6 +34,15 @@ export function createScreens(root, config, t) {
   metaBtn.textContent = t('ui.menu.reliquary');
   panel.appendChild(metaBtn);
 
+  // Звук из главного меню, а не только из паузы: музыка играет уже в меню, и
+  // первое, что делает игрок, которому она мешает, — ищет ползунок здесь.
+  const audioBtn = doc.createElement('button');
+  audioBtn.type = 'button';
+  audioBtn.id = 'btn-audio';
+  audioBtn.className = 'btn';
+  audioBtn.textContent = t('ui.audio.title');
+  panel.appendChild(audioBtn);
+
   const adminBtn = doc.createElement('button');
   adminBtn.type = 'button';
   adminBtn.id = 'btn-admin';
@@ -75,6 +84,7 @@ export function createScreens(root, config, t) {
   playBtn.addEventListener('click', () => handlers.onPlay && handlers.onPlay());
   coopBtn.addEventListener('click', () => handlers.onCoop && handlers.onCoop());
   metaBtn.addEventListener('click', () => handlers.onMeta && handlers.onMeta());
+  audioBtn.addEventListener('click', () => handlers.onAudio && handlers.onAudio());
   adminBtn.addEventListener('click', () => handlers.onAdmin && handlers.onAdmin());
   logoutBtn.addEventListener('click', () => handlers.onLogout && handlers.onLogout());
   joinBtn.addEventListener('click', async () => {

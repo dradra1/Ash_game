@@ -47,6 +47,8 @@ export function createPlayer(config, id, name, characterId, x, y) {
     slots,
     alive: true,
     input: { x: 0, y: 0 },
+    // Номер последнего учтённого ввода — уезжает в снапшоте как ack (net/protocol.js)
+    lastInputSeq: 0,
   };
 }
 

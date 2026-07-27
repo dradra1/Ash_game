@@ -167,14 +167,13 @@ export function createShop(config, unlockedWeapons, curseFx) {
     return slots;
   }
 
-  function reroll(player, danger, rng) {
+  function reroll(player, danger, rng, wallet) {
     let cost = 0;
     if (state.freeRerollsLeft > 0) {
       state.freeRerollsLeft -= 1;
     } else {
       cost = rerollCost(config, state.rerolls);
-      if (player.ash < cost) return 0;
-      player.ash -= cost;
+      if (!wallet.spend(player, cost)) return 0;
     }
     state.rerolls += 1;
     for (let i = 0; i < slots.length; i++) fillSlot(slots[i], player, state.wave, danger, rng);
@@ -203,33 +202,54 @@ export function freeSlotIndex(player) {
 }
 
 // Купить. Возвращает код: 'ok' | 'poor' | 'full' | 'empty'
-export function buy(player, shop, slotIndex, config, onChange) {
+//
+// withMerge — покупка ради слияния: слоты могут быть заняты, потому что сразу за
+// покупкой merge_count копий схлопнутся в одну вещь и слотов станет больше, а не меньше.
+export function buy(player, shop, slotIndex, config, wallet, onChange, withMerge) {
   const slot = shop.slots[slotIndex];
   if (!slot || !slot.cfg || slot.sold) return 'empty';
-  if (player.ash < slot.price) return 'poor';
+  if (wallet.balance(player) < slot.price) return 'poor';
+
+  // Сначала проверяем всё, что может отказать, и только потом платим и меняем
+  // инвентарь: половинчатая покупка списала бы прах и ничего не выдала.
+  const merging = !!withMerge && slot.kind === 'weapon' && mergeAfterBuy(player, slot, config);
+  let target = -1;
+  if (slot.kind === 'weapon') {
+    target = freeSlotIndex(player);
+    // Слотов нет, но слияние их освободит: кладём поверх одной из копий,
+    // которую слияние всё равно поглотит.
+    if (target < 0 && merging) target = indexOfWeapon(player, slot.id);
+    if (target < 0) return 'full';
+  }
+  if (!wallet.spend(player, slot.price)) return 'poor';
 
   if (slot.kind === 'weapon') {
-    const free = freeSlotIndex(player);
-    if (free < 0) return 'full';
-    equip(player.slots[free], slot.id, config);
+    equip(player.slots[target], slot.id, config);
   } else {
     player.items.push(slot.id);
     player.sources.push(config.items[slot.id].stats);
   }
-  player.ash -= slot.price;
   slot.sold = true;
   slot.locked = false;
+  if (merging) merge(player, slot.id, config, null);
   if (onChange) onChange();
   return 'ok';
 }
 
+function indexOfWeapon(player, weaponId) {
+  for (let i = 0; i < player.slots.length; i++) {
+    if (player.slots[i].id === weaponId) return i;
+  }
+  return -1;
+}
+
 // Продать своё за долю текущей цены
-export function sell(player, kind, index, config, wave, danger, onChange) {
+export function sell(player, kind, index, config, wave, danger, wallet, onChange) {
   if (kind === 'weapon') {
     const s = player.slots[index];
     if (!s || !s.cfg) return 0;
     const back = sellValue(config, s.cfg.price, wave, danger);
-    player.ash += back;
+    wallet.add(player, back);
     s.id = null;
     s.cfg = null;
     s.cd = 0;
@@ -241,7 +261,7 @@ export function sell(player, kind, index, config, wave, danger, onChange) {
   const id = player.items[index];
   if (!id) return 0;
   const back = sellValue(config, config.items[id].price, wave, danger);
-  player.ash += back;
+  wallet.add(player, back);
   player.items.splice(index, 1);
   // sources[0] — персонаж, sources[1] — копилка левелапов, предметы идут с индекса 2.
   // Одинаковые предметы кладут одну и ту же ссылку — удаляем первое вхождение.
@@ -264,6 +284,17 @@ export function mergeable(player, config) {
     if (counts[id] >= config.shop.merge_count) return id;
   }
   return null;
+}
+
+// Слияние сразу после покупки: хватит ли копий этого оружия, если купить ещё одну.
+// Отвечает на вопрос лавки «показывать ли кнопку „купить и объединить“».
+export function mergeAfterBuy(player, slot, config) {
+  if (!slot || slot.kind !== 'weapon' || !slot.cfg || !slot.cfg.next_tier) return false;
+  let have = 0;
+  for (let i = 0; i < player.slots.length; i++) {
+    if (player.slots[i].id === slot.id) have++;
+  }
+  return have + 1 >= config.shop.merge_count;
 }
 
 export function merge(player, weaponId, config, onChange) {

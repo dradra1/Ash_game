@@ -98,14 +98,18 @@ export function createSpawner(config) {
     // бюджета из ТЗ ни на что не влияла бы, и на 20-й волне вместо толпы приходило
     // бы 7 врагов в секунду.
     const minPack = Math.max(1, Math.round(w.pack_size_base + w.pack_size_per_wave * deps.wave));
-    if (state.credit < 1) return 0;
-    const packSize = Math.max(minPack, Math.floor(state.credit));
+    // Копим до целой пачки, а не до одного врага. Прежний код объявлял minPack
+    // минимумом, но тут же зажимал want = min(packSize, floor(credit)), где сам
+    // packSize был max(minPack, floor(credit)) — то есть want всегда равнялся
+    // floor(credit), и pack_size_base/pack_size_per_wave не влияли ни на что.
+    // Ждать накопления, а не выдавать врагов авансом: бюджет волны обязан сойтись.
+    if (state.credit < minPack) return 0;
 
     const nTypes = poolForWave(config_, deps.arenaId, deps.wave, typeBuf);
     if (nTypes === 0) return 0;
 
     let spawned = 0;
-    const want = Math.min(packSize, Math.floor(state.credit));
+    const want = Math.floor(state.credit);
     for (let i = 0; i < want; i++) {
       if (deps.pool.count >= cap) break;            // деградация, а не рост
       if (!spawnPoint(config_, deps.rng, players, point, 8,

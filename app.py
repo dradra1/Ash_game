@@ -760,6 +760,14 @@ def on_net_snapshot(payload):
     if room is None or room.host_sid != _sid():
         return          # снапшоты шлёт только хост
     rooms.touch(_sid())
+    # Адресный снапшот: {"to": индекс игрока, "b": байты}. Сервер по-прежнему не
+    # разбирает содержимое — читает только конверт, чтобы найти получателя.
+    if isinstance(payload, dict) and "to" in payload:
+        target = room.sid_at(payload.get("to"))
+        if target is None or target == room.host_sid:
+            return      # хост себе снапшоты не шлёт, а мёртвый индекс — не адрес
+        socketio.emit("net:snapshot", payload.get("b"), to=target)
+        return
     socketio.emit("net:snapshot", payload, room=room.code, include_self=False)
 
 

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Идемпотентно дописывает в tools/assets.json промпты объектов и иконок.
 
+ВНИМАНИЕ: скрипт отстал от assets.json. Часть промптов (снаряды p_*, ориентация
+«строго горизонтально, остриём вправо») дорабатывалась прямо в assets.json и обратно
+сюда не переносилась, поэтому запуск ЗАТРЁТ доработки более старыми формулировками.
+Правишь один ассет — правь его точечно в assets.json, а константу здесь обновляй
+следом, чтобы разрыв не рос. Перед запуском сверься с `git diff tools/assets.json`.
+
 Секции: weapons (24 семейства без спрайта), projectiles (12), items (64),
 stats (17), meta (4). Всё рисуется create_map_object в боковой проекции —
 почему не create_ui_asset для иконок, объяснено ниже, над таблицей STATS.
@@ -112,7 +118,10 @@ ITEMS = {
     "it_ember_lung":     "a bellows-like organ of scorched leather glowing orange inside",
     "it_reliquary":      "a small brass reliquary casket with a hinged lid and a glass window",
     "it_warp_tumor":     "a glistening violet growth of veined flesh",
-    "it_iron_lung":      "a riveted iron lung canister with a breathing hose",
+    # Лежит на боку: вертикальный баллон в инвентарной клетке 32×32 занимал узкую
+    # полоску по центру и читался как труба. Отрицания в промпте обязательны —
+    # без них модель упорно ставит канистру стоймя.
+    "it_iron_lung":      "a riveted iron lung canister LYING ON ITS SIDE, HORIZONTAL, resting lengthwise so its long axis runs left to right across the frame, one rounded end cap facing left and the other facing right, a coiled breathing hose drooping from the near end, banded steel body, rust and grime, NOT standing upright, NOT vertical",
     "it_martyrs_crown":  "a crown of twisted barbed wire with dried blood on the barbs",
     "it_gilded_ledger":  "a ledger book bound in gold leaf with an ornate clasp",
     "it_hollow_engine":  "a hollow engine housing with nothing inside but cold green light",

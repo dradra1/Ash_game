@@ -1026,7 +1026,7 @@
       "gen": 64,
       "fit": 32,
       "view": "side",
-      "prompt": "a riveted iron lung canister with a breathing hose"
+      "prompt": "a riveted iron lung canister LYING ON ITS SIDE, HORIZONTAL, resting lengthwise so its long axis runs left to right across the frame, one rounded end cap facing left and the other facing right, a coiled breathing hose drooping from the near end, banded steel body, rust and grime, NOT standing upright, NOT vertical"
     },
     "it_martyrs_crown": {
       "tool": "create_map_object",
@@ -1438,6 +1438,34 @@
       "outline": "lineless",
       "shading": "flat shading",
       "detail": "low detail"
+    },
+    "br_reliquary": {
+      "tool": "create_1_direction_object",
+      "gen": 128,
+      "fit": 32,
+      "view": "top-down",
+      "prompt": "a small squat brass reliquary casket with a cracked hinged lid, warm golden light leaking out through the crack, wax seals and torn paper strips stuck to the tarnished sides, standing on a low stone step, seen from directly above"
+    },
+    "br_ash_urn": {
+      "tool": "create_1_direction_object",
+      "gen": 128,
+      "fit": 32,
+      "view": "top-down",
+      "prompt": "a tall narrow grey stone funerary urn with a chipped rim, heaped pale ash spilling over the lip, soot stains down the belly, iron band around the neck, seen from directly above"
+    },
+    "br_censer": {
+      "tool": "create_1_direction_object",
+      "gen": 128,
+      "fit": 32,
+      "view": "top-down",
+      "prompt": "a heavy round pierced brass incense burner hanging from a short chain over a low tripod, pale blue smoke curling out of the perforations, glowing embers visible inside, seen from directly above"
+    },
+    "br_lodestone": {
+      "tool": "create_1_direction_object",
+      "gen": 128,
+      "fit": 32,
+      "view": "top-down",
+      "prompt": "a jagged violet crystal shard driven into a rusted iron socket, purple glow along the fractures, bent nails and scrap metal stuck to it as if pulled in, seen from directly above"
     }
   },
   "fx": {

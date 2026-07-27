@@ -60,6 +60,15 @@ class Room:
                 return i
         return -1
 
+    def sid_at(self, idx):
+        """sid игрока по его индексу. Нужен для адресной доставки снапшотов:
+        хост собирает снапшот под радиус видимости конкретного игрока, и веерная
+        рассылка всей комнате умножала бы трафик на число участников."""
+        for i, key in enumerate(self.players):
+            if i == idx:
+                return key
+        return None
+
 
 class Rooms:
     def __init__(self, config_getter):

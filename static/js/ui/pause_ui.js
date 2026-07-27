@@ -13,6 +13,7 @@ export function createPauseUi(root, config, t) {
     + '<div class="pause-actions">'
     + '<button type="button" class="btn resume"></button>'
     + '<button type="button" class="btn restart"></button>'
+    + '<button type="button" class="btn audio"></button>'
     + '<button type="button" class="btn menu"></button>'
     + '</div>'
     + '<div class="pause-cheats" style="display:none"></div>';
@@ -22,6 +23,7 @@ export function createPauseUi(root, config, t) {
   const resumeBtn = panel.querySelector('.resume');
   const restartBtn = panel.querySelector('.restart');
   const menuBtn = panel.querySelector('.menu');
+  const audioBtn = panel.querySelector('.audio');
   const cheatsEl = panel.querySelector('.pause-cheats');
 
   let handlers = {};
@@ -35,6 +37,9 @@ export function createPauseUi(root, config, t) {
   menuBtn.addEventListener('click', () => {
     if (handlers.onMenu) handlers.onMenu();
   });
+  audioBtn.addEventListener('click', () => {
+    if (handlers.onAudio) handlers.onAudio();
+  });
 
   return {
     show(h) {
@@ -43,6 +48,8 @@ export function createPauseUi(root, config, t) {
       resumeBtn.textContent = t('ui.common.resume');
       restartBtn.textContent = t('ui.pause.restart');
       menuBtn.textContent = t('ui.pause.menu');
+      audioBtn.textContent = t('ui.pause.audio');
+      audioBtn.style.display = handlers.onAudio ? '' : 'none';
       restartBtn.style.display = handlers.canRestart === false ? 'none' : '';
       panel.style.display = '';
     },

@@ -51,13 +51,23 @@ export function createInputCodec() {
 }
 
 // --- Снапшот хост → клиент (20 Гц) -----------------------------------------
-// Заголовок: тип, seq, волна, фаза, время фазы (дец. сек), число игроков, число врагов.
-const SNAP_HEADER = 10;
+// Заголовок: тип, seq, волна, фаза, время фазы (дец. сек), число игроков,
+// число врагов, общий котёл праха (uint32 — HUD в коопе показывает его строкой).
+const SNAP_HEADER = 14;
 // 11-й и 12-й байты игрока — «пульс удара»: индекс оружия и угол последнего
 // замаха. Два байта на игрока × 8 × 20 Гц = 320 Б/с при бюджете 30 КБ/с.
 // Индекс оружия, а не номер слота, делает пульс самодостаточным: клиенту не надо
 // знать лоадаут соседа и не нужно отдельного надёжного сообщения об экипировке.
-const SNAP_PLAYER = 11;
+//
+// Ещё три байта — прах (uint16) и доля опыта до уровня (uint8). Они меняются
+// каждую секунду, поэтому едут в снапшоте, а не в надёжном сообщении о лоадауте:
+// без них у кооп-клиента в HUD вечно висели «прах 0» и пустая полоса опыта.
+//
+// Последние два байта — номер последнего учтённого ввода этого игрока. По нему
+// клиент сравнивает авторитетную позицию с ТОЙ СВОЕЙ, что была на момент этого
+// ввода, и узнаёт настоящую ошибку предсказания. Без ack оставалось только тянуть
+// себя к позиции хоста «RTT назад» каждый кадр — отсюда и бралось скольжение по льду.
+const SNAP_PLAYER = 16;
 const SNAP_ENEMY = 8;
 const NO_WEAPON = 0xff;
 
@@ -70,14 +80,14 @@ export function createSnapshotCodec(config) {
 
   // Разобранный снапшот переиспользуется: клиент читает его каждый кадр
   const decoded = {
-    seq: 0, wave: 1, phase: 0, phaseTime: 0, paused: false,
+    seq: 0, wave: 1, phase: 0, phaseTime: 0, paused: false, pot: 0,
     players: [], playerCount: 0,
     enemies: [], enemyCount: 0,
   };
   for (let i = 0; i < maxPlayers; i++) {
     decoded.players.push({
       idx: 0, x: 0, y: 0, hpPct: 0, dir: 0, level: 1, alive: true, pendingLevels: 0,
-      swingWeapon: -1, swingAngle: 0, swingSeq: 0,
+      swingWeapon: -1, swingAngle: 0, swingSeq: 0, ash: 0, xpPct: 0, ackSeq: 0,
     });
   }
   for (let i = 0; i < maxEntities; i++) {
@@ -119,6 +129,7 @@ export function createSnapshotCodec(config) {
     const pt = isFinite(state.phaseTime) ? Math.max(0, Math.round(state.phaseTime * 10)) : 0xffff;
     view.setUint16(5, Math.min(0xffff, pt));
     view.setUint8(7, state.players.length);
+    view.setUint32(10, Math.max(0, Math.min(0xffffffff, Math.round(state.pot))));
 
     let o = SNAP_HEADER;
     for (let i = 0; i < state.players.length; i++) {
@@ -140,6 +151,10 @@ export function createSnapshotCodec(config) {
         view.setUint8(o + 9, NO_WEAPON);
         view.setUint8(o + 10, 0);
       }
+      view.setUint16(o + 11, Math.max(0, Math.min(0xffff, Math.round(p.ash || 0))));
+      view.setUint8(o + 13, p.xpNext > 0
+        ? Math.max(0, Math.min(255, Math.round((p.xp / p.xpNext) * 255))) : 0);
+      view.setUint16(o + 14, (p.lastInputSeq || 0) & 0xffff);
       o += SNAP_PLAYER;
     }
 
@@ -188,6 +203,7 @@ export function createSnapshotCodec(config) {
     decoded.phaseTime = pt === 0xffff ? Infinity : pt / 10;
     decoded.playerCount = v.getUint8(7);
     decoded.enemyCount = v.getUint16(8);
+    decoded.pot = v.getUint32(10);
 
     let o = SNAP_HEADER;
     for (let i = 0; i < decoded.playerCount; i++) {
@@ -211,6 +227,9 @@ export function createSnapshotCodec(config) {
         p.swingWeapon = wIdx;
         p.swingAngle = (v.getUint8(o + 10) / 255) * TAU;
       }
+      p.ash = v.getUint16(o + 11);
+      p.xpPct = v.getUint8(o + 13) / 255;
+      p.ackSeq = v.getUint16(o + 14);
       o += SNAP_PLAYER;
     }
     for (let k = 0; k < decoded.enemyCount; k++) {
@@ -379,6 +398,12 @@ export function buildTypeIndex(config) {
     toId.push(id);
   }
   for (const id in config.bosses) {
+    toIdx[id] = toId.length;
+    toId.push(id);
+  }
+  // Ломаемые объекты ездят в снапшоте теми же байтами, что враги: они и живут в
+  // пуле врагов. Добавлены последними, чтобы индексы врагов и боссов не поехали.
+  for (const id in config.breakables) {
     toIdx[id] = toId.length;
     toId.push(id);
   }

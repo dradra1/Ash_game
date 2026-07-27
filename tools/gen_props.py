@@ -12,6 +12,7 @@
 4 кандидатов, и брак виден до установки.
 
     python3 tools/gen_props.py                      сгенерировать и собрать лист
+    python3 tools/gen_props.py --prefix br_         то же для ломаемых объектов
     python3 tools/gen_props.py --install dc_pipe:1 dc_bones:3 ...
 
 Состояние в scratch/gen_props_state.json — прогон возобновляемый.
@@ -77,11 +78,15 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def props():
-    """Только препятствия: декали плоские и делаются другим инструментом."""
+def props(prefix="dc_"):
+    """Только объёмные объекты: декали плоские и делаются другим инструментом.
+
+    Префикс — потому что тем же путём идут ломаемые `br_*`: инструмент, ракурс и
+    приёмка у них те же, отличается только назначение.
+    """
     with open(ASSETS, encoding="utf-8") as f:
         world = json.load(f).get("world", {})
-    return {k: v for k, v in world.items() if k.startswith("dc_")}
+    return {k: v for k, v in world.items() if k.startswith(prefix)}
 
 
 def create(key, entry):
@@ -89,7 +94,7 @@ def create(key, entry):
     payload = {
         "description": f"{entry['prompt']}, {STYLE}",
         "view": "top-down",
-        "size": GEN,
+        "size": entry.get("gen", GEN),
     }
     code, out = pxl("call", "create_1_direction_object",
                     json.dumps(payload, ensure_ascii=False))
@@ -145,7 +150,7 @@ def shrink(path, fit):
     return canvas
 
 
-def sheet(keys):
+def sheet(keys, path=SHEET):
     """Контактный лист «строка = препятствие, столбец = кандидат»."""
     from PIL import ImageDraw
     cell = GEN + 8
@@ -162,12 +167,14 @@ def sheet(keys):
             im = Image.open(p).convert("RGBA")
             img.alpha_composite(im, (110 + i * cell + 4, y + 4))
             d.text((110 + i * cell + 4, y + cell), str(i), fill=(140, 140, 140))
-    img.save(SHEET)
+    img.save(path)
     return img.size
 
 
 def install(pairs):
-    table = props()
+    table = {}
+    for prefix in ("dc_", "br_"):
+        table.update(props(prefix))
     for spec in pairs:
         key, _, idx = spec.partition(":")
         src = os.path.join(FRAMES, f"{key}_{idx}.png")
@@ -183,11 +190,17 @@ def main():
         install(sys.argv[sys.argv.index("--install") + 1:])
         return
 
-    table = props()
+    prefix = "dc_"
+    if "--prefix" in sys.argv:
+        prefix = sys.argv[sys.argv.index("--prefix") + 1]
+    sheet_path = SHEET if prefix == "dc_" else SHEET.replace(
+        "props_candidates", prefix.rstrip("_") + "_candidates")
+
+    table = props(prefix)
     state = load_state()
     todo = [k for k in table if state.get(k, {}).get("phase") != "done"]
     if not todo:
-        log(f"все кандидаты скачаны, лист: {sheet(sorted(table))}")
+        log(f"все кандидаты скачаны, лист: {sheet(sorted(table), sheet_path)}")
         return
     log(f"старт: {len(todo)} препятствий")
 
@@ -232,7 +245,7 @@ def main():
             time.sleep(20)
 
     log(f"кандидаты в {FRAMES}")
-    log(f"лист: {SHEET} {sheet(sorted(table))}")
+    log(f"лист: {sheet_path} {sheet(sorted(table), sheet_path)}")
 
 
 if __name__ == "__main__":

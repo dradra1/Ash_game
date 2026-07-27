@@ -28,11 +28,16 @@ const PAD_ACTION_CODES = {
   ready: 'GamepadReady',
   focus_prev: 'GamepadFocusPrev',
   focus_next: 'GamepadFocusNext',
+  // Меню — списки сверху вниз, поэтому кроме «влево-вправо» лавки паду нужны
+  // «вверх-вниз» и «назад» (ui/focus.js).
+  focus_up: 'GamepadFocusUp',
+  focus_down: 'GamepadFocusDown',
+  cancel: 'GamepadCancel',
 };
 
 const DEFAULT_PAD_BUTTONS = {
-  buy: 0, lock: 2, merge: 3, reroll: 4, ready: 9,
-  focus_prev: 14, focus_next: 15,
+  buy: 0, cancel: 1, lock: 2, merge: 3, reroll: 4, ready: 9,
+  focus_up: 12, focus_down: 13, focus_prev: 14, focus_next: 15,
 };
 
 export function createInput(canvas, config) {
@@ -54,6 +59,8 @@ export function createInput(canvas, config) {
   const padBtnPrev = Object.create(null); // action → wasPressed
   let axisLeftHeld = false;
   let axisRightHeld = false;
+  let axisUpHeld = false;
+  let axisDownHeld = false;
 
   function recomputeFromKeys() {
     let x = 0;
@@ -188,14 +195,22 @@ export function createInput(canvas, config) {
       edgePadAction(action, pressed);
     }
 
-    // Стик влево/вправо → фокус слотов лавки (edge по выходу из deadzone)
+    // Стик влево/вправо → фокус слотов лавки, вверх/вниз → пункты меню
+    // (edge по выходу из deadzone)
     const ax = pad.axes[0] || 0;
+    const ay = pad.axes[1] || 0;
     const leftNow = ax < -deadzone;
     const rightNow = ax > deadzone;
+    const upNow = ay < -deadzone;
+    const downNow = ay > deadzone;
     if (leftNow && !axisLeftHeld) framePressed.GamepadFocusPrev = true;
     if (rightNow && !axisRightHeld) framePressed.GamepadFocusNext = true;
+    if (upNow && !axisUpHeld) framePressed.GamepadFocusUp = true;
+    if (downNow && !axisDownHeld) framePressed.GamepadFocusDown = true;
     axisLeftHeld = leftNow;
     axisRightHeld = rightNow;
+    axisUpHeld = upNow;
+    axisDownHeld = downNow;
 
     // Движение: тач > геймпад > клавиатура
     if (joyId >= 0) return;

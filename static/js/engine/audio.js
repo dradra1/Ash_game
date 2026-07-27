@@ -1,13 +1,39 @@
 // Звук на WebAudio: короткие синтезированные эффекты и лимит одновременных
-// инстансов на каждый вид.
+// инстансов на каждый вид, плюс фоновая музыка из файлов.
 //
-// Почему синтез, а не файлы: ТЗ разрешает только CC0/CC-BY с указанием авторства,
-// а до подбора библиотеки игра должна звучать. Голоса генерируются осциллятором —
-// ни лицензии, ни загрузки, ни трафика. Когда появятся звуковые файлы, сюда
-// добавится ветка загрузки по `config.audio.sfx[id].src`, интерфейс не меняется.
+// Почему эффекты синтезируются, а не грузятся: ТЗ разрешает только CC0/CC-BY с
+// указанием авторства, а до подбора библиотеки игра должна звучать. Голоса
+// генерируются осциллятором — ни лицензии, ни загрузки, ни трафика.
+//
+// Музыка, наоборот, файловая: config.audio.tracks задаёт id → {src, title, author,
+// license, url}. Все треки — CC0 с opengameart.org, авторы перечислены в CREDITS.md
+// и показываются в настройках звука. Играется через <audio> с зацикливанием и
+// кроссфейдом: декодировать многоминутный трек в буфер ради этого незачем.
+//
+// Громкости раздельные (music_volume / sfx_volume) и переживают перезапуск в
+// localStorage: настройки звука — единственное, что игрок правит почти сразу.
 
 function num(v, fallback) {
   return typeof v === 'number' && isFinite(v) ? v : fallback;
+}
+
+const STORE_KEY = 'ash_audio';
+const FADE_MS = 800;
+const FADE_STEP_MS = 50;
+
+function loadPrefs() {
+  try {
+    const raw = globalThis.localStorage && globalThis.localStorage.getItem(STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;                 // приватный режим/запрет хранилища — не повод падать
+  }
+}
+
+function savePrefs(p) {
+  try {
+    if (globalThis.localStorage) globalThis.localStorage.setItem(STORE_KEY, JSON.stringify(p));
+  } catch (e) { /* см. выше */ }
 }
 
 export function createAudio(config) {
@@ -17,6 +43,96 @@ export function createAudio(config) {
   let master = null;
   let muted = false;
   const playing = {};      // id → сколько сейчас звучит
+
+  const saved = loadPrefs() || {};
+  let musicVol = num(saved.music, num(cfg.music_volume, 0.5));
+  let sfxVol = num(saved.sfx, num(cfg.sfx_volume, 0.7));
+  muted = !!saved.muted;
+
+  // --- Музыка ---------------------------------------------------------------
+  const tracks = cfg.tracks || {};
+  let el = null;             // сейчас звучащий <audio>
+  let elId = null;
+  let fadeTimer = 0;
+  let unlocked = false;
+  let pendingTrack = null;   // что включить, как только браузер разрешит звук
+
+  function makeAudioEl(id) {
+    const t = tracks[id];
+    if (!t || !t.src || typeof globalThis.Audio !== 'function') return null;
+    const a = new globalThis.Audio(t.src);
+    a.loop = t.loop !== false;
+    a.preload = 'auto';
+    a.volume = 0;
+    return a;
+  }
+
+  function targetVol(id) {
+    const t = tracks[id];
+    const gain = t && typeof t.gain === 'number' ? t.gain : 1;
+    return muted ? 0 : Math.max(0, Math.min(1, musicVol * gain));
+  }
+
+  // Кроссфейд: старый трек гасим и выбрасываем, новый поднимаем до целевой.
+  function fadeTo(next, nextId) {
+    if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
+    const prev = el;
+    const prevFrom = prev ? prev.volume : 0;
+    el = next;
+    elId = nextId;
+    const steps = Math.max(1, Math.round(FADE_MS / FADE_STEP_MS));
+    let i = 0;
+    fadeTimer = globalThis.setInterval(() => {
+      i++;
+      const k = Math.min(1, i / steps);
+      if (prev) prev.volume = Math.max(0, prevFrom * (1 - k));
+      if (el) el.volume = targetVol(elId) * k;
+      if (k >= 1) {
+        globalThis.clearInterval(fadeTimer);
+        fadeTimer = 0;
+        if (prev) { prev.pause(); prev.src = ''; }
+      }
+    }, FADE_STEP_MS);
+  }
+
+  // Включить трек по id. Повторный вызов с тем же id ничего не делает — иначе
+  // музыка перезапускалась бы на каждой смене фазы внутри одной волны.
+  function playMusic(id) {
+    if (!id || !tracks[id]) return;
+    if (elId === id && el && !el.paused) return;
+    if (!unlocked) { pendingTrack = id; return; }
+    const next = makeAudioEl(id);
+    if (!next) return;
+    const p = next.play();
+    if (p && p.catch) p.catch(() => { pendingTrack = id; });
+    fadeTo(next, id);
+  }
+
+  function stopMusic() {
+    pendingTrack = null;
+    if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
+    if (el) { el.pause(); el.src = ''; }
+    el = null;
+    elId = null;
+  }
+
+  function applyMusicVolume() {
+    if (el && !fadeTimer) el.volume = targetVol(elId);
+  }
+
+  // Список треков с авторами и лицензиями для экрана настроек: требование CC-BY,
+  // и хорошая манера даже для CC0.
+  function credits() {
+    const out = [];
+    for (const id in tracks) {
+      const t = tracks[id];
+      out.push({
+        id, title: t.title || id, author: t.author || '',
+        license: t.license || '', url: t.url || '',
+      });
+    }
+    return out;
+  }
 
   function ensure() {
     if (ctx) return ctx;
@@ -62,7 +178,8 @@ export function createAudio(config) {
     osc.frequency.exponentialRampToValueAtTime(Math.max(1, v.f1), now + v.dur);
     // Громкость лежит в sfx_volume: ключ `sfx` занят таблицей звуков, и
     // умножение на объект давало NaN, от которого WebAudio падает.
-    const vol = v.gain * num(cfg.sfx_volume, 0.7);
+    const vol = v.gain * sfxVol;
+    if (vol <= 0) return;
     gain.gain.setValueAtTime(vol, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + v.dur);
     osc.connect(gain);
@@ -76,13 +193,42 @@ export function createAudio(config) {
   function unlock() {
     const ac = ensure();
     if (ac && ac.state === 'suspended') ac.resume();
+    unlocked = true;
+    if (pendingTrack) {
+      const id = pendingTrack;
+      pendingTrack = null;
+      playMusic(id);
+    }
+  }
+
+  function persist() {
+    savePrefs({ music: musicVol, sfx: sfxVol, muted });
   }
 
   return {
     play,
     unlock,
+    playMusic,
+    stopMusic,
+    credits,
+    get currentTrack() { return elId; },
     get muted() { return muted; },
-    setMuted(v) { muted = !!v; },
+    setMuted(v) {
+      muted = !!v;
+      applyMusicVolume();
+      persist();
+    },
+    get musicVolume() { return musicVol; },
+    setMusicVolume(v) {
+      musicVol = Math.max(0, Math.min(1, num(v, musicVol)));
+      applyMusicVolume();
+      persist();
+    },
+    get sfxVolume() { return sfxVol; },
+    setSfxVolume(v) {
+      sfxVol = Math.max(0, Math.min(1, num(v, sfxVol)));
+      persist();
+    },
     setVolume(v) {
       if (master) master.gain.value = Math.max(0, Math.min(1, v));
     },

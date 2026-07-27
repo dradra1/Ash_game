@@ -1,7 +1,9 @@
 // Преран-мастер: персонаж (соло) → арена → сложность → проклятия.
 // Для коопа персонаж остаётся в лобби; здесь хост задаёт карту/danger/curses.
 
-export function createSetupUi(root, config, t) {
+import { characterTipHtml } from './tooltip.js';
+
+export function createSetupUi(root, config, t, tip) {
   const doc = root.ownerDocument;
 
   const panel = doc.createElement('div');
@@ -104,7 +106,9 @@ export function createSetupUi(root, config, t) {
     render();
   }
 
-  function renderChoiceGrid(entries, selected, onPick, isLocked) {
+  // kind === 'character' включает подсказку с внешностью, статами и стартовым
+  // оружием: до этого визард показывал только имя и строчку настроения.
+  function renderChoiceGrid(entries, selected, onPick, isLocked, kind) {
     bodyEl.innerHTML = '';
     const grid = doc.createElement('div');
     grid.className = 'setup-grid';
@@ -121,6 +125,9 @@ export function createSetupUi(root, config, t) {
         + (e.desc ? `<span class="meta-sub">${e.desc}</span>` : '');
       if (!locked) {
         btn.addEventListener('click', () => onPick(id, e));
+      }
+      if (kind === 'character' && tip) {
+        tip.bind(btn, () => characterTipHtml(config, id, t));
       }
       grid.appendChild(btn);
     }
@@ -164,7 +171,7 @@ export function createSetupUi(root, config, t) {
       renderChoiceGrid(config.characters, pick.character, (id) => {
         pick.character = id;
         render();
-      }, (id) => !ownsCharacter(id));
+      }, (id) => !ownsCharacter(id), 'character');
     } else if (kind === 'arena') {
       hintEl.textContent = t('ui.select.arena');
       renderChoiceGrid(config.arenas, pick.arena, (id) => {

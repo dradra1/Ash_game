@@ -17,7 +17,7 @@ import { separateFromProps } from '../sim/arena.js';
 // propIndex — препятствия арены. Клиент не симулирует мир, но своего персонажа
 // предсказывает, и без коллизий предсказание въезжало бы в завал, а сверка с
 // хостом выдёргивала бы обратно: у каждого препятствия управление «резинит».
-export function createNetClient(transport, config, myIndex, propIndex) {
+export function createNetClient(transport, config, myIndex, propIndex, arenaW, arenaH) {
   const inputCodec = createInputCodec();
   const snapCodec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
@@ -52,6 +52,62 @@ export function createNetClient(transport, config, myIndex, propIndex) {
       p.ttl = s.ttl; p.size = s.size; p.age = 0;
       p.texture = projTex.toId[s.texture] || null;
       p.spin = spinByTex[s.texture] || null;
+    }
+  }
+
+  // История предсказанных позиций по номеру ввода. Нужна, чтобы сравнивать
+  // авторитетную позицию с нашей ТОГДАШНЕЙ, а не с текущей. Кольцо фиксированного
+  // размера: аллокаций в кадре быть не должно.
+  const HISTORY = 64;
+  const history = [];
+  for (let i = 0; i < HISTORY; i++) history.push({ seq: -1, x: 0, y: 0 });
+  let historyAt = 0;
+
+  function notePrediction(seq, x, y) {
+    const h = history[historyAt];
+    h.seq = seq;
+    h.x = x;
+    h.y = y;
+    historyAt = (historyAt + 1) % HISTORY;
+  }
+
+  function recallPrediction(seq) {
+    for (let i = 0; i < HISTORY; i++) {
+      if (history[i].seq === seq) return history[i];
+    }
+    return null;
+  }
+
+  // Экипировка от хоста: редкое надёжное сообщение (покупка, левелап, старт волны).
+  // Конфиг у клиента тот же, поэтому по сети едут только id — cfg разворачивается тут.
+  function applyLoadout(idx, snap) {
+    ensurePlayers(idx + 1);
+    const p = state.players[idx];
+    if (!p || !snap) return;
+    const ids = snap.weapons || [];
+    while (p.slots.length < ids.length) {
+      p.slots.push({
+        id: null, cfg: null, cd: 0, flash: 0, swingT: 0, swingLen: 0, lastAngle: 0,
+      });
+    }
+    p.slots.length = ids.length;
+    for (let i = 0; i < ids.length; i++) {
+      const slot = p.slots[i];
+      if (slot.id === ids[i]) continue;      // тот же ствол — не сбрасываем кулдаун
+      slot.id = ids[i];
+      slot.cfg = ids[i] ? config.weapons[ids[i]] : null;
+      slot.cd = 0;
+      slot.flash = 0;
+      slot.swingT = 0;
+    }
+    p.items = snap.items || [];
+    p.stats = snap.stats || {};
+    p.maxHp = snap.maxHp || p.maxHp;
+    p.level = snap.level || p.level;
+    // Скорость предсказания обязана совпадать с той, что симулирует хост, иначе
+    // реконсиляция вечно тянет игрока назад — это и есть «движение по льду».
+    if (p.stats && typeof p.stats.move_speed_pct === 'number') {
+      p.speed = config.player.move_speed * (1 + p.stats.move_speed_pct / 100);
     }
   }
 
@@ -107,9 +163,15 @@ export function createNetClient(transport, config, myIndex, propIndex) {
         id: state.players.length, name: '', character: null,
         x: 0, y: 0, prevX: 0, prevY: 0, tx: 0, ty: 0,
         vx: 0, vy: 0, dir: 0, animT: 0,
-        hp: 1, maxHp: 1, alive: true, level: 1, ash: 0,
+        // maxHp и speed до первого сообщения о лоадауте — базовые из конфига,
+        // чтобы HUD не показывал «1 / 1», а предсказание не стояло на месте.
+        hp: config.player.base.max_hp, maxHp: config.player.base.max_hp,
+        speed: config.player.move_speed,
+        alive: true, level: 1, ash: 0,
         slots: [], items: [], stats: {}, input: { x: 0, y: 0 },
         pendingLevels: 0, xp: 0, xpNext: 1,
+        // Остаток измеренной ошибки предсказания, гасится в step()
+        corrX: 0, corrY: 0,
         swingSeq: -1, swingId: null, swingAngle: 0, swingT: 0, swingLen: 0.22,
       });
     }
@@ -145,6 +207,7 @@ export function createNetClient(transport, config, myIndex, propIndex) {
     state.phase = PHASE_NAME[dec.phase] || 'wave';
     state.phaseTime = dec.phaseTime;
     state.paused = !!dec.paused;
+    state.pot = dec.pot;
 
     ensurePlayers(dec.playerCount);
     for (let i = 0; i < dec.playerCount; i++) {
@@ -158,8 +221,12 @@ export function createNetClient(transport, config, myIndex, propIndex) {
       p.alive = src.alive;
       p.level = src.level;
       p.pendingLevels = src.pendingLevels || 0;
-      p.maxHp = 100;
-      p.hp = src.hpPct * 100;
+      // maxHp приходит надёжным сообщением о лоадауте; в снапшоте едет только доля,
+      // поэтому HUD показывает настоящие числа, а не проценты от выдуманной сотни.
+      p.hp = src.hpPct * p.maxHp;
+      p.ash = src.ash;
+      p.xp = src.xpPct;
+      p.xpNext = 1;
       // Пульс удара: новый замах виден по выросшему swingSeq. Слоты соседа
       // клиенту неизвестны, поэтому оружие приходит индексом, а не номером слота.
       if (src.swingWeapon >= 0 && src.swingSeq !== p.swingSeq) {
@@ -170,14 +237,38 @@ export function createNetClient(transport, config, myIndex, propIndex) {
         p.swingLen = cfg && cfg.shape.anim_time ? cfg.shape.anim_time : 0.22;
         p.swingT = p.swingLen;
         swingSeen++;
+        // Пульс переносится и в слот: раз лоадаут известен, замах и кулдаун
+        // рисуются из слотов, как у хоста. Кулдаун здесь приблизительный —
+        // берётся паспортный из конфига, без учёта attack_speed_pct.
+        for (let s = 0; s < p.slots.length; s++) {
+          const slot = p.slots[s];
+          if (slot.id !== p.swingId) continue;
+          slot.lastAngle = src.swingAngle;
+          slot.swingLen = p.swingLen;
+          slot.swingT = p.swingLen;
+          slot.flash = FLASH_TIME;
+          slot.cd = cfg ? cfg.cooldown : 0;
+          break;
+        }
       }
       if (i === myIndex) {
-        // Свой персонаж: мягко подтягиваем предсказанную позицию к авторитетной
-        const dx = src.x - p.x;
-        const dy = src.y - p.y;
+        // Свой персонаж. Ошибку предсказания меряем не по текущей позиции (она
+        // ушла вперёд на RTT и «ошибкой» не является), а по той, в которой мы были
+        // на момент ввода, который хост только что учёл. Если предсказание верное,
+        // ошибка нулевая и подтягивать НЕЧЕГО — именно постоянное подтягивание к
+        // устаревшей позиции и ощущалось как движение по льду.
+        const past = recallPrediction(src.ackSeq);
+        const dx = src.x - (past ? past.x : p.x);
+        const dy = src.y - (past ? past.y : p.y);
         if (dx * dx + dy * dy > teleport * teleport) {
+          // Разошлись слишком сильно (телепорт, отбрасывание, пропуск пачки пакетов)
           p.x = src.x;
           p.y = src.y;
+          p.corrX = 0;
+          p.corrY = 0;
+        } else {
+          p.corrX = dx;
+          p.corrY = dy;
         }
       } else {
         // Чужие: интерполяция между снапшотами (prevPos → tx/ty за snapPeriod)
@@ -240,12 +331,23 @@ export function createNetClient(transport, config, myIndex, propIndex) {
       inputAcc -= inputPeriod;
       seq = (seq + 1) & 0xffff;
       transport.send(CH.INPUT, inputCodec.encode(myIndex, seq, input.x, input.y, 0).slice(0));
+      const me = state.players[myIndex];
+      if (me) notePrediction(seq, me.x, me.y);
     }
 
     stepProjectiles(dt);
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
       if (p.swingT > 0) p.swingT -= dt;
+      // Кулдауны и вспышки слотов тикают локально: слоты приходят лоадаутом,
+      // а их таймеры по сети не гоняются.
+      const slots = p.slots;
+      for (let s = 0; s < slots.length; s++) {
+        const slot = slots[s];
+        if (slot.cd > 0) slot.cd -= dt;
+        if (slot.flash > 0) slot.flash -= dt;
+        if (slot.swingT > 0) slot.swingT -= dt;
+      }
     }
 
     const k = Math.min(1, sinceSnap / snapPeriod);
@@ -259,14 +361,26 @@ export function createNetClient(transport, config, myIndex, propIndex) {
           p.x += p.vx * dt;
           p.y += p.vy * dt;
           if (propIndex) separateFromProps(p, config.player.radius, propIndex, null);
+          // Те же стены, что и у хоста (sim/player.js): без клампа предсказание
+          // уходило сквозь стену, и реконсиляция дёргала игрока обратно.
+          const pad = config.arena.wall_padding;
+          if (p.x < pad) p.x = pad;
+          else if (p.x > arenaW - pad) p.x = arenaW - pad;
+          if (p.y < pad) p.y = pad;
+          else if (p.y > arenaH - pad) p.y = arenaH - pad;
           if (p.vx !== 0 || p.vy !== 0) {
             if (p.vx * p.vx > p.vy * p.vy) p.dir = p.vx > 0 ? 1 : 3;
             else p.dir = p.vy > 0 ? 0 : 2;
             p.animT += dt;
           }
         }
-        p.x += (p.tx - p.x) * RECONCILE * dt * 60;
-        p.y += (p.ty - p.y) * RECONCILE * dt * 60;
+        // Гасим измеренную ошибку предсказания, а не расстояние до устаревшей цели.
+        // Верное предсказание даёт corr ≈ 0, и игрок не «плывёт».
+        const c = Math.min(1, RECONCILE * dt * 60);
+        p.x += p.corrX * c;
+        p.y += p.corrY * c;
+        p.corrX -= p.corrX * c;
+        p.corrY -= p.corrY * c;
       } else {
         const nx = p.prevX + (p.tx - p.prevX) * k;
         const ny = p.prevY + (p.ty - p.prevY) * k;
@@ -304,7 +418,7 @@ export function createNetClient(transport, config, myIndex, propIndex) {
   }
 
   return {
-    state, enemies, projectiles, step, stats, close,
+    state, enemies, projectiles, step, stats, close, applyLoadout,
     get projSeen() { return projSeen; },
     get swingSeen() { return swingSeen; },
     get ready() { return ready; },
@@ -326,6 +440,11 @@ function byteLength(p) {
   return p.byteLength !== undefined ? p.byteLength : 64;
 }
 
-// Скорость схождения предсказанной позиции с авторитетной. Больше — жёстче
-// дёргает при расхождении, меньше — дольше «плывёт».
+// Скорость гашения измеренной ошибки предсказания. Больше — жёстче дёргает при
+// расхождении, меньше — дольше «плывёт». Применяется к ошибке, а не к расстоянию
+// до устаревшей позиции хоста, поэтому при верном предсказании не работает вовсе.
 const RECONCILE = 0.12;
+
+// Та же длительность подсветки иконки оружия, что в sim/weapon.js: у клиента
+// слоты приходят лоадаутом, а таймеры тикают локально.
+const FLASH_TIME = 0.08;

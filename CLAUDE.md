@@ -143,6 +143,11 @@ node --test tests/js/*.test.js       # чистые формулы sim (без D
 node tools/bench_sim.js                  # 450 врагов + 600 снарядов, sim ≤ 6 мс/тик
 ```
 
+Сквозные проверки в браузере (нужен поднятый контейнер, playwright в `.venv`):
+`tools/smoke.py` — забег, fps, ошибки консоли; `tools/pad_test.py` — навигация по меню
+геймпадом (пад подменяется фейковым `navigator.getGamepads`); `tools/coop_test.py
+--players 8 --latency 80` — восемь настоящих браузеров в одной комнате.
+
 **Внимание**: в установленном здесь node (v24.18.0) `node --test <каталог>` не работает —
 он пытается загрузить каталог как модуль и падает с `MODULE_NOT_FOUND`. Запускать только
 глоб-формой `node --test tests/js/*.test.js`.

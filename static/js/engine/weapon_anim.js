@@ -51,7 +51,12 @@ export function swingPose(kind, k, halfArc, out) {
   switch (kind) {
     case SLAM: {
       // Удар сверху: замах назад, потом обрушивается по оси прицела.
-      const wind = 0.3;
+      //
+      // Замах короткий специально. Урон симуляция наносит В МОМЕНТ k=0, и при
+      // прежних 0.3 видимое обрушение приходило через ~100 мс после того, как враг
+      // уже получил по голове — оружие «думало» перед ударом. Теперь k=0 это почти
+      // сам удар, а остаток кадров — проводка и возврат.
+      const wind = 0.08;
       if (t < wind) {
         const w = t / wind;
         out.angle = -0.5 * w;
@@ -70,7 +75,9 @@ export function swingPose(kind, k, halfArc, out) {
 
     case THRUST: {
       // Выпад строго по оси: угол не меняется, меняется только вынос.
-      const p = outAndBack(t, 0.35);
+      // Пик рано (0.15, а не 0.35): остриё обязано быть впереди в тот же момент,
+      // когда враг получает урон, иначе пика выглядит «залипающей» перед тычком.
+      const p = outAndBack(t, 0.15);
       out.angle = 0;
       out.dist = 0.25 + 0.9 * p;
       out.tilt = 0;
@@ -89,7 +96,7 @@ export function swingPose(kind, k, halfArc, out) {
 
     case LASH: {
       // Хлыст: выброс дальше радиуса, изгиб в сторону и щелчок назад.
-      const p = outAndBack(t, 0.3);
+      const p = outAndBack(t, 0.18);
       out.angle = Math.sin(t * Math.PI * 1.5) * halfArc * 0.8;
       out.dist = 0.2 + 1.05 * p;
       out.tilt = out.angle * 0.6;

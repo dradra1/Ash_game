@@ -77,10 +77,14 @@ export function createLobby(socket) {
   };
 }
 
-// Ссылка-приглашение: /play?room=CODE
+// Ссылка-приглашение: /?room=CODE
+//
+// Именно корень, а не /play: такого маршрута в app.py нет и не было (есть только
+// /, /login, /favicon.ico и /api/*), nginx проксирует всё на приложение, и ссылка
+// честно отдавала 404 — при том что ручной ввод того же кода работал.
 export function inviteLink(code) {
   const loc = globalThis.location;
-  return `${loc.origin}/play?room=${code}`;
+  return `${loc.origin}/?room=${code}`;
 }
 
 export function roomFromUrl() {

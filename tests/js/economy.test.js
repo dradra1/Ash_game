@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert';
 import { loadConfig } from './fixture.js';
-import { createEconomy } from '../../static/js/sim/economy.js';
+import { createEconomy, createWallet } from '../../static/js/sim/economy.js';
 
 const config = loadConfig();
 const coop = config.coop;
@@ -44,19 +44,53 @@ test('дроп праха компенсирует деление котла', (
   assert.equal(solo.dropMultiplier(), 1);
   for (const n of [2, 4, 8]) {
     const e = createEconomy(config, n);
-    assert.ok(Math.abs(e.dropMultiplier() - (1 + coop.ash_per_player * (n - 1))) < 1e-9);
+    const budgetScale = 1 + coop.budget_per_player * (n - 1);
+    const want = (n / budgetScale) * coop.ash_share_target;
+    assert.ok(Math.abs(e.dropMultiplier() - want) < 1e-9, `состав ${n}`);
   }
 });
 
-test('вдвоём каждый получает меньше, чем соло, но больше половины', () => {
-  const duo = createEconomy(config, 2);
-  // одинаковое число убийств: соло весь дроп себе, вдвоём — с множителем и пополам
-  const kills = 100;
-  const soloShare = kills * 1;
-  duo.add(kills * duo.dropMultiplier());
-  const duoShare = duo.shareOf(0);
-  assert.ok(duoShare < soloShare, 'кооп не должен быть богаче на голову');
-  assert.ok(duoShare > soloShare / 2, 'но и не вдвое беднее');
+// Регресс п.4 «в коопе слишком много денег»: раньше spawn умножал число врагов на
+// budget_per_player, а дроп ДОПОЛНИТЕЛЬНО на ash_per_player, и при восьмерых на брата
+// выходило ~3.4 дохода соло. Доход на голову обязан совпадать с соло при любом составе.
+test('личный доход в коопе равен соло при любом составе', () => {
+  const soloKills = 100;                       // столько убийств делает один игрок за волну
+  for (const n of [1, 2, 4, 8]) {
+    const e = createEconomy(config, n);
+    // кооп поднимает и число врагов: убийств столько же на брата, но всего больше
+    const budgetScale = 1 + coop.budget_per_player * (n - 1);
+    e.add(soloKills * budgetScale * e.dropMultiplier());
+    const share = e.shareOf(0);
+    assert.ok(Math.abs(share - soloKills) < 1e-6,
+      `состав ${n}: доля ${share.toFixed(1)} против соло ${soloKills}`);
+  }
+});
+
+// Регресс п.16 «при выходе из магазина возвращаются все потраченные деньги».
+// Причина была в том, что лавка меняла player.ash напрямую, economy.spend не вызывался
+// ниоткуда, и следующий же подобранный прах пересчитывал баланс из нетронутого котла.
+test('трата переживает пополнение котла и не возвращается', () => {
+  const e = createEconomy(config, 1);
+  const wallet = createWallet(e, null);
+  const p = { id: 0 };
+  e.add(100);
+  assert.equal(wallet.balance(p), 100);
+  assert.ok(wallet.spend(p, 35));
+  assert.equal(wallet.balance(p), 65);
+  e.add(10);                                   // подобрали прах на следующей волне
+  assert.equal(wallet.balance(p), 75, 'потраченное не должно возвращаться');
+});
+
+test('продажа возвращает деньги только продавцу', () => {
+  const e = createEconomy(config, 2);
+  const wallet = createWallet(e, null);
+  const a = { id: 0 };
+  const b = { id: 1 };
+  e.add(200);                                  // по 100 каждому
+  assert.ok(wallet.spend(a, 60));
+  wallet.add(a, 30);
+  assert.equal(wallet.balance(a), 70);
+  assert.equal(wallet.balance(b), 100, 'чужая доля не должна меняться');
 });
 
 test('выбывание штрафует котёл на death_penalty', () => {

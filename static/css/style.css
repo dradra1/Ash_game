@@ -324,6 +324,22 @@ html, body {
     padding: 3px;
     text-align: center;
 }
+/* Полоска редкости. Ради неё JS и пишет --accent, но правила, которое её читает,
+   в файле не существовало: цвет тира писался в стиль и никуда не выводился.
+   Скин рисует рамку картинкой, поэтому цвет кладём отдельной полосой у левого
+   края, поверх border-image. */
+.card::before, .inv-cell:not(.empty)::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    pointer-events: none;
+}
+.card.empty::before { display: none; }
+
 .card-name { font-size: 13px; margin-bottom: 2px; }
 .card-tier { color: #7a7568; font-size: 11px; margin-bottom: 6px; }
 .card-line { color: #9a9488; }
@@ -401,6 +417,29 @@ html, body {
 .mini.merge { border-color: #c8a35a; color: #c8a35a; }
 
 .stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 1px 0; }
+/* Нулевые статы показываем, но приглушённо: игрок должен видеть, что стат
+   существует, ещё до того как впервые его возьмёт. */
+.stat-row.zero { opacity: 0.4; }
+.stat-row:hover { background: #22262f; }
+
+/* Ростер готовности в лавке: кого ещё ждём перед следующей волной */
+.shop-allies { margin-top: 14px; }
+.ally-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.ally {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    opacity: 0.45;
+}
+.ally.on { opacity: 1; }
+.ally .icon { width: 12px; height: 12px; margin: 0; }
+
+/* Пока ждём союзников, лавка притушена: покупать всё ещё можно, но видно,
+   что своё решение уже отправлено. */
+.modal.waiting .shop-slots, .modal.waiting .shop-cols { opacity: 0.75; }
+
+.mini.buy-merge { position: absolute; right: 10px; bottom: 24px; }
 
 .tooltip {
     position: fixed;
@@ -418,6 +457,21 @@ html, body {
     pointer-events: none;
 }
 .tooltip .stat { padding: 1px 0; }
+.tooltip .col-title { margin: 6px 0 3px; }
+
+/* Портрет персонажа в подсказке. Лист стойки — 4 строки (S,E,N,W), сторона кадра
+   равна ширине листа, поэтому background-size по ширине даёт ровно один кадр,
+   а position 0 0 берёт южный — лицом к игроку. */
+.tip-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.tip-face {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    background-size: 48px auto;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
 
 .icon {
     display: inline-block;
@@ -546,4 +600,37 @@ html, body {
     .choice { min-width: 45%; }
     #screen-menu.menu { min-width: 74vw; }
     .lobby-code .code { font-size: 22px; letter-spacing: 3px; }
+}
+
+/* ---- Настройки звука --------------------------------------------------- */
+.audio-rows { margin-bottom: 14px; }
+.audio-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+.audio-label { flex: 0 0 90px; color: var(--ink-mute); }
+.audio-row input[type="range"] { flex: 1 1 auto; accent-color: var(--gold); }
+.audio-value { flex: 0 0 44px; text-align: right; color: var(--ink-dim); }
+/* Влезают все пять треков разом: список авторов — не декорация, а условие, под
+   которым мы вообще берём чужое (CLAUDE.md §6), и прокручивать его геймпадом
+   нечем — строки не фокусируемые. */
+.audio-credits { max-height: 300px; overflow-y: auto; }
+.audio-credits .inv-cell { flex-direction: column; align-items: flex-start; gap: 1px; }
+
+/* Фокус клавиатуры и геймпада (ui/focus.js). Своей подсветки нет намеренно: пад
+   двигает НАСТОЯЩИЙ DOM-фокус, поэтому одно правило разом закрывает Tab, Enter и
+   крестовину. Без него навигация падом слепая — видно, что что-то нажалось, но не
+   видно где. :focus, а не :focus-visible: программный focus() второго не даёт. */
+.menu :focus,
+.modal :focus {
+    outline: 2px solid var(--gold-bright, #e0c07a);
+    outline-offset: 1px;
+}
+.menu .btn:focus,
+.modal .btn:focus {
+    border-image-source: url(/static/ui/ui_btn_hover.png);
+    color: var(--gold-bright);
 }

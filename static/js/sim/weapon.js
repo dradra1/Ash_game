@@ -31,6 +31,12 @@ function findTarget(x, y, range, deps) {
   const n = deps.enemyGrid.query(x, y, range, deps.queryBuf);
   let bestIdx = -1;
   let bestD = Infinity;
+  // Ломаемые объекты арены живут в том же пуле, что враги, поэтому автоприцел
+  // цеплялся бы за ближайшую бочку и в упор не замечал бегущую следом толпу.
+  // Держим их отдельным «запасным» кандидатом: бьём по ним, только если ни одного
+  // живого врага в радиусе нет — то есть в затишье, а не посреди свалки.
+  let breakIdx = -1;
+  let breakD = Infinity;
   for (let k = 0; k < n; k++) {
     const idx = deps.queryBuf[k];
     if (idx >= deps.enemyPool.count) continue;
@@ -39,12 +45,19 @@ function findTarget(x, y, range, deps) {
     const dx = e.x - x;
     const dy = e.y - y;
     const d = dx * dx + dy * dy;
+    if (e.breakable) {
+      if (d < breakD) {
+        breakD = d;
+        breakIdx = idx;
+      }
+      continue;
+    }
     if (d < bestD) {
       bestD = d;
       bestIdx = idx;
     }
   }
-  return bestIdx;
+  return bestIdx >= 0 ? bestIdx : breakIdx;
 }
 
 // Шаг всех слотов одного игрока.

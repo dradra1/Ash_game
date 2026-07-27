@@ -1,5 +1,5 @@
 {
-  "content_version": 20,
+  "content_version": 33,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -36,15 +36,14 @@
     "budget_per_player": 0.65,
     "hp_per_player": 0.1,
     "boss_hp_per_player": 0.55,
-    "ash_per_player": 0.55,
     "arena_per_player": 0.06,
     "death_penalty": 0.1,
-    "revive_hp_pct": 0.5,
     "shop_timer": 120,
     "friendly_fire": false,
     "levelup_pauses": true,
     "gift_enabled": true,
-    "levelup_timer": 90
+    "levelup_timer": 90,
+    "ash_share_target": 1.0
   },
   "render": {
     "sprite_default": 48,
@@ -93,7 +92,9 @@
       "life": 0.22,
       "size": 2
     },
-    "projectile_scale": 3.2
+    "projectile_scale": 3.2,
+    "weapon_rest_dist": 0.55,
+    "weapon_rest_spread": 0.42
   },
   "arena": {
     "size": [
@@ -114,7 +115,12 @@
     "props_attempts_per_prop": 14,
     "decals_max": 90,
     "spawn_clear": 26,
-    "tile_feather": 0.55
+    "tile_feather": 0.55,
+    "breakables_max": 5,
+    "breakables_min_gap": 240,
+    "breakables_wall_margin": 120,
+    "breakables_center_clear": 170,
+    "breakables_prop_gap": 22
   },
   "player": {
     "move_speed": 130,
@@ -157,7 +163,8 @@
     },
     "weapon_slots": 6,
     "wave_end_collect_sec": 1.2,
-    "wave_intro_sec": 1.5
+    "wave_intro_sec": 1.5,
+    "heal_on_wave_pct": 1.0
   },
   "danger": [
     {
@@ -230,7 +237,7 @@
     "crit_mult": 2.0,
     "min_max_hp": 1,
     "range_melee_factor": 0.5,
-    "range_melee_cooldown_pct": 0.35,
+    "range_melee_cooldown_pct": 0.12,
     "engineering_scale": 0.05,
     "order": [
       "max_hp",
@@ -256,106 +263,125 @@
         "name": "Здоровье",
         "texture": "st_hp",
         "kind": "flat",
-        "color": "#c34b4b"
+        "color": "#c34b4b",
+        "desc": "Предел здоровья. Прибавка лечит сразу на свою величину. В начале каждой волны здоровье восстанавливается полностью."
       },
       "hp_regen": {
         "name": "Реген",
         "texture": "st_regen",
         "kind": "flat",
-        "color": "#7fbf6a"
+        "color": "#7fbf6a",
+        "desc": "Здоровье в секунду. Копится дробно и выдаётся целыми единицами. В лавке и на выборе улучшения не идёт."
       },
       "lifesteal_pct": {
         "name": "Вампиризм",
         "texture": "st_leech",
         "kind": "pct",
-        "color": "#a33a5a"
+        "color": "#a33a5a",
+        "desc": "Шанс в процентах вылечиться на 3 здоровья при ЛЮБОМ попадании, а не только при добивании. Не срабатывает на полном здоровье."
       },
       "damage_pct": {
         "name": "Урон",
         "texture": "st_dmg",
         "kind": "pct",
-        "color": "#e0a03a"
+        "color": "#e0a03a",
+        "desc": "Общая прибавка к урону всего оружия в процентах. Считается после плоских прибавок."
       },
       "melee_dmg": {
         "name": "Ближний урон",
         "texture": "st_melee",
         "kind": "flat",
-        "color": "#c8703a"
+        "color": "#c8703a",
+        "desc": "Плоская прибавка к урону оружия ближнего боя."
       },
       "ranged_dmg": {
         "name": "Дальний урон",
         "texture": "st_ranged",
         "kind": "flat",
-        "color": "#6a9fc8"
+        "color": "#6a9fc8",
+        "desc": "Плоская прибавка к урону стрелкового оружия."
       },
       "elem_dmg": {
         "name": "Стихийный урон",
         "texture": "st_elem",
         "kind": "flat",
-        "color": "#8f5ac8"
+        "color": "#8f5ac8",
+        "desc": "Плоская прибавка к урону стихийного оружия."
       },
       "attack_speed_pct": {
         "name": "Скорость атаки",
         "texture": "st_aspd",
         "kind": "pct",
-        "color": "#d8c85a"
+        "color": "#d8c85a",
+        "desc": "Сокращает перезарядку всего оружия в процентах."
       },
       "crit_pct": {
         "name": "Крит",
         "texture": "st_crit",
         "kind": "pct",
-        "color": "#e05a3a"
+        "color": "#e05a3a",
+        "desc": "Шанс критического удара в процентах. Складывается с собственным шансом оружия. Крит наносит двойной урон."
       },
       "engineering": {
         "name": "Инженерия",
         "texture": "st_engi",
         "kind": "flat",
-        "color": "#a8a03a"
+        "color": "#a8a03a",
+        "desc": "Усиливает установки и дронов — оружие, которое бьёт само."
       },
       "range": {
         "name": "Дальность",
         "texture": "st_range",
         "kind": "flat",
-        "color": "#5ac8b0"
+        "color": "#5ac8b0",
+        "desc": "Дальность оружия. Ближнему бою даёт лишь половину прибавки И УДЛИНЯЕТ ЕГО ПЕРЕЗАРЯДКУ — тяжёлым стволам берите с оглядкой."
       },
       "armor": {
         "name": "Броня",
         "texture": "st_armor",
         "kind": "flat",
-        "color": "#8a8f9a"
+        "color": "#8a8f9a",
+        "desc": "Снижает входящий урон. Отдача убывает с ростом, потолок — 80%."
       },
       "dodge_pct": {
         "name": "Уклонение",
         "texture": "st_dodge",
         "kind": "pct",
-        "color": "#5a9fd8"
+        "color": "#5a9fd8",
+        "desc": "Шанс полностью уклониться от удара, в процентах. Потолок — 60%."
       },
       "move_speed_pct": {
         "name": "Скорость",
         "texture": "st_speed",
         "kind": "pct",
-        "color": "#7fd8a0"
+        "color": "#7fd8a0",
+        "desc": "Скорость передвижения в процентах. Главный защитный стат жанра: уклоняться выгоднее, чем терпеть."
       },
       "luck": {
         "name": "Удача",
         "texture": "st_luck",
         "kind": "flat",
-        "color": "#c8a35a"
+        "color": "#c8a35a",
+        "desc": "Сдвигает находки к высоким тирам — и в лавке, и на выборе улучшения."
       },
       "tithe": {
         "name": "Десятина",
         "texture": "st_tithe",
         "kind": "flat",
-        "color": "#b0a070"
+        "color": "#b0a070",
+        "desc": "Прибавка к праху с каждого убитого врага."
       },
       "knockback": {
         "name": "Отбрасывание",
         "texture": "st_kb",
         "kind": "flat",
-        "color": "#9a8a7a"
+        "color": "#9a8a7a",
+        "desc": "Сила отбрасывания врагов при попадании. Боссы сопротивляются."
       }
     },
-    "range_step_px": 20
+    "range_step_px": 20,
+    "lifesteal_heal": 3,
+    "tithe_scale": 0.04
   },
   "level": {
     "xp_formula": {
@@ -647,7 +673,9 @@
           100,
           250,
           500
-        ]
+        ],
+        "stat_name": "Стартовый прах",
+        "desc": "Процент праха, с которым начинается забег."
       },
       {
         "id": "mu_hp",
@@ -662,7 +690,9 @@
           300,
           500,
           800
-        ]
+        ],
+        "stat_name": "Стартовое здоровье",
+        "desc": "Прибавка к пределу здоровья на старте забега."
       },
       {
         "id": "mu_luck",
@@ -675,7 +705,9 @@
           120,
           300,
           600
-        ]
+        ],
+        "stat_name": "Стартовая удача",
+        "desc": "Прибавка к удаче на старте забега."
       },
       {
         "id": "mu_reroll",
@@ -687,7 +719,9 @@
         "price": [
           150,
           400
-        ]
+        ],
+        "stat_name": "Скидка на реролл",
+        "desc": "Процент скидки на пересбор ассортимента лавки."
       }
     ]
   },
@@ -6951,6 +6985,28 @@
         6,
         4,
         2
+      ],
+      "breakables": [
+        {
+          "type": "br_reliquary",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_ash_urn",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_censer",
+          "r": 14,
+          "weight": 8
+        },
+        {
+          "type": "br_lodestone",
+          "r": 14,
+          "weight": 8
+        }
       ]
     },
     "ar_ash": {
@@ -7037,6 +7093,28 @@
         4,
         3,
         1
+      ],
+      "breakables": [
+        {
+          "type": "br_reliquary",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_ash_urn",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_censer",
+          "r": 14,
+          "weight": 8
+        },
+        {
+          "type": "br_lodestone",
+          "r": 14,
+          "weight": 8
+        }
       ]
     },
     "ar_tomb": {
@@ -7122,6 +7200,28 @@
         3,
         5,
         2
+      ],
+      "breakables": [
+        {
+          "type": "br_reliquary",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_ash_urn",
+          "r": 14,
+          "weight": 10
+        },
+        {
+          "type": "br_censer",
+          "r": 14,
+          "weight": 8
+        },
+        {
+          "type": "br_lodestone",
+          "r": 14,
+          "weight": 8
+        }
       ]
     }
   },
@@ -7275,9 +7375,65 @@
     "master": 0.8,
     "sfx": {},
     "sfx_instance_limit": 4,
-    "tracks": {},
+    "tracks": {
+      "mu_menu": {
+        "src": "/static/audio/mu_menu.ogg",
+        "title": "EmptyCity",
+        "author": "yd",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/emptycity-background-music",
+        "loop": true,
+        "gain": 0.9
+      },
+      "mu_wave_a": {
+        "src": "/static/audio/mu_wave_a.ogg",
+        "title": "Post Apocalyptic Wastelands",
+        "author": "SubspaceAudio (Juhani Junkala)",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/horror-atmosphere",
+        "loop": true,
+        "gain": 1.0
+      },
+      "mu_wave_b": {
+        "src": "/static/audio/mu_wave_b.ogg",
+        "title": "Dark Shrine Loop",
+        "author": "qubodup",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/dark-shrine-loop",
+        "loop": true,
+        "gain": 1.0
+      },
+      "mu_wave_c": {
+        "src": "/static/audio/mu_wave_c.ogg",
+        "title": "Fast fight / battle music",
+        "author": "XCVG",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/fast-fight-battle-music-looped",
+        "loop": true,
+        "gain": 0.9
+      },
+      "mu_boss": {
+        "src": "/static/audio/mu_boss.ogg",
+        "title": "Boss Battle #2 (Symphonic Metal)",
+        "author": "nene",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/boss-battle-2-symphonic-metal",
+        "loop": true,
+        "gain": 0.85
+      }
+    },
     "music_volume": 0.5,
-    "sfx_volume": 0.7
+    "sfx_volume": 0.7,
+    "playlist": {
+      "menu": "mu_menu",
+      "wave": [
+        "mu_wave_a",
+        "mu_wave_b",
+        "mu_wave_c"
+      ],
+      "boss": "mu_boss",
+      "shop": "mu_menu"
+    }
   },
   "i18n": {
     "ru": {
@@ -7385,7 +7541,29 @@
       "ui.setup.curse_locked": "Откроется за ачивку",
       "ui.setup.none": "Без проклятий",
       "ui.meta.curses": "Проклятия",
-      "ui.meta.unlocks_curse": "Открывает проклятие"
+      "ui.meta.unlocks_curse": "Открывает проклятие",
+      "tag.blade": "клинковое",
+      "tag.blunt": "дробящее",
+      "tag.construct": "механизм",
+      "tag.gun": "огнестрел",
+      "tag.heavy": "тяжёлое",
+      "tag.holy": "священное",
+      "tag.precise": "точное",
+      "tag.primitive": "примитивное",
+      "tag.spread": "веерное",
+      "tag.warp": "разломное",
+      "ui.shop.buy_merge": "Купить и объединить",
+      "ui.shop.current": "Сейчас",
+      "ui.lobby.copied": "Ссылка скопирована",
+      "ui.unit.sec": "с",
+      "ui.select.traits": "Особенности",
+      "ui.select.start_weapons": "Стартовое оружие",
+      "ui.audio.title": "Звук",
+      "ui.audio.music": "Музыка",
+      "ui.audio.sfx": "Эффекты",
+      "ui.audio.muted": "Без звука",
+      "ui.audio.credits": "Треки и авторы",
+      "ui.pause.audio": "Звук"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -7492,7 +7670,29 @@
       "ui.setup.curse_locked": "Unlocked by achievement",
       "ui.setup.none": "No curses",
       "ui.meta.curses": "Curses",
-      "ui.meta.unlocks_curse": "Unlocks curse"
+      "ui.meta.unlocks_curse": "Unlocks curse",
+      "tag.blade": "клинковое",
+      "tag.blunt": "дробящее",
+      "tag.construct": "механизм",
+      "tag.gun": "огнестрел",
+      "tag.heavy": "тяжёлое",
+      "tag.holy": "священное",
+      "tag.precise": "точное",
+      "tag.primitive": "примитивное",
+      "tag.spread": "веерное",
+      "tag.warp": "разломное",
+      "ui.shop.buy_merge": "Buy and merge",
+      "ui.shop.current": "Now",
+      "ui.lobby.copied": "Link copied",
+      "ui.unit.sec": "s",
+      "ui.select.traits": "Traits",
+      "ui.select.start_weapons": "Starting weapons",
+      "ui.audio.title": "Sound",
+      "ui.audio.music": "Music",
+      "ui.audio.sfx": "Effects",
+      "ui.audio.muted": "Muted",
+      "ui.audio.credits": "Tracks and authors",
+      "ui.pause.audio": "Sound"
     }
   },
   "admin": {
@@ -7580,12 +7780,145 @@
     "gamepad_deadzone": 0.25,
     "gamepad_buttons": {
       "buy": 0,
+      "cancel": 1,
       "lock": 2,
       "merge": 3,
       "reroll": 4,
       "ready": 9,
+      "focus_up": 12,
+      "focus_down": 13,
       "focus_prev": 14,
       "focus_next": 15
+    }
+  },
+  "economy": {
+    "wave_income_target": [
+      50.0,
+      80.0,
+      104.0,
+      128.0,
+      152.0,
+      176.0,
+      200.0,
+      266.7,
+      333.3,
+      400.0,
+      466.7,
+      533.3,
+      600.0,
+      628.6,
+      657.1,
+      685.7,
+      714.3,
+      742.9,
+      771.4,
+      800.0
+    ],
+    "wave_ash_mult": [
+      4.3,
+      2.75,
+      1.83,
+      1.6,
+      1.17,
+      0.83,
+      0.72,
+      0.79,
+      0.73,
+      0.46,
+      0.88,
+      0.87,
+      0.96,
+      0.88,
+      0.82,
+      0.78,
+      0.75,
+      0.75,
+      0.66,
+      0.46
+    ]
+  },
+  "breakables": {
+    "br_reliquary": {
+      "name": "Треснувший реликварий",
+      "texture": "br_reliquary",
+      "color": "#c8a35a",
+      "ai": "static",
+      "breakable": true,
+      "hp": 12,
+      "damage": 0,
+      "speed": 0,
+      "size": 16,
+      "sprite": 32,
+      "ash": 0,
+      "xp": 0,
+      "score": 0,
+      "knockback_resist": 1.0,
+      "reward": {
+        "type": "heal",
+        "value": 10
+      }
+    },
+    "br_ash_urn": {
+      "name": "Урна с прахом",
+      "texture": "br_ash_urn",
+      "color": "#9aa0a8",
+      "ai": "static",
+      "breakable": true,
+      "hp": 12,
+      "damage": 0,
+      "speed": 0,
+      "size": 16,
+      "sprite": 32,
+      "ash": 0,
+      "xp": 0,
+      "score": 0,
+      "knockback_resist": 1.0,
+      "reward": {
+        "type": "ash",
+        "value": 10
+      }
+    },
+    "br_censer": {
+      "name": "Гулкое кадило",
+      "texture": "br_censer",
+      "color": "#6a9fc8",
+      "ai": "static",
+      "breakable": true,
+      "hp": 16,
+      "damage": 0,
+      "speed": 0,
+      "size": 16,
+      "sprite": 32,
+      "ash": 0,
+      "xp": 0,
+      "score": 0,
+      "knockback_resist": 1.0,
+      "reward": {
+        "type": "push",
+        "value": 26,
+        "radius": 220
+      }
+    },
+    "br_lodestone": {
+      "name": "Тяговый камень",
+      "texture": "br_lodestone",
+      "color": "#7a2f8f",
+      "ai": "static",
+      "breakable": true,
+      "hp": 16,
+      "damage": 0,
+      "speed": 0,
+      "size": 16,
+      "sprite": 32,
+      "ash": 0,
+      "xp": 0,
+      "score": 0,
+      "knockback_resist": 1.0,
+      "reward": {
+        "type": "pull",
+        "value": 22,
+        "radius": 240
+      }
     }
   }
 }

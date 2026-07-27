@@ -14,7 +14,7 @@ import { makePickup, resetPickup, dropAsh, stepPickups } from './pickup.js';
 import { stepWeapons } from './weapon.js';
 import { createSpawner, spawnPoint } from './spawn.js';
 import { createShop } from './shop.js';
-import { createEconomy } from './economy.js';
+import { createEconomy, createWallet } from './economy.js';
 import { createLevelUp } from './level.js';
 import { buildArenaLayout, createPropIndex, separateFromProps } from './arena.js';
 import { resolveCurseFx, curseStatMods, applyCurseToDanger } from './curses.js';
@@ -51,6 +51,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     danger: dangerCfg.id,
     curses: curseFx.ids.slice(),
     players: [],
+    ready: {},           // id игрока → нажал «Готов» в лавке
     pot: 0,              // общий котёл праха (кооп-экономика — M3)
     kills: 0,
     score: 0,
@@ -127,7 +128,9 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   for (let i = 0; i < state.players.length; i++) {
     shops[state.players[i].id] = createShop(config, unlocked || null, curseFx);
   }
-  const ready = {};
+  // Кто уже нажал «Готов» в лавке. Лежит в state, а не в замыкании: ростер
+  // готовности рисуется и у хоста, и у клиента (снимок лавки везёт эти флаги).
+  const ready = state.ready;
 
   const events = [];        // очередь событий для UI/сети, разбирается снаружи
 
@@ -155,6 +158,17 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     const e = enemyPool.items[idx];
     if (!e.alive) return;
     e.hp -= amount;
+    // Вампиризм: lifesteal_pct — ШАНС в процентах вылечить фиксированные
+    // stats.lifesteal_heal HP, и срабатывает он на КАЖДОМ попадании, а не только
+    // на добивающем. Раньше лечила доля урона последнего удара, из-за чего удар
+    // на 100 по врагу с 1 HP лечил как за все 100.
+    if (amount > 0) {
+      const owner = findPlayer(ownerId);
+      if (owner && owner.stats.lifesteal_pct > 0 && owner.hp < owner.maxHp
+        && rng.float() * 100 < owner.stats.lifesteal_pct) {
+        owner.hp = Math.min(owner.maxHp, owner.hp + config.stats.lifesteal_heal);
+      }
+    }
     // Частицы — клиентская косметика, симуляция про них знать не должна: колбэк
     // приходит снаружи, как транспорт. В коопе он есть только у хоста, клиенты
     // рисуют свои искры по событиям спавна.
@@ -166,6 +180,12 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     }
     if (e.hp <= 0) {
       e.alive = false;
+      // Ломаемый объект — не убийство: он не идёт ни в счётчик убийств, ни в очки,
+      // ни в опыт, ни в обычный дроп праха. Вся его выгода — в награде.
+      if (e.breakable) {
+        applyBreakableReward(e, findPlayer(ownerId));
+        return;
+      }
       state.kills += 1;
       if (e.boss) {
         state.bosses += 1;
@@ -186,24 +206,20 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       if (owner) {
         owner.kills += 1;
         owner.score += e.score;
-        // Вампиризм: доля нанесённого урона возвращается здоровьем
-        if (owner.stats.lifesteal_pct > 0 && owner.hp < owner.maxHp) {
-          owner.hp = Math.min(owner.maxHp, owner.hp + amount * owner.stats.lifesteal_pct / 100);
-        }
       }
       const tithe = owner ? owner.stats.tithe : 0;
-      // Множитель дропа компенсирует деление котла на число игроков
-      let ashAmount = 0;
-      if (curseFx.ash_drop_zero) {
-        // Базовый прах с врага обнулён; десятина (в т.ч. от проклятий) всё ещё капает
-        if (tithe > 0) {
-          ashAmount = tithe * economy.dropMultiplier()
-            * dangerCfg.ash_mult * curseFx.ash_drop_mult;
-        }
-      } else {
-        ashAmount = (e.ash + tithe) * economy.dropMultiplier()
-          * dangerCfg.ash_mult * curseFx.ash_drop_mult;
-      }
+      // Десятина — ДОЛЯ от праха врага, а не плоская добавка к каждому убийству.
+      // Плоская добавка и разгоняла позднюю экономику: убийств за волну сотни, и
+      // при 40 накопленной десятины враг ценой 3 приносил 43 — доход к 16-й волне
+      // улетал в 3182 при цели 686.
+      const titheMult = tithe * config.stats.tithe_scale;
+      // Множитель дропа компенсирует деление котла на число игроков,
+      // wave_ash_mult приводит кривую дохода к целевой (см. patch_config_income).
+      const raw = curseFx.ash_drop_zero
+        ? e.ash * titheMult          // базовый прах обнулён проклятием, десятина капает
+        : e.ash * (1 + titheMult);
+      const ashAmount = raw * economy.dropMultiplier()
+        * dangerCfg.ash_mult * curseFx.ash_drop_mult * economy.waveMult(state.wave);
       const xpAmount = e.xp * curseFx.xp_mult;
       const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
       // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
@@ -226,14 +242,17 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     }
   }
 
+  // player.ash — витрина для HUD и лавки; истина живёт в economy. Соло считается
+  // тем же shareOf: соло — это комната из одного игрока, отдельной ветки быть не должно.
   function syncAsh() {
     state.pot = economy.state.pot;
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
-      p.ash = economy.solo ? economy.state.pot - (economy.state.spent[p.id] || 0)
-        : economy.shareOf(p.id);
+      p.ash = economy.shareOf(p.id);
     }
   }
+
+  const wallet = createWallet(economy, syncAsh);
 
   function fireProjectile(enemy, nx, ny) {
     const atk = enemy.cfg.attack;
@@ -264,13 +283,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     // Прах идёт в ОБЩИЙ котёл комнаты, а не в карман поднявшего.
     economy.add(amount);
     if (amount > 0) state.ash_gained += amount;
-    state.pot = economy.state.pot;
-    // Личный баланс в соло равен котлу, в коопе — своей доле
-    for (let i = 0; i < state.players.length; i++) {
-      const p = state.players[i];
-      p.ash = economy.solo ? economy.state.pot - (economy.state.spent[p.id] || 0)
-        : economy.shareOf(p.id);
-    }
+    syncAsh();
   }
 
   const enemyDeps = {
@@ -303,6 +316,9 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     if (!p || !p.alive || !input) return;
     p.input.x = input.x || 0;
     p.input.y = input.y || 0;
+    // Номер последнего учтённого ввода уезжает обратно в снапшоте: по нему клиент
+    // измеряет настоящую ошибку своего предсказания, а не тянется к устаревшей позиции.
+    if (input.seq !== undefined) p.lastInputSeq = input.seq;
   }
 
   transport.on(CH.INPUT, (payload, fromId) => {
@@ -375,12 +391,86 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     state.waveLen = waveLength(config, n, curseFx);
     state.phase = PHASE_INTRO;
     state.phaseTime = config.run.wave_intro_sec;
+    healEveryone();
+    spawnBreakables();
     spawner.reset();
     spawnDeps.wave = n;
     state.bossUid = -1;
     state.shopOpen = false;
     for (const k in ready) delete ready[k];
     pushEvent('wave_start', n);
+  }
+
+  // Каждая волна начинается со здоровыми игроками: выбывшие возвращаются в строй,
+  // живые долечиваются. Доля берётся из конфига — это главная ручка сложности,
+  // при 1.0 накопленный за волну урон полностью списывается.
+  function healEveryone() {
+    const pct = config.run.heal_on_wave_pct;
+    for (let i = 0; i < state.players.length; i++) {
+      const p = state.players[i];
+      const heal = Math.round(p.maxHp * pct);
+      if (!p.alive) {
+        p.alive = true;
+        // Выбывший поднимается ровно на то, что даёт хил, но не с нулём
+        p.hp = Math.max(1, heal);
+      } else {
+        p.hp = Math.min(p.maxHp, p.hp + heal);
+      }
+      p.regenAcc = 0;
+    }
+  }
+
+  // Ломаемые объекты встают заново каждую волну на своих детерминированных точках.
+  // Живут в пуле врагов (ai: static), поэтому наведение оружия, урон, снапшот и
+  // кооп-синхронизация достаются им даром.
+  function spawnBreakables() {
+    const spots = layout.breakables;
+    if (!spots || !spots.length) return;
+    for (let i = 0; i < spots.length; i++) {
+      const s = spots[i];
+      if (!config.breakables || !config.breakables[s.type]) continue;
+      const e = enemyPool.spawn();
+      if (!e) return;                       // пул занят толпой — деградация, а не рост
+      initEnemy(e, config, s.type, state.wave, dangerCfg, state.players.length, curseFx);
+      e.x = s.x;
+      e.y = s.y;
+      e.vx = 0;
+      e.vy = 0;
+    }
+  }
+
+  // Награда за разбитый объект. Достаётся тому, кто его добил: иначе в коопе
+  // выгоднее было бы не трогать бочки, а ждать, пока их разобьёт сосед.
+  function applyBreakableReward(e, owner) {
+    const reward = e.cfg.reward;
+    if (!reward) return;
+    const value = reward.value || 0;
+    if (reward.type === 'heal') {
+      if (owner) owner.hp = Math.min(owner.maxHp, owner.hp + value);
+    } else if (reward.type === 'ash') {
+      const drop = dropAsh(pickupPool, e.x, e.y, value * economy.dropMultiplier(), 0, config);
+      if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+    } else if (reward.type === 'push' || reward.type === 'pull') {
+      const sign = reward.type === 'push' ? 1 : -1;
+      const radius = reward.radius || 0;
+      const n = shifted.query(e.x, e.y, radius, queryBuf);
+      for (let k = 0; k < n; k++) {
+        const idx = queryBuf[k];
+        if (idx >= enemyPool.count) continue;
+        const o = enemyPool.items[idx];
+        if (!o.alive || o.breakable) continue;
+        const dx = o.x - e.x;
+        const dy = o.y - e.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (d > radius) continue;
+        // Толчок через тот же канал, что и отбрасывание оружием: сопротивление
+        // босса и config.sim.knockback_scale работают сами собой.
+        const k2 = value * (1 - o.kbResist) * config.sim.knockback_scale * sign;
+        o.kbX += (dx / d) * k2;
+        o.kbY += (dy / d) * k2;
+      }
+    }
+    pushEvent('breakable_down', reward.type === 'heal' ? 1 : 0, { x: e.x, y: e.y });
   }
 
   function endRun(win) {
@@ -506,13 +596,10 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     state.shopOpen = true;
     state.phaseTime = coop ? config.coop.shop_timer : Infinity;
     for (const k in ready) delete ready[k];
+    // Выбывших поднимает healEveryone на старте следующей волны — здесь только ассортимент.
+    // Залоченные слоты переживают open(): fillSlot возвращается на них сразу.
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
-      // Выбывшие возвращаются в строй к следующей волне
-      if (!p.alive) {
-        p.alive = true;
-        p.hp = Math.max(1, Math.round(p.maxHp * config.coop.revive_hp_pct));
-      }
       shops[p.id].open(p, state.wave + 1, dangerCfg, rng, coop);
     }
     pushEvent('shop_open', state.wave + 1);
@@ -545,8 +632,11 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       gridInsert(i, e.x, e.y);
     }
 
-    // На левелапе мир стоит: только UI выбора
-    if (state.phase !== PHASE_LEVELUP) {
+    // На левелапе и в лавке мир стоит: только UI выбора.
+    // Лавку сюда пришлось добавить из-за кооп-асимметрии: в соло симуляция на
+    // паузе, а в коопе она крутилась все coop.shop_timer секунд, и кооп-игроки
+    // регенерировали до двух минут здоровья за волну там, где соло не получал ничего.
+    if (state.phase !== PHASE_LEVELUP && state.phase !== PHASE_SHOP) {
       stepPlayers(state.players, dt, config, arenaW, arenaH, propIndex);
     }
 
@@ -674,6 +764,10 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   function cheatKillAll() {
     for (let i = 0; i < enemyPool.count; i++) {
       const e = enemyPool.items[i];
+      // Ломаемые объекты живут в том же пуле, но «убить всех» — про врагов:
+      // иначе чит накручивал бы убийства и очки за бочки и заодно молча съедал
+      // мини-ивенты волны, не выдав ни одной награды.
+      if (e.breakable) continue;
       if (e.alive) {
         e.hp = 0;
         e.alive = false;
@@ -691,11 +785,17 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     }
   }
 
+  // Первая волна не проходит через startWave: её состояние выставлено прямо в
+  // литерале state, а startWave зовётся только на переходах между волнами. Значит
+  // и объекты на ней надо поставить руками, иначе вся первая волна — единственная
+  // за забег без единого мини-ивента.
+  spawnBreakables();
+
   return {
     state, step, applyInput, snapshot, stats, refreshStats, events, spawns,
     enemyPool, projPool, pickupPool, rng,
     startWave, endRun, openShop, openLevelUp, readyUp, shopFor, levelUp, coop,
-    economy, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,
+    economy, wallet, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,
     noteShopBuy, curseFx,
     cheatAddAsh, cheatLevelUp, cheatGodMode, cheatKillAll, cheatSkipWave,
     danger: dangerCfg, arenaW, arenaH, layout, propIndex,

@@ -195,13 +195,36 @@ test('снапшот и событие спавна различимы по пе
   assert.equal(snap.decode(b.slice()), null);
 });
 
-test('бюджет трафика: пульс удара стоит два байта на игрока', () => {
+test('раскладка снапшота: 14 байт заголовка и 16 на игрока', () => {
   const codec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
   const weapons = buildWeaponIndex(config);
   const run = runWith(2);
   for (const p of run.state.players) p.slots = [];
+  // Мир должен быть пуст: тест меряет чистую раскладку заголовка и игроков.
+  // На первой волне в пуле уже стоят ломаемые объекты арены — они попадают в
+  // радиус видимости и дают лишние байты сущностей.
+  run.enemyPool.clear();
   const bytes = codec.encode(run, 0, 0, 1, types.toIdx, weapons).byteLength;
-  // 10 байт заголовка + 11 на игрока, врагов нет
-  assert.equal(bytes, 10 + 2 * 11);
+  // Заголовок 14 = 10 прежних + 4 на общий котёл.
+  // Игрок 16 = 11 прежних + 2 прах + 1 доля опыта + 2 ack последнего ввода.
+  assert.equal(bytes, 14 + 2 * 16);
+});
+
+test('прах, опыт и ack ввода переживают кодирование', () => {
+  const codec = createSnapshotCodec(config);
+  const types = buildTypeIndex(config);
+  const weapons = buildWeaponIndex(config);
+  const run = runWith(2);
+  const me = run.state.players[0];
+  me.ash = 1234;
+  me.xp = 3;
+  me.xpNext = 4;
+  me.lastInputSeq = 4242;
+  run.state.pot = 99999;
+  const dec = codec.decode(codec.encode(run, me.x, me.y, 1, types.toIdx, weapons).slice());
+  assert.equal(dec.players[0].ash, 1234);
+  assert.ok(Math.abs(dec.players[0].xpPct - 0.75) < 0.01, 'доля опыта');
+  assert.equal(dec.players[0].ackSeq, 4242);
+  assert.equal(dec.pot, 99999);
 });

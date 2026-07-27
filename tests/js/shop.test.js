@@ -5,8 +5,9 @@ import { createRng } from '../../static/js/engine/rng.js';
 import { createPlayer } from '../../static/js/sim/player.js';
 import {
   createShop, priceOf, rerollCost, sellValue, maxTier, rollTier,
-  buy, sell, merge, mergeable, freeSlotIndex,
+  buy, sell, merge, mergeable, mergeAfterBuy, freeSlotIndex,
 } from '../../static/js/sim/shop.js';
+import { createEconomy, createWallet } from '../../static/js/sim/economy.js';
 
 const config = loadConfig();
 const d1 = config.danger[1];
@@ -14,6 +15,16 @@ const d3 = config.danger[3];
 
 function player() {
   return createPlayer(config, 0, 'p', 'ch_pilgrim', 100, 100);
+}
+
+// Кошелёк, как в забеге: истина в котле, player.ash — витрина, которую обновляет
+// onChange (в игре это run.syncAsh).
+function purse(p, amount) {
+  const economy = createEconomy(config, 1);
+  economy.add(amount);
+  const wallet = createWallet(economy, () => { p.ash = economy.shareOf(p.id); });
+  p.ash = economy.shareOf(p.id);
+  return wallet;
 }
 
 test('инфляция цен растёт с волной по формуле конфига', () => {
@@ -120,9 +131,9 @@ test('покупка списывает прах, предмет меняет с
   const idx = shop.slots.findIndex((s) => s.kind === 'item');
   if (idx < 0) return;                       // редкий расклад — все слоты оружие
   const slot = shop.slots[idx];
-  p.ash = slot.price;
+  const wallet = purse(p, slot.price);
   const before = JSON.stringify(p.stats);
-  const res = buy(p, shop, idx, config, () => {});
+  const res = buy(p, shop, idx, config, wallet, () => {});
   assert.equal(res, 'ok');
   assert.equal(p.ash, 0);
   assert.ok(slot.sold);
@@ -139,9 +150,9 @@ test('без праха купить нельзя', () => {
   const p = player();
   const shop = createShop(config, null);
   shop.open(p, 3, d1, createRng(6), false);
-  p.ash = 0;
+  const wallet = purse(p, 0);
   const idx = shop.slots.findIndex((s) => s.cfg && s.price > 0);
-  assert.equal(buy(p, shop, idx, config, null), 'poor');
+  assert.equal(buy(p, shop, idx, config, wallet, null), 'poor');
 });
 
 test('оружие не купить, если все слоты заняты', () => {
@@ -158,8 +169,8 @@ test('оружие не купить, если все слоты заняты', 
     idx = shop.slots.findIndex((s) => s.kind === 'weapon');
   }
   assert.ok(idx >= 0, 'за 60 открытий должно попасться оружие');
-  p.ash = 10000;
-  assert.equal(buy(p, shop, idx, config, null), 'full');
+  const wallet = purse(p, 10000);
+  assert.equal(buy(p, shop, idx, config, wallet, null), 'full');
 });
 
 test('слияние: два одинаковых одного тира дают одно следующего', () => {
@@ -188,9 +199,9 @@ test('оружие тира IV не сливается дальше', () => {
 
 test('продажа оружия освобождает слот и возвращает прах', () => {
   const p = player();
-  p.ash = 0;
+  const wallet = purse(p, 0);
   const before = freeSlotIndex(p);
-  const back = sell(p, 'weapon', 0, config, 5, d1, null);
+  const back = sell(p, 'weapon', 0, config, 5, d1, wallet, null);
   assert.ok(back > 0);
   assert.equal(p.ash, back);
   assert.notEqual(freeSlotIndex(p), before);
@@ -202,7 +213,7 @@ test('продажа предмета снимает его модификато
   p.items.push(id);
   p.sources.push(config.items[id].stats);
   const withItem = p.sources.length;
-  sell(p, 'item', 0, config, 4, d1, null);
+  sell(p, 'item', 0, config, 4, d1, purse(p, 0), null);
   assert.equal(p.items.length, 0);
   assert.equal(p.sources.length, withItem - 1);
   // персонаж и копилка левелапов остались на месте
@@ -215,14 +226,14 @@ test('реролл списывает прах и меняет ассортим�
   const rng = createRng(31);
   shop.open(p, 6, d1, rng, false);
   const before = shop.slots.map((s) => s.id).join(',');
-  p.ash = 1000;
-  const cost = shop.reroll(p, d1, rng);
+  const wallet = purse(p, 1000);
+  const cost = shop.reroll(p, d1, rng, wallet);
   assert.ok(cost > 0);
   assert.equal(p.ash, 1000 - cost);
   const after = shop.slots.map((s) => s.id).join(',');
   assert.notEqual(before, after);
   // второй реролл дороже первого
-  const cost2 = shop.reroll(p, d1, rng);
+  const cost2 = shop.reroll(p, d1, rng, wallet);
   assert.ok(cost2 > cost);
 });
 
@@ -234,8 +245,7 @@ test('залоченный слот переживает реролл вмест
   shop.slots[0].locked = true;
   const id = shop.slots[0].id;
   const price = shop.slots[0].price;
-  p.ash = 10000;
-  shop.reroll(p, d1, rng);
+  shop.reroll(p, d1, rng, purse(p, 10000));
   assert.equal(shop.slots[0].id, id);
   assert.equal(shop.slots[0].price, price);
 });

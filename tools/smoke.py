@@ -85,6 +85,19 @@ def main():
         if not clicked:
             problems.append(f"не нашёл кликабельную кнопку «{label}»")
 
+        # «Играть» больше не запускает забег сразу: сначала преран-мастер
+        # (персонаж → арена → сложность → проклятия). Прокликиваем «Дальше»,
+        # принимая значения по умолчанию, пока панель не уйдёт с экрана.
+        for _ in range(6):
+            page.wait_for_timeout(400)
+            try:
+                nxt = page.locator("#run-setup .btn.next")
+                if not nxt.is_visible():
+                    break
+                nxt.click(timeout=2000)
+            except Exception:
+                break
+
         page.wait_for_timeout(1500)
 
         # Позиция игрока до и после удержания клавиш — проверяем, что мир живой

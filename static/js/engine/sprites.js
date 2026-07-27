@@ -94,6 +94,15 @@ export function drawSheet(ctx, textureId, dir, frame, x, y, size) {
   const s = getSprite(textureId);
   if (!s || !s.ready || s.failed) return false;
   const img = s.img;
+  // Квадратная картинка — это одиночный спрайт, а не лист направлений (ASSETS.md §5:
+  // лист всегда 4 строки, то есть высота вчетверо больше стороны кадра). Так рисуются
+  // ломаемые объекты арены: им четыре ракурса не нужны, они не поворачиваются.
+  if (img.width === img.height) {
+    const h = size / 2;
+    ctx.drawImage(img, 0, 0, img.width, img.height,
+      Math.round(x - h), Math.round(y - h), size, size);
+    return true;
+  }
   const side = img.height / 4;
   if (side <= 0) return false;
   const frames = Math.max(1, Math.floor(img.width / side));

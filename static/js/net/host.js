@@ -9,7 +9,7 @@ import {
   createInputCodec, createSnapshotCodec, createSpawnCodec,
   buildTypeIndex, buildWeaponIndex, buildProjectileIndex, MSG_EVENT,
 } from './protocol.js';
-import { shopSnapshot, localAdapter } from '../ui/shop_adapter.js';
+import { shopSnapshot, loadoutSnapshot, localAdapter } from '../ui/shop_adapter.js';
 
 export function createHost(run, transport, config) {
   const inputCodec = createInputCodec();
@@ -49,6 +49,9 @@ export function createHost(run, transport, config) {
       const adapter = localAdapter(run, player, shop, config, () => run.readyUp(player.id));
       adapter.act(msg.kind, msg.a);
       sendShopTo(msg.p);
+      sendLoadoutTo(msg.p);
+      // Готовность соседа видна всем: ростер в лавке рисуется по этим флагам
+      if (msg.kind === 'ready') broadcastShops();
       return;
     }
     if (msg.t === 'levelup_act') {
@@ -56,6 +59,7 @@ export function createHost(run, transport, config) {
       if (!player) return;
       run.applyLevelPick(player.id, msg.idx | 0);
       sendLevelUpTo(msg.p);
+      sendLoadoutTo(msg.p);
       return;
     }
     if (msg.t === 'pause_req') {
@@ -89,8 +93,18 @@ export function createHost(run, transport, config) {
     });
   }
 
+  function sendLoadoutTo(idx) {
+    const player = run.state.players[idx];
+    if (!player) return;
+    transport.send(CH.EVENT, { t: 'loadout', p: idx, snap: loadoutSnapshot(player) });
+  }
+
   function broadcastShops() {
     for (let i = 0; i < run.state.players.length; i++) sendShopTo(i);
+  }
+
+  function broadcastLoadouts() {
+    for (let i = 0; i < run.state.players.length; i++) sendLoadoutTo(i);
   }
 
   function broadcastLevelUps() {
@@ -98,12 +112,21 @@ export function createHost(run, transport, config) {
   }
 
   let lastPhase = run.state.phase;
+  // Первая рассылка экипировки: без неё клиент до первой лавки не знает ни своих
+  // стволов, ни статов, а предсказание движения идёт базовой скоростью.
+  let bootSent = false;
 
   function step(dt) {
+    if (!bootSent) {
+      bootSent = true;
+      broadcastLoadouts();
+    }
     if (run.state.phase !== lastPhase) {
       lastPhase = run.state.phase;
       if (lastPhase === 'shop') broadcastShops();
       if (lastPhase === 'levelup') broadcastLevelUps();
+      // Старт волны лечит всех и мог изменить maxHp — экипировка едет на любой смене фазы
+      broadcastLoadouts();
     }
 
     acc += dt;
@@ -117,7 +140,8 @@ export function createHost(run, transport, config) {
       const p = players[i];
       const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx, weapons);
       const copy = packed.slice();
-      transport.send(CH.SNAPSHOT, copy);
+      // Адресно: снапшот собран под радиус видимости именно этого игрока
+      transport.send(CH.SNAPSHOT, copy, i);
       stats.bytesOut += copy.byteLength;
       windowBytes += copy.byteLength;
       stats.sent++;
@@ -153,5 +177,8 @@ export function createHost(run, transport, config) {
     transport.off(CH.EVENT, onClientEvent);
   }
 
-  return { step, stats, close, types, weapons, projTex, broadcastLevelUps, sendLevelUpTo };
+  return {
+    step, stats, close, types, weapons, projTex,
+    broadcastLevelUps, sendLevelUpTo, broadcastLoadouts, sendLoadoutTo,
+  };
 }

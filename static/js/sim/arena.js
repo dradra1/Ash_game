@@ -140,6 +140,70 @@ function buildProps(rng, arena, cfg, arenaW, arenaH) {
   return props;
 }
 
+// Ломаемые мини-ивенты: точки, где на каждой волне встаёт объект, который можно
+// разбить ради награды. Раскладка детерминирована сидом, как и всё остальное,
+// поэтому кооп-клиент знает те же точки и по сети они не передаются.
+//
+// Коллизий у них НЕТ намеренно. Стоило бы им перекрывать проход — разрушение
+// меняло бы проходимость арены, и клиенту пришлось бы синхронно перестраивать
+// индекс препятствий, иначе предсказание движения выдёргивало бы игрока в месте
+// уже снесённой бочки.
+function buildBreakables(rng, arena, cfg, arenaW, arenaH, props) {
+  const table = arena.breakables;
+  const out = [];
+  if (!table || !table.length) return out;
+
+  const want = cfg.breakables_max | 0;
+  if (want <= 0) return out;
+  // Два разных отступа. От завалов достаточно не перекрываться (иначе объект
+  // недостижим для оружия), а вот друг от друга мини-ивенты держатся далеко,
+  // чтобы не сбивались в кучу в одном углу. Один общий отступ здесь не работает:
+  // при 26 завалах отступ «как между ивентами» перекрывает всю арену, и
+  // отбраковочная выборка не находит вообще ни одной точки.
+  const propGap = cfg.breakables_prop_gap || 0;
+  const minGap = cfg.breakables_min_gap || 0;
+  const wallMargin = cfg.breakables_wall_margin || 0;
+  const centerClear = cfg.breakables_center_clear || 0;
+  const cx = arenaW / 2;
+  const cy = arenaH / 2;
+  const attempts = want * (cfg.props_attempts_per_prop || 12);
+
+  for (let a = 0; a < attempts && out.length < want; a++) {
+    const entry = table[pickWeighted(rng, table.length, null)];
+    const r = entry.r || 14;
+    const x = rng.range(wallMargin + r, arenaW - wallMargin - r);
+    const y = rng.range(wallMargin + r, arenaH - wallMargin - r);
+
+    const dcx = x - cx;
+    const dcy = y - cy;
+    const clear = centerClear + r;
+    if (dcx * dcx + dcy * dcy < clear * clear) continue;
+
+    // Не ставим внутрь завала: объект оказался бы недостижим для оружия
+    let ok = true;
+    for (let i = 0; i < props.length; i++) {
+      const o = props[i];
+      const dx = o.x - x;
+      const dy = o.y - y;
+      const need = o.r + r + propGap;
+      if (dx * dx + dy * dy < need * need) { ok = false; break; }
+    }
+    if (ok) {
+      for (let i = 0; i < out.length; i++) {
+        const o = out[i];
+        const dx = o.x - x;
+        const dy = o.y - y;
+        const need = o.r + r + minGap;
+        if (dx * dx + dy * dy < need * need) { ok = false; break; }
+      }
+    }
+    if (!ok) continue;
+
+    out.push({ x, y, r, type: entry.type });
+  }
+  return out;
+}
+
 // Декали — плоские пятна, запекаемые в пол. Коллизий не имеют, ограничений тоже:
 // единственное, чего они стоят, — время запекания.
 function buildDecals(rng, arena, cfg, arenaW, arenaH) {
@@ -175,9 +239,12 @@ export function buildArenaLayout(config, arenaId, seed, arenaW, arenaH) {
   const rng = createRng((seed ^ hashId(arenaId)) >>> 0);
 
   // Порядок вызовов фиксирован: он определяет последовательность rng.
+  // Ломаемые объекты добавлены ПОСЛЕДНИМИ специально: так пол, декали и завалы
+  // остаются побайтово теми же, что до их появления, и старые сиды не «переезжают».
   const tiles = buildTiles(rng, arena, cfg, cols, rows);
   const decals = buildDecals(rng, arena, cfg, w, h);
   const props = buildProps(rng, arena, cfg, w, h);
+  const breakables = buildBreakables(rng, arena, cfg, w, h, props);
 
   return {
     arena: arenaId,
@@ -191,6 +258,7 @@ export function buildArenaLayout(config, arenaId, seed, arenaW, arenaH) {
     groundColor: arena.ground_color,
     decals,
     props,
+    breakables,
   };
 }
 

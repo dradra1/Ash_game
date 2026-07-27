@@ -5,6 +5,7 @@ import {
   resolveCurseFx, curseStatMods, applyCurseToDanger, emptyCurseFx,
 } from '../../static/js/sim/curses.js';
 import { createShop, priceOf } from '../../static/js/sim/shop.js';
+import { createEconomy, createWallet } from '../../static/js/sim/economy.js';
 import { createPlayer } from '../../static/js/sim/player.js';
 import { createRng } from '../../static/js/engine/rng.js';
 import { waveLength } from '../../static/js/sim/run.js';
@@ -55,7 +56,7 @@ test('free_market: лавка бесплатна и даёт бесплатны�
   for (const s of shop.slots) {
     if (s.cfg) assert.equal(s.price, 0);
   }
-  const spent = shop.reroll(p, danger, rng);
+  const spent = shop.reroll(p, danger, rng, createWallet(createEconomy(config, 1), null));
   assert.equal(spent, 0);
   assert.equal(p.ash, 0);
 });

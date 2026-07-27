@@ -59,12 +59,18 @@ export function createSocketTransport(socket, opts) {
     bytesOut: 0,
     ping: 0,
 
-    send(ch, payload) {
+    // toId — индекс адресата. Снапшот собирается ПОД КОНКРЕТНОГО зрителя (враги
+    // отсечены по его радиусу видимости), поэтому веерная рассылка всех N снапшотов
+    // всей комнате означала N-кратный трафик и интерполяцию по чужому списку врагов.
+    // Сервер по индексу находит sid и доставляет адресно; без toId — как раньше, всем.
+    send(ch, payload, toId) {
       const size = byteLength(payload);
       api.bytesOut += size;
       if (ch === CH.INPUT) socket.emit('net:input', payload);
-      else if (ch === CH.SNAPSHOT) socket.emit('net:snapshot', payload);
-      else socket.emit('net:event', payload);
+      else if (ch === CH.SNAPSHOT) {
+        if (toId === undefined || toId === null) socket.emit('net:snapshot', payload);
+        else socket.emit('net:snapshot', { to: toId, b: payload });
+      } else socket.emit('net:event', payload);
     },
 
     on(ch, cb) {

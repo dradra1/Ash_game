@@ -178,8 +178,10 @@ export function createMetaUi(root, config, t, api) {
         icon: w.texture,
         owned,
         sub: t('ui.class.' + w.class),
-        body: `<div class="meta-line">${Math.round(w.damage)} / ${w.cooldown.toFixed(2)}с</div>`
-          + `<div class="meta-line">${w.tags.join(', ')}</div>`,
+        body: `<div class="meta-line">${Math.round(w.damage)} / `
+          + `${w.cooldown.toFixed(2)}${t('ui.unit.sec')}</div>`
+          // Теги переводим: раньше в интерфейс уходили сырые английские id
+          + `<div class="meta-line">${w.tags.map((g) => t('tag.' + g)).join(', ')}</div>`,
         price: priceOf('weapon', id),
         onBuy: () => buy('weapon', id),
       }));
@@ -195,8 +197,11 @@ export function createMetaUi(root, config, t, api) {
       bodyEl.appendChild(card({
         name: up.name, color: '#c8a35a', owned: maxed,
         icon: up.texture,
-        sub: `+${up.step} ${up.stat}`,
-        body: `<div class="meta-line">${t('ui.meta.rank')}: ${rank} / ${up.max_ranks}</div>`,
+        // stat — английский ключ конфига (start_ash_pct и т.п.), его нет ни в
+        // stats.meta, ни в i18n. Показываем человеческое название из конфига.
+        sub: `+${up.step} ${up.stat_name || up.stat}`,
+        body: `<div class="meta-line">${t('ui.meta.rank')}: ${rank} / ${up.max_ranks}</div>`
+          + (up.desc ? `<div class="meta-line dim">${up.desc}</div>` : ''),
         price,
         onBuy: () => buy('upgrade', up.id),
       }));
