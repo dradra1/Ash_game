@@ -8,7 +8,10 @@
 меняется только license, а UI уже умеет его показывать.
 
 Файлы лежат в static/audio/, перекодированы в ogg vorbis q2 (исходники были до
-350 кбит/с и весили 14 МБ на трек — для браузерной игры неприемлемо).
+350 кбит/с и весили 14 МБ на трек — для браузерной игры неприемлемо) и выровнены
+по громкости под −18 LUFS (tools/normalize_audio.py). Поэтому `gain` у всех 1.0:
+поправка на разницу мастеринга больше не нужна, ключ остаётся на случай трека,
+который выпадет из ряда и которого нельзя будет тронуть.
 
     tools/patch_config_audio.py --apply
 """
@@ -33,7 +36,7 @@ TRACKS = {
         "license": "CC0",
         "url": OGA + "emptycity-background-music",
         "loop": True,
-        "gain": 0.9,
+        "gain": 1.0,
     },
     "mu_wave_a": {
         "src": "/static/audio/mu_wave_a.ogg",
@@ -60,7 +63,7 @@ TRACKS = {
         "license": "CC0",
         "url": OGA + "fast-fight-battle-music-looped",
         "loop": True,
-        "gain": 0.9,
+        "gain": 1.0,
     },
     "mu_boss": {
         "src": "/static/audio/mu_boss.ogg",
@@ -69,7 +72,7 @@ TRACKS = {
         "license": "CC0",
         "url": OGA + "boss-battle-2-symphonic-metal",
         "loop": True,
-        "gain": 0.85,
+        "gain": 1.0,
     },
 }
 

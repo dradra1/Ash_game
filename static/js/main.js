@@ -8,7 +8,7 @@ import { createLoop } from './engine/loop.js';
 import { createInput } from './engine/input.js';
 import { createRenderer } from './engine/render.js';
 import { createLocalTransport, createSocketTransport, CH } from './net/transport.js';
-import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP } from './sim/run.js';
+import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP, PHASE_INTRO } from './sim/run.js';
 import { buildArenaLayout, createPropIndex } from './sim/arena.js';
 import { swingPose, trailAlpha, makePose } from './engine/weapon_anim.js';
 import { createHost } from './net/host.js';
@@ -114,7 +114,14 @@ async function boot() {
     if (state.wave === musicWave && state.phase === musicPhase) return;
     musicWave = state.wave;
     musicPhase = state.phase;
-    audio.playMusic(musicFor(state.phase, state.wave, boss));
+    // Начало волны тянется дольше обычной смены темы: игрок только что вышел из
+    // лавки, и тема боя должна набрать громкость, а не включиться разом. Дедуп по
+    // id выше не трогаем — если трек из лавки продолжается в волне, перезапускать
+    // его не надо, фейд поверх играющего звучит как провал.
+    const fade = state.phase === PHASE_INTRO
+      ? (config.audio && config.audio.wave_fade_ms)
+      : 0;
+    audio.playMusic(musicFor(state.phase, state.wave, boss), fade);
   }
   const particles = createParticles(config);
   // Отдельный ГПСЧ для косметики. Тянуть искры из rng забега нельзя: тогда забег

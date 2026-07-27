@@ -1,5 +1,5 @@
 {
-  "content_version": 42,
+  "content_version": 43,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -7387,7 +7387,7 @@
         "license": "CC0",
         "url": "https://opengameart.org/content/emptycity-background-music",
         "loop": true,
-        "gain": 0.9
+        "gain": 1.0
       },
       "mu_wave_a": {
         "src": "/static/audio/mu_wave_a.ogg",
@@ -7414,7 +7414,7 @@
         "license": "CC0",
         "url": "https://opengameart.org/content/fast-fight-battle-music-looped",
         "loop": true,
-        "gain": 0.9
+        "gain": 1.0
       },
       "mu_boss": {
         "src": "/static/audio/mu_boss.ogg",
@@ -7423,7 +7423,7 @@
         "license": "CC0",
         "url": "https://opengameart.org/content/boss-battle-2-symphonic-metal",
         "loop": true,
-        "gain": 0.85
+        "gain": 1.0
       }
     },
     "music_volume": 0.5,
@@ -7437,7 +7437,9 @@
       ],
       "boss": "mu_boss",
       "shop": "mu_menu"
-    }
+    },
+    "fade_ms": 800,
+    "wave_fade_ms": 2000
   },
   "i18n": {
     "ru": {

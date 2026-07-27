@@ -18,8 +18,33 @@ function num(v, fallback) {
 }
 
 const STORE_KEY = 'ash_audio';
-const FADE_MS = 800;
-const FADE_STEP_MS = 50;
+const FADE_STEP_MS = 25;
+const DEFAULT_FADE_MS = 800;
+
+function clamp01(k) {
+  return k < 0 ? 0 : (k > 1 ? 1 : k);
+}
+
+// Кроссфейд равной мощности. При линейном сведении на середине проваливается
+// суммарная громкость: два некоррелированных трека по 0.5 амплитуды дают не
+// единицу, а корень из двух пополам. sin/cos держат сумму мощностей постоянной.
+export function crossUp(k) {
+  return Math.sin(clamp01(k) * Math.PI / 2);
+}
+
+// Через crossUp(1 − k), а не через cos: у косинуса cos(π/2) даёт 6e-17 вместо нуля,
+// и последний тик фейда оставлял бы на затухшем треке остаток громкости.
+export function crossDown(k) {
+  return crossUp(1 - clamp01(k));
+}
+
+// Появление из тишины — другой случай: гасить нечего, и кривая равной мощности
+// звучит как резкий рывок (на десятой доле фейда уже 16% громкости). Квадратичная
+// начинается тихо и доходит до цели ровно, без ступеньки в конце.
+export function fadeIn(k) {
+  const t = clamp01(k);
+  return t * t;
+}
 
 function loadPrefs() {
   try {
@@ -56,6 +81,8 @@ export function createAudio(config) {
   let fadeTimer = 0;
   let unlocked = false;
   let pendingTrack = null;   // что включить, как только браузер разрешит звук
+  let pendingFade = 0;
+  const defaultFade = num(cfg.fade_ms, DEFAULT_FADE_MS);
 
   function makeAudioEl(id) {
     const t = tracks[id];
@@ -74,19 +101,25 @@ export function createAudio(config) {
   }
 
   // Кроссфейд: старый трек гасим и выбрасываем, новый поднимаем до целевой.
-  function fadeTo(next, nextId) {
+  // Длительность приходит вызывающим: вход в волну тянется дольше обычной смены
+  // темы, и число для этого лежит в конфиге, а не в коде.
+  function fadeTo(next, nextId, fadeMs) {
     if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
     const prev = el;
     const prevFrom = prev ? prev.volume : 0;
     el = next;
     elId = nextId;
-    const steps = Math.max(1, Math.round(FADE_MS / FADE_STEP_MS));
+    const steps = Math.max(1, Math.round(fadeMs / FADE_STEP_MS));
     let i = 0;
     fadeTimer = globalThis.setInterval(() => {
       i++;
-      const k = Math.min(1, i / steps);
-      if (prev) prev.volume = Math.max(0, prevFrom * (1 - k));
-      if (el) el.volume = targetVol(elId) * k;
+      const k = i / steps;
+      if (prev) {
+        prev.volume = Math.max(0, prevFrom * crossDown(k));
+        if (el) el.volume = targetVol(elId) * crossUp(k);
+      } else if (el) {
+        el.volume = targetVol(elId) * fadeIn(k);
+      }
       if (k >= 1) {
         globalThis.clearInterval(fadeTimer);
         fadeTimer = 0;
@@ -97,19 +130,20 @@ export function createAudio(config) {
 
   // Включить трек по id. Повторный вызов с тем же id ничего не делает — иначе
   // музыка перезапускалась бы на каждой смене фазы внутри одной волны.
-  function playMusic(id) {
+  function playMusic(id, fadeMs) {
     if (!id || !tracks[id]) return;
     if (elId === id && el && !el.paused) return;
-    if (!unlocked) { pendingTrack = id; return; }
+    if (!unlocked) { pendingTrack = id; pendingFade = fadeMs; return; }
     const next = makeAudioEl(id);
     if (!next) return;
     const p = next.play();
-    if (p && p.catch) p.catch(() => { pendingTrack = id; });
-    fadeTo(next, id);
+    if (p && p.catch) p.catch(() => { pendingTrack = id; pendingFade = fadeMs; });
+    fadeTo(next, id, fadeMs > 0 ? fadeMs : defaultFade);
   }
 
   function stopMusic() {
     pendingTrack = null;
+    pendingFade = 0;
     if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
     if (el) { el.pause(); el.src = ''; }
     el = null;
@@ -196,8 +230,10 @@ export function createAudio(config) {
     unlocked = true;
     if (pendingTrack) {
       const id = pendingTrack;
+      const fade = pendingFade;
       pendingTrack = null;
-      playMusic(id);
+      pendingFade = 0;
+      playMusic(id, fade);
     }
   }
 
