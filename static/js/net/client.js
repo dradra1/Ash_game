@@ -13,6 +13,7 @@ import {
   PHASE_NAME, MSG_SNAPSHOT, MSG_SPAWN,
 } from './protocol.js';
 import { separateFromProps } from '../sim/arena.js';
+import { enemyCfg } from '../sim/enemy.js';
 
 // propIndex — препятствия арены. Клиент не симулирует мир, но своего персонажа
 // предсказывает, и без коллизий предсказание въезжало бы в завал, а сверка с
@@ -286,7 +287,11 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
       const id = types.toId[src.type];
       if (e.type !== id) {
         e.type = id;
-        e.cfg = config.enemies[id] || config.bosses[id];
+        // Через общий резолвер, а не по двум таблицам: ломаемые объекты арены
+        // ездят в снапшоте теми же байтами, что враги, но лежат в config.breakables —
+        // и на клиенте оставались без cfg, то есть не рисовались вовсе.
+        e.cfg = enemyCfg(config, id);
+        e.breakable = !!(e.cfg && e.cfg.breakable);
         e.sprite = (e.cfg && e.cfg.sprite) || config.render.sprite_default;
       }
       e.prevX = same ? e.x : src.x;

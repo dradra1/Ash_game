@@ -90,25 +90,37 @@ export function draw9Slice(ctx, name, x, y, w, h, slice, border) {
   return true;
 }
 
+// Какой кусок листа рисовать. Вынесено отдельно и без канваса, чтобы правило
+// «лист = 4 строки, сторона кадра = высота/4» проверялось тестом (ASSETS.md §5).
+//
+// Никаких догадок по геометрии здесь быть НЕ должно. Правило «квадратная картинка —
+// это одиночный спрайт» тут когда-то стояло и ломало ровно то, ради чего код
+// существует: лист ходьбы из 4 кадров × 4 направлений КВАДРАТЕН (192×192, 448×448),
+// и весь он целиком впечатывался в одну клетку — игрок и враги на бегу
+// превращались в сетку из шестнадцати миниатюр. Одиночные картинки (ломаемые
+// объекты арены) рисует drawSprite, сюда они не приходят.
+export function sheetFrame(width, height, dir, frame, out) {
+  const side = height / 4;
+  if (side <= 0) return null;
+  const frames = Math.max(1, Math.floor(width / side));
+  const dst = out || { sx: 0, sy: 0, side: 0, frames: 0 };
+  dst.side = side;
+  dst.frames = frames;
+  dst.sx = ((frame % frames) + frames) % frames * side;
+  dst.sy = (dir & 3) * side;
+  return dst;
+}
+
+const frameRect = { sx: 0, sy: 0, side: 0, frames: 0 };
+
 export function drawSheet(ctx, textureId, dir, frame, x, y, size) {
   const s = getSprite(textureId);
   if (!s || !s.ready || s.failed) return false;
   const img = s.img;
-  // Квадратная картинка — это одиночный спрайт, а не лист направлений (ASSETS.md §5:
-  // лист всегда 4 строки, то есть высота вчетверо больше стороны кадра). Так рисуются
-  // ломаемые объекты арены: им четыре ракурса не нужны, они не поворачиваются.
-  if (img.width === img.height) {
-    const h = size / 2;
-    ctx.drawImage(img, 0, 0, img.width, img.height,
-      Math.round(x - h), Math.round(y - h), size, size);
-    return true;
-  }
-  const side = img.height / 4;
-  if (side <= 0) return false;
-  const frames = Math.max(1, Math.floor(img.width / side));
-  const sx = ((frame % frames) + frames) % frames * side;
-  const sy = (dir & 3) * side;
+  const r = sheetFrame(img.width, img.height, dir, frame, frameRect);
+  if (!r) return false;
   const half = size / 2;
-  ctx.drawImage(img, sx, sy, side, side, Math.round(x - half), Math.round(y - half), size, size);
+  ctx.drawImage(img, r.sx, r.sy, r.side, r.side,
+    Math.round(x - half), Math.round(y - half), size, size);
   return true;
 }

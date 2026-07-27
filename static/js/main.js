@@ -602,6 +602,12 @@ async function boot() {
     for (let i = 0; i < pool.count; i++) {
       const e = pool.items[i];
       if (!e.cfg) continue;
+      // Ломаемые объекты живут в пуле врагов, но рисуются как предметы мира:
+      // одна картинка, без направлений и без листа ходьбы.
+      if (e.cfg.breakable) {
+        renderer.drawObject(e.cfg.texture, e.x, e.y, e.sprite, e.cfg.color);
+        continue;
+      }
       const moving = netClient ? true : (e.vx !== 0 || e.vy !== 0);
       renderer.drawEntity(e.cfg.texture, e.dir, (e.animT * animFps) | 0,
         e.x, e.y, e.sprite, e.cfg.color, moving ? e.cfg.texture + WALK : null);

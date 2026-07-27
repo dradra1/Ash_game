@@ -254,6 +254,17 @@ export function createRenderer(canvas, config, arenaSize) {
     ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
   }
 
+  // Неподвижный объект мира одной картинкой: ломаемые бочки и урны. Отдельно от
+  // drawEntity, потому что у них НЕТ листа направлений — четыре ракурса объекту,
+  // который не поворачивается, не нужны. Различать лист и одиночную картинку по
+  // геометрии нельзя: лист ходьбы 4×4 квадратный, как и одиночный спрайт.
+  function drawObject(textureId, x, y, size, color) {
+    if (drawSprite(textureId, x, y, size, 0, false)) return;
+    const half = size / 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
+  }
+
   // Круглая метка (прах, снаряд без спрайта)
   function drawDot(x, y, r, color) {
     ctx.fillStyle = color;
@@ -294,6 +305,7 @@ export function createRenderer(canvas, config, arenaSize) {
     drawProps,
     drawSprite,
     drawEntity,
+    drawObject,
     drawRect,
     drawDot,
     drawRing,
