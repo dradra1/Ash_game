@@ -121,6 +121,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # разо�
 .venv/bin/python -m pytest tests/py -q   # сервер: API, мета, реестр комнат, валидация забегов
 node --test tests/js/*.test.js           # формулы sim: статы, XP, лавка, экономика
 node tools/bench_sim.js                  # бюджет производительности симуляции
+node tools/playtest.js --god             # автопрогон забега: кривая дохода по волнам
+node tools/coop_income.js                # прах на игрока при 1/2/4/8 участниках
 ```
 
 Сквозные проверки в настоящем браузере (нужен поднятый контейнер и playwright):

@@ -141,6 +141,7 @@ ui/              screens hud shop_ui levelup_ui meta_ui tooltip
 .venv/bin/python -m pytest tests/py -q   # сервер: API, мета, реестр комнат, валидация забегов
 node --test tests/js/*.test.js       # чистые формулы sim (без DOM): статы, XP, лавка, экономика
 node tools/bench_sim.js                  # 450 врагов + 600 снарядов, sim ≤ 6 мс/тик
+node tools/coop_income.js                # прах на игрока при 1/2/4/8: кооп не богаче соло
 ```
 
 Сквозные проверки в браузере (нужен поднятый контейнер, playwright в `.venv`):

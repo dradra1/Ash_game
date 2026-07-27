@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import { createRun, PHASE_SHOP, PHASE_OVER } from '../static/js/sim/run.js';
 import { buy, mergeable, merge, freeSlotIndex, rerollCost } from '../static/js/sim/shop.js';
 import { refreshStats } from '../static/js/sim/player.js';
+import { steer } from './bot_move.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(here, '../config/game_config.json'), 'utf8'));
@@ -36,32 +37,6 @@ const GOD = has('god');
 // Приоритет левелапа: живучесть, потом урон. Специально не оптимальный.
 const PRIORITY = ['max_hp', 'damage_pct', 'attack_speed_pct', 'armor',
   'melee_dmg', 'ranged_dmg', 'move_speed_pct', 'crit_pct'];
-
-// Порог отхода подстраивается под оружие: убегать дальше, чем бьёшь, —
-// значит не убить никого. Бот держит врагов на дистанции чуть меньше своей
-// самой короткой дальности, чтобы оружие стреляло, но контакта не было.
-const WALL_R = 140;
-const DIRS = 16;         // сколько направлений перебираем
-const LOOKAHEAD = 0.5;   // на сколько секунд заглядываем вперёд
-const WALL_PENALTY = 1.5;
-const DANGER_W = 6;      // штраф за подпускание врага в контакт
-const KILL_W = 7;        // премия за каждую цель в радиусе оружия
-
-function threatRadius(p, config) {
-  let shortest = Infinity;
-  for (const s of p.slots) {
-    if (s.cfg && s.cfg.range < shortest) shortest = s.cfg.range;
-  }
-  if (!isFinite(shortest)) shortest = 120;
-  const contact = config.player.radius + 24;
-  return Math.max(contact + 18, shortest * 0.8);
-}
-
-function wallPush(v, size) {
-  if (v < WALL_R) return (WALL_R - v) / WALL_R;
-  if (v > size - WALL_R) return -(WALL_R - (size - v)) / WALL_R;
-  return 0;
-}
 
 const transport = { id: 0, isHost: true, role: 'host', send() {}, on() {}, off() {}, close() {} };
 
@@ -164,56 +139,9 @@ function playOne(seed) {
       continue;
     }
 
-    // --- бой: перебор направлений. Для каждого из DIRS вариантов смотрим, где
-    // окажемся через LOOKAHEAD секунд, и берём тот, где ближайший враг дальше всего
-    // (со штрафом за стену). Это близко к тому, как кайтит человек, и, в отличие от
-    // чистого отталкивания, не загоняет само себя в угол.
-    const aw = config.arena.size[0];
-    const ah = config.arena.size[1];
-    const pad = config.arena.wall_padding;
-    // Дальность самого длинного оружия — по ней и собираем цели
-    let reach = 0;
-    for (const s of p.slots) if (s.cfg && s.cfg.range > reach) reach = s.cfg.range;
-    if (reach === 0) reach = 120;
-    const reach2 = reach * reach;
-    const safeD = config.player.radius + 30;
-    let bestScore = -Infinity;
-    let bx = 0;
-    let by = 0;
-    for (let d = 0; d < DIRS; d++) {
-      const a = (d / DIRS) * Math.PI * 2;
-      const dx = Math.cos(a);
-      const dy = Math.sin(a);
-      let nx = p.x + dx * p.speed * LOOKAHEAD;
-      let ny = p.y + dy * p.speed * LOOKAHEAD;
-      if (nx < pad) nx = pad; else if (nx > aw - pad) nx = aw - pad;
-      if (ny < pad) ny = pad; else if (ny > ah - pad) ny = ah - pad;
-
-      let minD2 = Infinity;
-      let inRange = 0;
-      for (let i = 0; i < run.enemyPool.count; i++) {
-        const e = run.enemyPool.items[i];
-        // враг тоже успеет подойти — учитываем его смещение к нам
-        const ex = e.x + (p.x - e.x) * (e.speed * LOOKAHEAD) / (Math.hypot(p.x - e.x, p.y - e.y) || 1);
-        const ey = e.y + (p.y - e.y) * (e.speed * LOOKAHEAD) / (Math.hypot(p.x - e.x, p.y - e.y) || 1);
-        const ddx = nx - ex;
-        const ddy = ny - ey;
-        const d2 = ddx * ddx + ddy * ddy;
-        if (d2 < minD2) minD2 = d2;
-        if (d2 <= reach2) inRange++;
-      }
-      // Чистое «убежать подальше» = ноль убийств = нет праха = смерть позже.
-      // Оценка ищет компромисс: не пускать врага в контакт, но держать в радиусе
-      // оружия как можно больше целей — это и есть навык жанра.
-      const minD = Math.sqrt(minD2);
-      let score = minD < safeD ? (minD - safeD) * DANGER_W : 0;
-      score += inRange * KILL_W;
-      const wall = Math.min(nx, ny, aw - nx, ah - ny);
-      if (wall < WALL_R) score -= (WALL_R - wall) * WALL_PENALTY;
-      if (score > bestScore) { bestScore = score; bx = dx; by = dy; }
-    }
-    p.input.x = bx;
-    p.input.y = by;
+    // --- бой: направление выбирает общая «голова» бота (tools/bot_move.js),
+    // та же, что и в замере кооп-дохода
+    steer(p, run, config);
 
     run.step(dt);
     if (GOD) { p.hp = p.maxHp; p.alive = true; }
