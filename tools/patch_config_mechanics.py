@@ -55,6 +55,7 @@ I18N_RU = {
     "ui.cheat.god": "Бессмертие",
     "ui.cheat.kill": "Убить всех",
     "ui.cheat.skip": "Скип волны",
+    "ui.cheat.relics": "+1000 реликвий",
     "ui.levelup.queue": "Ещё выборов",
 }
 
@@ -77,6 +78,7 @@ I18N_EN = {
     "ui.cheat.god": "God mode",
     "ui.cheat.kill": "Kill all",
     "ui.cheat.skip": "Skip wave",
+    "ui.cheat.relics": "+1000 relics",
 }
 
 

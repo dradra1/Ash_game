@@ -56,8 +56,26 @@ def test_relics_follow_the_config_formula(app_env):
            "curses": "[]"}
     got = meta.award_relics(c, run, wave=20, win=True, bosses=2, players=1)
     expect = round((f["per_wave"] * 20 + f["win"] + f["per_boss"] * 2)
-                   * c["danger"][1]["reward_mult"])
+                   * c["danger"][1]["reward_mult"] * f["gain_mult"])
     assert got == expect
+
+
+def test_gain_mult_scales_the_whole_payout(app_env):
+    """Общий множитель начисления — одна ручка на всё.
+
+    Правка per_wave/win/per_boss по отдельности мимо бонуса за первое прохождение
+    (он в другом ключе) означала бы, что «поднять получение реликвий» подняло не всё.
+    Тест ловит ровно это: множитель обязан входить в итог целиком.
+    """
+    _app, _db, meta = app_env
+    c = cfg(app_env)
+    f = c["meta"]["relic_formula"]
+    mult = f["gain_mult"]
+    assert mult > 0
+    run = {"danger": 0, "id": 1, "started_at": 0, "curses": "[]"}
+    got = meta.award_relics(c, run, wave=20, win=True, bosses=2, players=1)
+    bare = f["per_wave"] * 20 + f["win"] + f["per_boss"] * 2
+    assert got == round(bare * mult)
 
 
 def test_curse_reward_mult_boosts_relics(app_env):
@@ -235,6 +253,33 @@ def test_finish_awards_relics_and_they_persist(client, app_env):
 
     profile = client.get("/api/profile").get_json()
     assert profile["relics"] == res["relics_gained"]
+
+
+def test_first_clear_bonus_gets_the_same_multiplier(client, app_env):
+    """Бонус за первое прохождение живёт отдельным ключом и легко остаётся без ×N.
+
+    Проверяем не саму сумму, а разницу между победой и поражением на той же волне:
+    в неё входит `win` из формулы и разовый бонус, и оба обязаны быть умножены.
+    """
+    _app, _db, meta = app_env
+    c = cfg(app_env)
+    mult = c["meta"]["relic_formula"]["gain_mult"]
+    bonus = c["meta"]["first_clear_bonus"]
+    assert bonus > 0
+
+    started = start_run(client, danger=1)
+    need = meta.min_run_time(c, 20)
+    backdate(_db, started["run_id"], need + 60)
+    res = client.post("/api/run/finish", json={
+        "run_id": started["run_id"], "wave": 20, "win": True, "bosses": 2,
+        "time_sec": need + 30, "kills": 900, "score": 4000,
+    }).get_json()
+
+    formula = meta.award_relics(
+        c, {"danger": 1, "id": 1, "started_at": 0, "curses": "[]"},
+        20, True, 2, 1)
+    # Первый выигрыш закрывает персонажа, арену и сложность разом — три бонуса
+    assert res["relics_gained"] == formula + round(bonus * 3 * mult)
 
 
 def test_faked_result_is_flagged_but_still_pays(client, app_env):

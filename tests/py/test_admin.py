@@ -131,3 +131,42 @@ def test_admin_write_does_not_touch_working_copy(client):
     # А подменённый сид обновиться обязан: механизм зеркалирования должен работать
     seed = json.loads(pathlib.Path(os.environ["ASH_REPO_CONFIG"]).read_text(encoding="utf-8"))
     assert seed["characters"][first]["stats"]["max_hp"] == 77
+
+
+def test_relic_cheat_is_admin_only(client):
+    """Чит на реликвии — единственный, который обязан жить на сервере.
+
+    Все остальные читы вызывают функцию в sim/run.js: мир считает браузер, и
+    подделать там нечего, кроме собственного забега. Реликвии же начисляет сервер
+    по своей формуле (ТЗ §3.10), поэтому и чит — эндпоинт под вайтлистом.
+    """
+    c, app = client
+    _register(c, "normal_user", "secret1")
+    assert c.post("/api/admin/relics").status_code == 403
+    assert c.get("/api/profile").get_json()["relics"] == 0
+
+
+def test_relic_cheat_grants_the_configured_amount(client):
+    c, app = client
+    _register(c, "dradra1")
+    amount = app.get_config()["meta"]["cheat_relics"]
+    assert amount > 0
+
+    r = c.post("/api/admin/relics")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["granted"] == amount
+    assert body["relics"] == amount
+    assert c.get("/api/profile").get_json()["relics"] == amount
+
+    # Повторный вызов копит, а не переписывает
+    assert c.post("/api/admin/relics").get_json()["relics"] == amount * 2
+
+
+def test_relic_cheat_ignores_the_client_amount(client):
+    """Сумму задаёт сервер. Иначе кнопка «+1000» стала бы «+сколько попросишь»."""
+    c, app = client
+    _register(c, "dradra1")
+    amount = app.get_config()["meta"]["cheat_relics"]
+    r = c.post("/api/admin/relics", json={"amount": 10 ** 9})
+    assert r.get_json()["relics"] == amount

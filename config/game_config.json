@@ -1,5 +1,5 @@
 {
-  "content_version": 41,
+  "content_version": 42,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -654,7 +654,8 @@
       "win": 25,
       "per_boss": 8,
       "coop_per_player": 0.05,
-      "danger_step": 1.2
+      "danger_step": 1.2,
+      "gain_mult": 1.6
     },
     "first_clear_bonus": 50,
     "weapon_unlock_price": {
@@ -725,7 +726,8 @@
         "stat_name": "Скидка на реролл",
         "desc": "Процент скидки на пересбор ассортимента лавки."
       }
-    ]
+    ],
+    "cheat_relics": 1000
   },
   "factions": {
     "cov": {
@@ -7569,7 +7571,9 @@
       "ui.error.run_start": "Забег не запустился — попробуй ещё раз",
       "ui.meta.arenas": "Арены",
       "ui.select.relic_mult": "реликвии",
-      "ui.meta.arena_enemies": "Врагов в пуле"
+      "ui.meta.arena_enemies": "Врагов в пуле",
+      "ui.cheat.relics": "+1000 реликвий",
+      "ui.error.cheat_relics": "Реликвии не начислились"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -7702,7 +7706,9 @@
       "ui.error.run_start": "Could not start the run — try again",
       "ui.meta.arenas": "Arenas",
       "ui.select.relic_mult": "relics",
-      "ui.meta.arena_enemies": "Enemy pool"
+      "ui.meta.arena_enemies": "Enemy pool",
+      "ui.cheat.relics": "+1000 relics",
+      "ui.error.cheat_relics": "Could not grant relics"
     }
   },
   "admin": {

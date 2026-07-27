@@ -393,6 +393,25 @@ def api_admin_config_put():
                     }})
 
 
+@app.route("/api/admin/relics", methods=["POST"])
+@admin_required
+def api_admin_relics():
+    """Чит: насыпать себе реликвий, чтобы проверять метапрогрессию без забегов.
+
+    Единственный чит, который нельзя было сделать функцией в `sim/run.js`:
+    реликвии начисляет сервер по своей формуле (ТЗ §3.10). Сумма берётся из
+    конфига, тело запроса не читается вовсе — иначе «чит на 1000» превратился бы
+    в «чит на сколько попросишь», и уже не важно, что кнопка админская.
+    """
+    user = current_user()
+    amount = int((get_config().get("meta") or {}).get("cheat_relics") or 0)
+    if amount <= 0:
+        return jsonify({"error": "disabled"}), 400
+    db.add_relics(user["id"], amount)
+    return jsonify({"ok": True, "granted": amount,
+                    "relics": current_user()["relics"]})
+
+
 @app.route("/api/run/start", methods=["POST"])
 @login_required
 def run_start():

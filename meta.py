@@ -17,6 +17,16 @@ def relic_formula(config, wave, win, bosses, players):
     return meta, danger_list
 
 
+def gain_mult(config):
+    """Общий множитель всего, что начисляется в реликвиях.
+
+    Одна ручка вместо правки per_wave / win / per_boss / first_clear_bonus по
+    отдельности: базовые числа остаются читаемыми, а «поднять доход в N раз» —
+    это одна строка конфига, а не четыре пересчитанных значения.
+    """
+    return config["meta"]["relic_formula"].get("gain_mult", 1.0)
+
+
 def award_relics(config, run_row, wave, win, bosses, players):
     f = config["meta"]["relic_formula"]
     danger = run_row["danger"] if run_row["danger"] is not None else 0
@@ -25,7 +35,7 @@ def award_relics(config, run_row, wave, win, bosses, players):
     coop_mult = 1 + f["coop_per_player"] * max(0, players - 1)
     base = f["per_wave"] * wave + f["win"] * (1 if win else 0) + f["per_boss"] * bosses
     curse_mult = curse_reward_mult(config, run_row)
-    return int(round(base * reward_mult * coop_mult * curse_mult))
+    return int(round(base * reward_mult * coop_mult * curse_mult * gain_mult(config)))
 
 
 def curse_reward_mult(config, run_row):
@@ -70,7 +80,9 @@ def first_clear_bonus(config, conn, user_id, run_row, win):
         ).fetchone()
         if row["n"] == 0:
             total += bonus
-    return total
+    # Тем же множителем, что и основное начисление: иначе «поднять получение
+    # реликвий» окажется поднятием не всего получения.
+    return int(round(total * gain_mult(config)))
 
 
 # --- Плаузибилити-проверки ------------------------------------------------

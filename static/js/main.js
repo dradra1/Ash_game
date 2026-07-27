@@ -300,6 +300,16 @@ async function boot() {
     });
     mk(t('ui.cheat.kill'), () => run.cheatKillAll());
     mk(t('ui.cheat.skip'), () => run.cheatSkipWave());
+    // Единственный чит не из run: реликвии начисляет сервер по своей формуле
+    // (ТЗ §3.10), и сумму задаёт он же — тело запроса не читается.
+    mk(t('ui.cheat.relics'), async () => {
+      try {
+        const r = await fetchJson('/api/admin/relics', { method: 'POST' });
+        if (profile) profile.relics = r.relics;
+      } catch (e) {
+        screens.error(t('ui.error.cheat_relics'));
+      }
+    });
   }
 
   function handleEsc() {
