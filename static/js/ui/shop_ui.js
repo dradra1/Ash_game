@@ -108,24 +108,17 @@ export function createShopUi(root, config, t, tip) {
     return counts;
   }
 
-  // Блок «синергии ствола» внизу тултипа оружия: все его сеты (класс + теги)
-  // с бонусами порогов; недостижённые пока пороги приглушены.
+  // Строка «синергии ствола» внизу тултипа оружия: ТОЛЬКО названия его сетов
+  // (класс + теги), без порогов и бонусов — подробности игрок смотрит
+  // в тултипах строк панели синергий.
   function weaponSynHtml(cfg) {
     const syn = config.synergies;
     if (!syn || !syn.enabled) return '';
-    const counts = synCounts();
-    const sets = [[t('ui.class.' + cfg.class), syn.classes[cfg.class],
-      counts[cfg.class] || 0]];
+    const names = [t('ui.class.' + cfg.class)];
     for (const tag of cfg.tags || []) {
-      if (syn.tags && syn.tags[tag]) {
-        sets.push([t('ui.tag.' + tag), syn.tags[tag], counts[tag] || 0]);
-      }
+      if (syn.tags && syn.tags[tag]) names.push(t('ui.tag.' + tag));
     }
-    let html = `<div class="col-title">${t('ui.shop.synergies')}</div>`;
-    for (const [name, tiers, n] of sets) {
-      html += synTipHtml(name, tiers, n);
-    }
-    return html;
+    return `<div class="card-line">${t('ui.shop.synergies')}: ${names.join(', ')}</div>`;
   }
 
   function renderSlots() {
