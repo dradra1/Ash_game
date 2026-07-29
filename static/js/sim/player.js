@@ -2,15 +2,18 @@
 
 import { createStats, resolveStats, moveSpeed, armorFactor, dodgeChance } from './stats.js';
 import { makeSlot, equip } from './weapon.js';
+import { createSynergyState, refreshSynergies } from './synergy.js';
 import { separateFromProps } from './arena.js';
 
 export function createPlayer(config, id, name, characterId, x, y) {
   const chCfg = config.characters[characterId];
   const stats = createStats(config);
-  // Источники модификаторов по порядку: персонаж, копилка левелапов, дальше предметы.
-  // levelMods — один объект, который растёт: левелапов за забег десятки.
+  // Источники модификаторов по порядку: персонаж, копилка левелапов, синергии,
+  // дальше предметы. levelMods и synergy.mods — стабильные ссылки, которые
+  // растут: пересоздавать их нельзя, sources держит именно эти объекты.
   const levelMods = {};
-  const sources = [chCfg.stats, levelMods];
+  const synergy = createSynergyState();
+  const sources = [chCfg.stats, levelMods, synergy.mods];
   resolveStats(stats, config, sources);
 
   const slots = new Array(config.run.weapon_slots);
@@ -20,12 +23,13 @@ export function createPlayer(config, id, name, characterId, x, y) {
     equip(slots[i], start[i], config);
   }
 
-  return {
+  const player = {
     id,
     name,
     character: characterId,
     x, y, vx: 0, vy: 0,
     dir: 0, frame: 0, animT: 0,
+    moving: false,           // состояние отрисовки: «идёт ли» — едет в снапшоте битом
     hp: stats.max_hp,
     maxHp: stats.max_hp,
     radius: config.player.radius,
@@ -43,17 +47,67 @@ export function createPlayer(config, id, name, characterId, x, y) {
     stats,
     sources,
     levelMods,
+    synergy,
     items: [],
     slots,
     alive: true,
     input: { x: 0, y: 0 },
     // Номер последнего учтённого ввода — уезжает в снапшоте как ack (net/protocol.js)
     lastInputSeq: 0,
+    // Очередь сетевого ввода: хост снимает РОВНО ОДИН пакет за тик.
+    //
+    // Раньше здесь была защёлка — последний пришедший пакет лежал в input и
+    // интегрировался каждый тик, а ack прыгал на самый свежий ПОЛУЧЕННЫЙ номер.
+    // Пакеты по TCP приходят пачками: пришло два между тиками — первый ни разу
+    // не побывал в симуляции, но подтверждён; не пришло ни одного — старый ввод
+    // проигран дважды. Клиент выбрасывает из переигровки всё не новее ack, и его
+    // база разъезжается с авторитетом на один-три тика. Это и есть «резина».
+    //
+    // Хранится КВАНТОВАННЫЙ int8: по сети ввод едет с шагом 1/127, и клиент
+    // предсказывает этим же числом. Проинтегрируй хост float — на диагоналях
+    // они посчитают разную скорость, и расхождение начнёт копиться на ровном
+    // месте (CLAUDE.md §2).
+    inQ: {
+      x: new Int8Array(config.net.input_queue_len),
+      y: new Int8Array(config.net.input_queue_len),
+      seq: new Uint16Array(config.net.input_queue_len),
+      head: 0, tail: 0, count: 0,
+      // Номер последнего ПОЛОЖЕННОГО пакета: по нему отсекаются дубликаты
+      // и опоздавшие. -1 — очередь ещё ничего не видела.
+      lastSeq: -1,
+    },
   };
+
+  // Стартовое оружие уже одето и могло собрать синергию — резолв повторный.
+  // Прибавка max_hp от синергии долечит hp через refreshStats.
+  refreshStats(player, config);
+  return player;
+}
+
+// Снять из очереди один пакет ввода. Возвращать нечего: всё пишется в игрока.
+//
+// Голод очереди (пакет не доехал) — оставляем прежний ввод и НЕ двигаем ack:
+// обнулять ввод значило бы превращать одиночную потерю в видимую всем заминку,
+// а двинуть ack — заставить клиента выбросить из переигровки кадр, которого
+// хост не применял, то есть воспроизвести ровно тот баг, который мы чиним.
+function takeInput(p) {
+  const q = p.inQ;
+  if (q.count === 0) return;
+  const h = q.head;
+  p.input.x = q.x[h] / 127;
+  p.input.y = q.y[h] / 127;
+  p.lastInputSeq = q.seq[h];
+  q.head = (h + 1) % q.x.length;
+  q.count--;
 }
 
 // Пересобрать статы после изменения источников (покупка, левелап — M2)
 export function refreshStats(player, config) {
+  // Синергии пересчитываются первыми: их mods стоят в sources, и resolveStats
+  // ниже обязан видеть уже готовые бонусы. Сюда же попадают все пути смены
+  // лоадаута (лавка зовёт refreshStats через onChange), поэтому отдельных
+  // точек пересчёта синергий не нужно.
+  refreshSynergies(player, config);
   const before = player.stats.max_hp;
   resolveStats(player.stats, config, player.sources);
   player.speed = moveSpeed(config, player.stats);
@@ -111,7 +165,12 @@ export function stepPlayers(players, dt, config, arenaW, arenaH, propIndex) {
 
   for (let i = 0; i < players.length; i++) {
     const p = players[i];
-    if (!p.alive) continue;
+
+    // Ввод снимается ДО проверки на живость: иначе очередь мертвеца копится, и
+    // после воскрешения он проигрывает чужое прошлое.
+    takeInput(p);
+
+    if (!p.alive) { p.moving = false; continue; }
 
     if (p.iframes > 0) p.iframes -= dt;
 
@@ -132,6 +191,7 @@ export function stepPlayers(players, dt, config, arenaW, arenaH, propIndex) {
     p.vy = iy * p.speed;
 
     if (p.vx !== 0 || p.vy !== 0) {
+      p.moving = true;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       // Сначала препятствия, потом стены: стена — жёсткая граница и должна
@@ -142,6 +202,8 @@ export function stepPlayers(players, dt, config, arenaW, arenaH, propIndex) {
       if (p.vx * p.vx > p.vy * p.vy) p.dir = p.vx > 0 ? 1 : 3;
       else p.dir = p.vy > 0 ? 0 : 2;
       p.animT += dt;
+    } else {
+      p.moving = false;
     }
   }
 }

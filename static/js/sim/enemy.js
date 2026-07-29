@@ -3,9 +3,21 @@
 
 import { separateFromProps, slideAlong } from './arena.js';
 
-// Архетипы M1. Остальные (charger/orbiter/splitter/bomber/summoner/support) — M4.
+// Архетипы M1. Остальные (orbiter/splitter/bomber/summoner/support) — M4.
 export const AI_CHASE = 0;
 export const AI_SHOOTER = 1;
+
+// Рывок: подходит на дистанцию, замирает и КРАСНЕЕТ (telegraph), потом бьёт
+// рывком — но не в игрока, а в точку, где тот был charge.lead секунд назад.
+// Отсюда и правило уклонения: беги, и рывок уйдёт в твой след.
+export const AI_CHARGER = 3;
+
+// Фазы рывка. Живут в e.chargeState, потому что на 450 сущностях объект
+// состояния на врага — это аллокация в горячем цикле (CLAUDE.md §4).
+const CH_IDLE = 0;      // преследует обычным шагом
+const CH_WINDUP = 1;    // стоит и краснеет
+const CH_DASH = 2;      // летит по запомненному вектору
+const CH_RECOVER = 3;   // отдыхает после рывка
 
 // Неподвижная цель без атаки: ломаемые объекты арены. Они живут в пуле врагов
 // намеренно — так им бесплатно достаются HP, наведение оружия, урон от всех
@@ -13,7 +25,9 @@ export const AI_SHOOTER = 1;
 // вторым пулом со своей сеткой и своими сообщениями.
 export const AI_STATIC = 2;
 
-const AI_CODE = { chase: AI_CHASE, shooter: AI_SHOOTER, static: AI_STATIC };
+const AI_CODE = {
+  chase: AI_CHASE, shooter: AI_SHOOTER, static: AI_STATIC, charger: AI_CHARGER,
+};
 
 // Нормаль последнего выталкивания. Один объект на модуль: аллокация на кадр при
 // 450 врагах — прямое нарушение бюджета (CLAUDE.md §4).
@@ -35,6 +49,9 @@ export function makeEnemy() {
     x: 0, y: 0, vx: 0, vy: 0,
     hp: 0, maxHp: 0, dmg: 0, speed: 0, size: 0, sprite: 0,
     dir: 0, frame: 0, animT: 0,
+    moving: false, telegraph: false, // отрисовка: «идёт ли» и «краснеет» перед рывком
+    // Рывок: фаза, таймер фазы, запомненная точка удара и «прицелился ли уже»
+    chargeState: CH_IDLE, chargeT: 0, chargeCd: 0, dashX: 0, dashY: 0, aimed: false,
     targetId: -1, retargetT: 0, atkCd: 0, contactCd: 0,
     kbX: 0, kbY: 0, kbResist: 0,
     ash: 0, xp: 0, score: 0,
@@ -49,6 +66,8 @@ export function resetEnemy(e) {
   e.kbX = 0; e.kbY = 0;
   e.targetId = -1; e.retargetT = 0; e.atkCd = 0; e.contactCd = 0;
   e.frame = 0; e.animT = 0;
+  e.moving = false; e.telegraph = false;
+  e.chargeState = CH_IDLE; e.chargeT = 0; e.chargeCd = 0; e.aimed = false;
 }
 
 // Характеристики врага на данной волне. Формулы — строго из конфига (waves/danger/coop).
@@ -79,6 +98,13 @@ export function initEnemy(e, config, typeId, wave, danger, players, curseFx) {
   e.type = typeId;
   e.cfg = cfg;
   e.ai = AI_CODE[cfg.ai] !== undefined ? AI_CODE[cfg.ai] : AI_CHASE;
+  // Рывок без блока charge в конфиге — это опечатка контента, а не поведение.
+  // Деградируем в преследование: иначе такой враг встанет столбом на всю волну.
+  if (e.ai === AI_CHARGER && !cfg.charge) e.ai = AI_CHASE;
+  e.chargeState = CH_IDLE;
+  e.chargeT = 0;
+  e.chargeCd = 0;
+  e.aimed = false;
   e.maxHp = scaleHp(config, cfg, wave, danger, players);
   e.hp = e.maxHp;
   e.dmg = scaleDamage(config, cfg, wave, danger);
@@ -137,6 +163,7 @@ export function stepEnemies(pool, dt, deps) {
     if (e.ai === AI_STATIC) {
       e.vx = 0;
       e.vy = 0;
+      e.moving = false;
       continue;
     }
 
@@ -158,8 +185,12 @@ export function stepEnemies(pool, dt, deps) {
       const dx = target.x - e.x;
       const dy = target.y - e.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      // Урон в рывке отличается от контактного: множитель берётся из конфига
+      let hitDmg = e.dmg;
 
-      if (e.ai === AI_SHOOTER) {
+      if (e.ai === AI_CHARGER) {
+        hitDmg = stepCharger(e, dt, target, dx, dy, dist);
+      } else if (e.ai === AI_SHOOTER) {
         const atk = e.cfg.attack;
         const keep = atk.keep_dist;
         // Держать дистанцию: подходить дальше keep, отходить ближе 0.7*keep
@@ -188,11 +219,18 @@ export function stepEnemies(pool, dt, deps) {
       const touch = e.size + target.radius;
       if (e.contactCd <= 0 && dist <= touch) {
         e.contactCd = contactCd;
-        deps.hitPlayer(target, e.dmg, dx / dist, dy / dist);
+        deps.hitPlayer(target, hitDmg, dx / dist, dy / dist);
       }
     } else {
       e.vx = 0;
       e.vy = 0;
+      // Цели нет — рывок отменяется целиком, иначе враг останется красным
+      // навсегда и после воскрешения игрока выстрелит рывком в никуда.
+      if (e.ai === AI_CHARGER && e.chargeState !== CH_IDLE) {
+        e.chargeState = CH_IDLE;
+        e.telegraph = false;
+        e.aimed = false;
+      }
     }
 
     // Отбрасывание затухает экспоненциально
@@ -218,13 +256,92 @@ export function stepEnemies(pool, dt, deps) {
     // Направление спрайта по доминирующей оси
     const mx = e.vx + e.kbX;
     const my = e.vy + e.kbY;
-    if (mx !== 0 || my !== 0) {
+    e.moving = mx !== 0 || my !== 0;
+    if (e.moving) {
       if (mx * mx > my * my) e.dir = mx > 0 ? 1 : 3;
       else e.dir = my > 0 ? 0 : 2;
       e.animT += dt;
     }
   }
   return pool.count;
+}
+
+// Шаг рывкача. Возвращает урон, который нанесёт контакт в ЭТОМ тике: в рывке он
+// умножается на charge.damage_mult, в остальных фазах равен обычному.
+//
+// Главное правило механики: точка удара снимается за charge.lead секунд ДО
+// самого рывка и дальше не пересчитывается. Поэтому уклонение — это не «отойти
+// в сторону в последний момент», а не стоять на месте всю подготовку: рывок
+// уходит туда, где игрок был секунду назад.
+function stepCharger(e, dt, target, dx, dy, dist) {
+  const c = e.cfg.charge;
+
+  if (e.chargeState === CH_WINDUP) {
+    e.chargeT -= dt;
+    e.vx = 0;
+    e.vy = 0;
+    e.telegraph = true;
+    if (!e.aimed && e.chargeT <= c.lead) {
+      e.aimed = true;
+      e.dashX = target.x;
+      e.dashY = target.y;
+    }
+    if (e.chargeT <= 0) {
+      // lead ≥ windup — прицелиться было негде: бьём по текущей точке
+      if (!e.aimed) {
+        e.dashX = target.x;
+        e.dashY = target.y;
+      }
+      const ax = e.dashX - e.x;
+      const ay = e.dashY - e.y;
+      const ad = Math.sqrt(ax * ax + ay * ay) || 1;
+      e.vx = (ax / ad) * c.speed;
+      e.vy = (ay / ad) * c.speed;
+      e.chargeState = CH_DASH;
+      e.chargeT = c.duration;
+      e.telegraph = false;
+    }
+    return e.dmg;
+  }
+
+  if (e.chargeState === CH_DASH) {
+    e.chargeT -= dt;
+    // Вектор НЕ пересчитывается: рывок летит в запомненную точку, а не ведёт
+    // игрока. Иначе от него нельзя было бы уйти вовсе.
+    if (e.chargeT <= 0) {
+      e.chargeState = CH_RECOVER;
+      e.chargeT = c.recover;
+      e.vx = 0;
+      e.vy = 0;
+    }
+    return e.dmg * (c.damage_mult || 1);
+  }
+
+  if (e.chargeState === CH_RECOVER) {
+    e.chargeT -= dt;
+    e.vx = 0;
+    e.vy = 0;
+    if (e.chargeT <= 0) {
+      e.chargeState = CH_IDLE;
+      e.chargeCd = c.cooldown;
+    }
+    return e.dmg;
+  }
+
+  // CH_IDLE: обычное преследование, пока не подошли на дистанцию рывка
+  if (e.chargeCd > 0) e.chargeCd -= dt;
+  if (e.chargeCd <= 0 && dist <= c.range) {
+    e.chargeState = CH_WINDUP;
+    e.chargeT = c.windup;
+    e.aimed = false;
+    e.telegraph = true;
+    e.vx = 0;
+    e.vy = 0;
+    return e.dmg;
+  }
+  e.vx = (dx / dist) * e.speed;
+  e.vy = (dy / dist) * e.speed;
+  return e.dmg;
 }
 
 function findPlayer(players, id) {

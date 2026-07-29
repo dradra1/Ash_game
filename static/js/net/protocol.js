@@ -11,6 +11,9 @@ export const MSG_INPUT = 1;
 export const MSG_SNAPSHOT = 2;
 export const MSG_SPAWN = 3;      // событие спавна снаряда
 export const MSG_EVENT = 4;      // надёжные события: волна, смерть, лут, босс
+export const MSG_SWING = 5;      // пульс замаха: кто, чем и под каким углом ударил
+export const MSG_PICKUP = 6;     // прах на полу (дешёвый канал, своя частота)
+export const MSG_TURRET = 7;     // расстановка турелей — редко, при смене лоадаута
 
 export const FLAG_READY = 1;
 export const FLAG_PAUSE = 2;
@@ -54,12 +57,7 @@ export function createInputCodec() {
 // Заголовок: тип, seq, волна, фаза, время фазы (дец. сек), число игроков,
 // число врагов, общий котёл праха (uint32 — HUD в коопе показывает его строкой).
 const SNAP_HEADER = 14;
-// 11-й и 12-й байты игрока — «пульс удара»: индекс оружия и угол последнего
-// замаха. Два байта на игрока × 8 × 20 Гц = 320 Б/с при бюджете 30 КБ/с.
-// Индекс оружия, а не номер слота, делает пульс самодостаточным: клиенту не надо
-// знать лоадаут соседа и не нужно отдельного надёжного сообщения об экипировке.
-//
-// Ещё три байта — прах (uint16) и доля опыта до уровня (uint8). Они меняются
+// Байты 9-11 игрока — прах (uint16) и доля опыта до уровня (uint8). Они меняются
 // каждую секунду, поэтому едут в снапшоте, а не в надёжном сообщении о лоадауте:
 // без них у кооп-клиента в HUD вечно висели «прах 0» и пустая полоса опыта.
 //
@@ -67,9 +65,16 @@ const SNAP_HEADER = 14;
 // клиент сравнивает авторитетную позицию с ТОЙ СВОЕЙ, что была на момент этого
 // ввода, и узнаёт настоящую ошибку предсказания. Без ack оставалось только тянуть
 // себя к позиции хоста «RTT назад» каждый кадр — отсюда и бралось скольжение по льду.
-const SNAP_PLAYER = 16;
+//
+// Замаха здесь БОЛЬШЕ НЕТ — он уехал в отдельный канал MSG_SWING. Прежняя схема
+// («индекс оружия + угол» прямо в записи игрока) не работала принципиально:
+// байт был один на все шесть слотов, поэтому за такт в эфир попадал ровно один
+// замах, а повторный удар ТЕМ ЖЕ оружием клиент вообще не отличал от предыдущего
+// и не проигрывал заново. У хоста с одним мечом сосед видел анимацию один раз за
+// забег. Событийный канал шлёт каждый удар и стоит меньше: 3 байта против двух
+// на игрока в КАЖДОМ снапшоте, но только когда бьют.
+const SNAP_PLAYER = 14;
 const SNAP_ENEMY = 8;
-const NO_WEAPON = 0xff;
 
 export function createSnapshotCodec(config) {
   const maxEntities = config.net.max_entities_per_snapshot;
@@ -87,11 +92,11 @@ export function createSnapshotCodec(config) {
   for (let i = 0; i < maxPlayers; i++) {
     decoded.players.push({
       idx: 0, x: 0, y: 0, hpPct: 0, dir: 0, level: 1, alive: true, pendingLevels: 0,
-      swingWeapon: -1, swingAngle: 0, swingSeq: 0, ash: 0, xpPct: 0, ackSeq: 0,
+      moving: false, ash: 0, xpPct: 0, ackSeq: 0,
     });
   }
   for (let i = 0; i < maxEntities; i++) {
-    decoded.enemies.push({ uid: 0, type: 0, x: 0, y: 0, hpPct: 0, dir: 0 });
+    decoded.enemies.push({ uid: 0, type: 0, x: 0, y: 0, hpPct: 0, dir: 0, moving: false, telegraph: false });
   }
 
   // Сортировка врагов по близости к зрителю — если их больше лимита, обрезаем
@@ -99,26 +104,7 @@ export function createSnapshotCodec(config) {
   const order = new Int32Array(config.sim.max_enemies_cap);
   const dist = new Float64Array(config.sim.max_enemies_cap);
 
-  // Что показать из ударов игрока за такт. Слотов шесть, а байт один, поэтому
-  // слоты обходятся по кругу: за пару тактов эфир получают все, и ни один вид
-  // оружия не оказывается вечно невидимым для соседей.
-  function pickSwing(p) {
-    const slots = p.slots;
-    if (!slots) return -1;
-    const n = slots.length;
-    const start = (p._swingCursor || 0) % n;
-    for (let i = 0; i < n; i++) {
-      const k = (start + i) % n;
-      const slot = slots[k];
-      if (slot.cfg && slot.swingT > 0) {
-        p._swingCursor = k + 1;
-        return k;
-      }
-    }
-    return -1;
-  }
-
-  function encode(run, viewX, viewY, seq, typeIndex, weaponIndex) {
+  function encode(run, viewX, viewY, seq, typeIndex) {
     const state = run.state;
     view.setUint8(0, MSG_SNAPSHOT);
     view.setUint16(1, seq & 0xffff);
@@ -138,23 +124,17 @@ export function createSnapshotCodec(config) {
       view.setInt16(o + 1, clampI16(p.x));
       view.setInt16(o + 3, clampI16(p.y));
       view.setUint8(o + 5, p.maxHp > 0 ? Math.round((p.hp / p.maxHp) * 255) : 0);
-      view.setUint8(o + 6, (p.dir & 3) | (p.alive ? 4 : 0));
+      // Байт направления: биты 0-1 — dir, 2 — alive, 3 — moving, 4-5 — счётчик
+      // замаха (резерв). Флаги сидят в свободных битах, а не в отдельном байте:
+      // лишний байт на игрока × 8 × 30 Гц = 1.9 КБ/с, и это только за игроков —
+      // у врагов та же экономия идёт со 120 записей.
+      view.setUint8(o + 6, (p.dir & 3) | (p.alive ? 4 : 0) | (p.moving ? 0x08 : 0));
       view.setUint8(o + 7, Math.min(255, p.level));
       view.setUint8(o + 8, Math.min(255, p.pendingLevels || 0));
-      const sw = pickSwing(p);
-      if (sw >= 0) {
-        const slot = p.slots[sw];
-        view.setUint8(o + 9, weaponIndex ? (weaponIndex.toIdx[slot.id] & 0xff) : NO_WEAPON);
-        // Угол в uint8: шаг 1.4°, для замаха избыточно точно
-        view.setUint8(o + 10, Math.round(normAngle(slot.lastAngle) / TAU * 255) & 0xff);
-      } else {
-        view.setUint8(o + 9, NO_WEAPON);
-        view.setUint8(o + 10, 0);
-      }
-      view.setUint16(o + 11, Math.max(0, Math.min(0xffff, Math.round(p.ash || 0))));
-      view.setUint8(o + 13, p.xpNext > 0
+      view.setUint16(o + 9, Math.max(0, Math.min(0xffff, Math.round(p.ash || 0))));
+      view.setUint8(o + 11, p.xpNext > 0
         ? Math.max(0, Math.min(255, Math.round((p.xp / p.xpNext) * 255))) : 0);
-      view.setUint16(o + 14, (p.lastInputSeq || 0) & 0xffff);
+      view.setUint16(o + 12, (p.lastInputSeq || 0) & 0xffff);
       o += SNAP_PLAYER;
     }
 
@@ -182,7 +162,9 @@ export function createSnapshotCodec(config) {
     for (let k = 0; k < n; k++) {
       const e = pool.items[order[k]];
       view.setUint16(o, e.uid & 0xffff);
-      view.setUint8(o + 2, typeIndex[e.type] || 0);
+      // Байт типа: биты 0-5 — индекс типа (потолок 63, охраняется тестом),
+      // 6 — moving, 7 — telegraph. Те же соображения бюджета, что у игрока.
+      view.setUint8(o + 2, (typeIndex[e.type] & 0x3f) | (e.moving ? 0x40 : 0) | (e.telegraph ? 0x80 : 0));
       view.setInt16(o + 3, clampI16(e.x));
       view.setInt16(o + 5, clampI16(e.y));
       view.setUint8(o + 7, e.maxHp > 0 ? Math.round((e.hp / e.maxHp) * 255) : 0);
@@ -215,27 +197,21 @@ export function createSnapshotCodec(config) {
       const d = v.getUint8(o + 6);
       p.dir = d & 3;
       p.alive = (d & 4) !== 0;
+      p.moving = (d & 0x08) !== 0;
       p.level = v.getUint8(o + 7);
       p.pendingLevels = v.getUint8(o + 8);
-      const wIdx = v.getUint8(o + 9);
-      if (wIdx === NO_WEAPON) {
-        p.swingWeapon = -1;
-      } else {
-        // swingSeq растёт на каждый новый удар: клиент по нему понимает, что это
-        // именно новый замах, а не тот же самый в следующем снапшоте.
-        if (p.swingWeapon !== wIdx) p.swingSeq++;
-        p.swingWeapon = wIdx;
-        p.swingAngle = (v.getUint8(o + 10) / 255) * TAU;
-      }
-      p.ash = v.getUint16(o + 11);
-      p.xpPct = v.getUint8(o + 13) / 255;
-      p.ackSeq = v.getUint16(o + 14);
+      p.ash = v.getUint16(o + 9);
+      p.xpPct = v.getUint8(o + 11) / 255;
+      p.ackSeq = v.getUint16(o + 12);
       o += SNAP_PLAYER;
     }
     for (let k = 0; k < decoded.enemyCount; k++) {
       const e = decoded.enemies[k];
       e.uid = v.getUint16(o);
-      e.type = v.getUint8(o + 2);
+      const b = v.getUint8(o + 2);
+      e.type = b & 0x3f;
+      e.moving = (b & 0x40) !== 0;
+      e.telegraph = (b & 0x80) !== 0;
       e.x = v.getInt16(o + 3);
       e.y = v.getInt16(o + 5);
       e.hpPct = v.getUint8(o + 7) / 255;
@@ -342,6 +318,199 @@ export function createSpawnCodec(config) {
       s.texture = v.getUint8(o + 8);
       s.hostile = v.getUint8(o + 9) === 1;
       o += SPAWN_ITEM;
+    }
+    decoded.count = count;
+    return decoded;
+  }
+
+  return { encode, decode, maxBytes: buf.byteLength };
+}
+
+// --- Пульс замаха, хост → клиент -------------------------------------------
+// Дуговой удар не рождает снаряда: без этого канала кооп-клиент видит, как сосед
+// молча стоит посреди умирающей толпы. Событие, а не поле в снапшоте: удары
+// редки и мгновенны, а слотов шесть — держать под них место в КАЖДОЙ записи
+// игрока дороже и всё равно не передаёт больше одного удара за такт.
+//
+// 4 байта: источник (uint16, старший бит — турель это или игрок), индекс оружия,
+// угол. При восьмерых с шестью стволами это ~1 КБ/с в самой густой свалке.
+const SWING_HEADER = 4;
+const SWING_ITEM = 4;
+const SWING_TURRET_BIT = 0x8000;
+
+export function createSwingCodec(config) {
+  const max = config.net.max_swings_per_snapshot;
+  const buf = new ArrayBuffer(SWING_HEADER + max * SWING_ITEM);
+  const view = new DataView(buf);
+  const decoded = { count: 0, items: [] };
+  for (let i = 0; i < max; i++) {
+    decoded.items.push({ kind: 0, idx: 0, weapon: 0, angle: 0 });
+  }
+
+  function encode(list, n, weaponIndex) {
+    view.setUint8(0, MSG_SWING);
+    const count = Math.min(n, max);
+    view.setUint16(1, count);
+    let o = SWING_HEADER;
+    for (let i = 0; i < count; i++) {
+      const s = list[i];
+      view.setUint16(o, (s.idx & 0x7fff) | (s.kind ? SWING_TURRET_BIT : 0));
+      view.setUint8(o + 2, weaponIndex.toIdx[s.weapon] & 0xff);
+      // Угол в uint8: шаг 1.4°, для замаха избыточно точно
+      view.setUint8(o + 3, Math.round(normAngle(s.angle) / TAU * 255) & 0xff);
+      o += SWING_ITEM;
+    }
+    return new Uint8Array(buf, 0, o);
+  }
+
+  function decode(data) {
+    const v = data instanceof DataView ? data : new DataView(toBuffer(data));
+    if (v.getUint8(0) !== MSG_SWING) return null;
+    const count = Math.min(v.getUint16(1), max);
+    let o = SWING_HEADER;
+    for (let i = 0; i < count; i++) {
+      const s = decoded.items[i];
+      const src = v.getUint16(o);
+      s.kind = (src & SWING_TURRET_BIT) !== 0 ? 1 : 0;
+      s.idx = src & 0x7fff;
+      s.weapon = v.getUint8(o + 2);
+      s.angle = (v.getUint8(o + 3) / 255) * TAU;
+      o += SWING_ITEM;
+    }
+    decoded.count = count;
+    return decoded;
+  }
+
+  return { encode, decode, maxBytes: buf.byteLength };
+}
+
+// --- Прах на полу, хост → клиент -------------------------------------------
+// Отдельный канал со своей частотой: прах стоит на месте, пока его не потянул
+// магнит, и гнать его наравне с врагами незачем. До этого канала не было вовсе —
+// у кооп-клиента пол был пуст, и деньги «не выпадали» (жалоба №2 по коопу).
+//
+// 7 байт: uid (uint16), позиция int16 ×2 и «величина кучки» (uint8) — последняя
+// задаёт только размер спрайта, сумма клиенту не нужна: прах считает хост.
+//
+// uid обязателен ровно по той же причине, что и у врагов. Кучки отбираются по
+// радиусу видимости КОНКРЕТНОГО клиента и едут в порядке пула, который
+// перетасовывается при каждом подборе (swap-remove). Без опознавателя клиент
+// сопоставлял их по номеру записи, и запись i от пакета к пакету означала разные
+// кучки — на экране это выглядело как прах, скачущий по всей карте.
+const PICKUP_HEADER = 4;
+const PICKUP_ITEM = 7;
+
+export function createPickupCodec(config) {
+  const max = config.net.max_pickups_per_snapshot;
+  const buf = new ArrayBuffer(PICKUP_HEADER + max * PICKUP_ITEM);
+  const view = new DataView(buf);
+  const decoded = { count: 0, items: [] };
+  for (let i = 0; i < max; i++) decoded.items.push({ uid: 0, x: 0, y: 0, tier: 0 });
+
+  // Ближайшие к зрителю: за экраном прах всё равно не виден, а лимит записи мал
+  const order = new Int32Array(config.sim.max_pickups);
+  const dist = new Float64Array(config.sim.max_pickups);
+
+  function encode(pool, viewX, viewY, tierOf) {
+    view.setUint8(0, MSG_PICKUP);
+    const r = config.net.view_radius;
+    const r2 = r * r;
+    let n = 0;
+    for (let i = 0; i < pool.count; i++) {
+      const p = pool.items[i];
+      const dx = p.x - viewX;
+      const dy = p.y - viewY;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > r2) continue;
+      order[n] = i;
+      dist[n] = d2;
+      n++;
+    }
+    if (n > max) {
+      partialSortByDist(order, dist, n, max);
+      n = max;
+    }
+    view.setUint16(1, n);
+    let o = PICKUP_HEADER;
+    for (let k = 0; k < n; k++) {
+      const p = pool.items[order[k]];
+      view.setUint16(o, p.uid & 0xffff);
+      view.setInt16(o + 2, clampI16(p.x));
+      view.setInt16(o + 4, clampI16(p.y));
+      view.setUint8(o + 6, tierOf ? tierOf(p) : 0);
+      o += PICKUP_ITEM;
+    }
+    return new Uint8Array(buf, 0, o);
+  }
+
+  function decode(data) {
+    const v = data instanceof DataView ? data : new DataView(toBuffer(data));
+    if (v.getUint8(0) !== MSG_PICKUP) return null;
+    const count = Math.min(v.getUint16(1), max);
+    let o = PICKUP_HEADER;
+    for (let i = 0; i < count; i++) {
+      const p = decoded.items[i];
+      p.uid = v.getUint16(o);
+      p.x = v.getInt16(o + 2);
+      p.y = v.getInt16(o + 4);
+      p.tier = v.getUint8(o + 6);
+      o += PICKUP_ITEM;
+    }
+    decoded.count = count;
+    return decoded;
+  }
+
+  return { encode, decode, maxBytes: buf.byteLength };
+}
+
+// --- Расстановка турелей, хост → клиент ------------------------------------
+// Инженерия ставит копии оружия в случайные точки арены (sim/turret.js). Точки
+// выводятся из rng ЗАБЕГА, и повторить их у клиента нельзя: он не крутит
+// симуляцию и не знает, сколько раз генератор дёрнули. Поэтому список едет
+// целиком — но только когда он изменился (старт волны, покупка), а не в каждом
+// снапшоте: турели неподвижны.
+//
+// 6 байт на установку: позиция int16 ×2, индекс оружия, номер хозяина.
+const TURRET_HEADER = 4;
+const TURRET_ITEM = 6;
+
+export function createTurretCodec(config) {
+  const max = config.engineering.max_turrets;
+  const buf = new ArrayBuffer(TURRET_HEADER + max * TURRET_ITEM);
+  const view = new DataView(buf);
+  const decoded = { count: 0, items: [] };
+  for (let i = 0; i < max; i++) {
+    decoded.items.push({ x: 0, y: 0, weapon: 0, owner: 0 });
+  }
+
+  function encode(pool, weaponIndex) {
+    view.setUint8(0, MSG_TURRET);
+    const count = Math.min(pool.count, max);
+    view.setUint16(1, count);
+    let o = TURRET_HEADER;
+    for (let i = 0; i < count; i++) {
+      const t = pool.items[i];
+      view.setInt16(o, clampI16(t.x));
+      view.setInt16(o + 2, clampI16(t.y));
+      view.setUint8(o + 4, weaponIndex.toIdx[t.weaponId] & 0xff);
+      view.setUint8(o + 5, t.ownerIdx & 0xff);
+      o += TURRET_ITEM;
+    }
+    return new Uint8Array(buf, 0, o);
+  }
+
+  function decode(data) {
+    const v = data instanceof DataView ? data : new DataView(toBuffer(data));
+    if (v.getUint8(0) !== MSG_TURRET) return null;
+    const count = Math.min(v.getUint16(1), max);
+    let o = TURRET_HEADER;
+    for (let i = 0; i < count; i++) {
+      const t = decoded.items[i];
+      t.x = v.getInt16(o);
+      t.y = v.getInt16(o + 2);
+      t.weapon = v.getUint8(o + 4);
+      t.owner = v.getUint8(o + 5);
+      o += TURRET_ITEM;
     }
     decoded.count = count;
     return decoded;

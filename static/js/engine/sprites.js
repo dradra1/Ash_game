@@ -113,6 +113,57 @@ export function sheetFrame(width, height, dir, frame, out) {
 
 const frameRect = { sx: 0, sy: 0, side: 0, frames: 0 };
 
+// Перекрашенная копия листа: враг, готовящий рывок, заливается цветом поверх
+// собственного спрайта. `filter` и `shadowBlur` в кадре запрещены (CLAUDE.md §4),
+// поэтому силуэт печётся ОДИН раз на пару (текстура, цвет) в offscreen-холст, а
+// в кадре остаётся обычный drawImage — ровно та же цена, что у самого спрайта.
+const tintCache = new Map();
+
+export function getTinted(textureId, color) {
+  const key = textureId + '|' + color;
+  const hit = tintCache.get(key);
+  if (hit !== undefined) return hit;
+  const s = getSprite(textureId);
+  if (!s || !s.ready || s.failed) return null;      // ещё грузится — не кэшируем
+  const doc = globalThis.document;
+  if (!doc || !doc.createElement) {
+    tintCache.set(key, null);
+    return null;
+  }
+  const c = doc.createElement('canvas');
+  c.width = s.img.width;
+  c.height = s.img.height;
+  const g = c.getContext('2d');
+  if (!g) {
+    tintCache.set(key, null);
+    return null;
+  }
+  g.imageSmoothingEnabled = false;
+  g.drawImage(s.img, 0, 0);
+  // source-in оставляет заливку только там, где у спрайта есть пиксели:
+  // получается силуэт нужного цвета с исходной альфой.
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  tintCache.set(key, c);
+  return c;
+}
+
+// Кадр листа, залитый цветом, поверх уже нарисованного спрайта.
+export function drawSheetTint(ctx, textureId, color, alpha, dir, frame, x, y, size) {
+  const tint = getTinted(textureId, color);
+  if (!tint) return false;
+  const r = sheetFrame(tint.width, tint.height, dir, frame, frameRect);
+  if (!r) return false;
+  const half = size / 2;
+  const prev = ctx.globalAlpha;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(tint, r.sx, r.sy, r.side, r.side,
+    Math.round(x - half), Math.round(y - half), size, size);
+  ctx.globalAlpha = prev;
+  return true;
+}
+
 export function drawSheet(ctx, textureId, dir, frame, x, y, size) {
   const s = getSprite(textureId);
   if (!s || !s.ready || s.failed) return false;

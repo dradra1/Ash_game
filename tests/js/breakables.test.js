@@ -160,6 +160,14 @@ function breakOne(run, kind, limitSec) {
     }
     p.x = target.x - 8;
     p.y = target.y;
+    // При включённой инженерии бьёт не игрок, а его установки, и стоят они
+    // в случайных точках арены. Подтаскиваем их к объекту — иначе тест мерил бы
+    // не награду за разбитое, а везение расстановки.
+    for (let k = 0; k < run.turretPool.count; k++) {
+      const t = run.turretPool.items[k];
+      t.x = target.x + 8;
+      t.y = target.y;
+    }
     run.step(DT);
   }
   return target.alive ? null : target;

@@ -1,5 +1,5 @@
 {
-  "content_version": 43,
+  "content_version": 53,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -19,17 +19,28 @@
     "pickup_radius": 6
   },
   "net": {
-    "snapshot_hz": 20,
+    "snapshot_hz": 30,
     "input_hz": 60,
     "view_radius": 900,
     "max_entities_per_snapshot": 120,
     "teleport_threshold": 96,
-    "protocol_version": 1,
+    "protocol_version": 2,
     "reconnect_grace_sec": 30,
     "room_ttl_min": 30,
     "room_code_len": 6,
     "room_code_alphabet": "ACDEFGHJKLMNPQRTUVWXY3479",
-    "traffic_budget_kbs": 30
+    "traffic_budget_kbs": 60,
+    "input_queue_len": 8,
+    "input_catchup_max": 3,
+    "interp_delay_ms": 60,
+    "interp_max_extrapolate_ms": 120,
+    "pickup_hz": 10,
+    "max_pickups_per_snapshot": 64,
+    "smooth_time": 0.1,
+    "predict_history_frames": 256,
+    "reconcile_deadzone_px": 0.75,
+    "interp_samples": 4,
+    "max_swings_per_snapshot": 128
   },
   "coop": {
     "max_players": 8,
@@ -43,7 +54,17 @@
     "levelup_pauses": true,
     "gift_enabled": true,
     "levelup_timer": 90,
-    "ash_share_target": 1.0
+    "ash_share_target": 1.0,
+    "kill_scale": [
+      1.0,
+      1.71,
+      2.41,
+      3.08,
+      3.72,
+      4.36,
+      5.02,
+      5.52
+    ]
   },
   "render": {
     "sprite_default": 48,
@@ -95,7 +116,20 @@
     "projectile_scale": 3.2,
     "weapon_rest_dist": 0.55,
     "weapon_rest_spread": 0.42,
-    "ash_texture": "pk_ash"
+    "ash_texture": "pk_ash",
+    "weapon_flash_time": 0.08,
+    "weapon_swing_default": 0.22,
+    "projectile_size_default": 4,
+    "projectile_spin_rate": 14,
+    "ash_big_amount": 12,
+    "ash_size_big": 22,
+    "turret_size": 30,
+    "turret_ring": true,
+    "turret_ring_radius": 11,
+    "turret_ring_width": 2,
+    "telegraph_color": "#e03a2a",
+    "telegraph_alpha": 0.72,
+    "telegraph_pulse_hz": 4
   },
   "arena": {
     "size": [
@@ -6675,6 +6709,39 @@
       "elite": true,
       "of": "e_hatcher",
       "knockback_resist": 0.7
+    },
+    "e_lunger": {
+      "name": "Багровый рвач",
+      "texture": "e_lunger",
+      "color": "#a33a34",
+      "ai": "charger",
+      "hp": 34,
+      "damage": 8,
+      "speed": 58,
+      "size": 16,
+      "sprite": 48,
+      "ash": 5,
+      "xp": 5,
+      "score": 9,
+      "arenas": [
+        "ar_hive",
+        "ar_ash",
+        "ar_tomb"
+      ],
+      "min_wave": 9,
+      "max_wave": 20,
+      "weight": 5,
+      "knockback_resist": 0.35,
+      "charge": {
+        "range": 260,
+        "windup": 2.0,
+        "lead": 1.0,
+        "speed": 620,
+        "duration": 0.45,
+        "recover": 0.7,
+        "cooldown": 3.0,
+        "damage_mult": 2.0
+      }
     }
   },
   "bosses": {
@@ -6926,7 +6993,8 @@
         "e_hiverat",
         "e_zealot",
         "e_bomber",
-        "e_censerbearer"
+        "e_censerbearer",
+        "e_lunger"
       ],
       "elite_pool": [
         "el_butcherling",
@@ -7033,7 +7101,8 @@
         "e_slinger",
         "e_ashhound",
         "e_chainganger",
-        "e_scrapthrower"
+        "e_scrapthrower",
+        "e_lunger"
       ],
       "elite_pool": [
         "el_warboss",
@@ -7140,7 +7209,8 @@
         "e_drone",
         "e_swarmlet",
         "e_warden",
-        "e_hatcher"
+        "e_hatcher",
+        "e_lunger"
       ],
       "elite_pool": [
         "el_ironwarden",
@@ -7459,8 +7529,6 @@
       "ui.hud.wave": "Волна",
       "ui.hud.level": "Уровень",
       "ui.hud.ash": "Прах",
-      "ui.hud.pot": "Котёл",
-      "ui.hud.share": "Твоя доля",
       "ui.hud.dead": "выбыл",
       "ui.shop.title": "Лавка",
       "ui.shop.reroll": "Реролл",
@@ -7575,7 +7643,42 @@
       "ui.select.relic_mult": "реликвии",
       "ui.meta.arena_enemies": "Врагов в пуле",
       "ui.cheat.relics": "+1000 реликвий",
-      "ui.error.cheat_relics": "Реликвии не начислились"
+      "ui.error.cheat_relics": "Реликвии не начислились",
+      "ui.city.title": "Город",
+      "ui.city.tavern": "Таверна",
+      "ui.city.tavern_hint": "Фракции и персонажи",
+      "ui.city.forge": "Оружейная",
+      "ui.city.forge_hint": "Оружие и снаряжение",
+      "ui.city.chapel": "Часовня",
+      "ui.city.chapel_hint": "Постоянные улучшения",
+      "ui.city.crypt": "Крипта",
+      "ui.city.crypt_hint": "Проклятия забега",
+      "ui.city.obelisk": "Обелиск",
+      "ui.city.obelisk_hint": "Ачивки и звания",
+      "ui.city.gate": "Врата",
+      "ui.city.gate_hint": "Отправиться в забег",
+      "ui.city.soon": "Стройка",
+      "ui.city.soon_hint": "Здесь ещё строят. Скоро откроется.",
+      "ui.city.locked": "Закрыто",
+      "ui.city.new": "Новое",
+      "ui.city.waystation": "Путевая палата",
+      "ui.city.waystation_hint": "Арены и земли",
+      "ui.shop.synergies": "Синергии",
+      "ui.synergy.special.melee_sweep": "Веер ударов: +40% дальности и +30% ширины дуги ближнего оружия",
+      "ui.synergy.special.extra_shot": "Дальнее оружие выпускает +1 снаряд за выстрел",
+      "ui.synergy.special.extra_pierce": "Стихийные снаряды пробивают +1 цель",
+      "ui.synergy.special.extra_turret": "Каждый инженерный ствол ставит +1 установку",
+      "ui.tag.precise": "точное",
+      "ui.tag.heavy": "тяжёлое",
+      "ui.tag.spread": "веерное",
+      "ui.tag.gun": "огнестрельное",
+      "ui.tag.blade": "клинковое",
+      "ui.tag.warp": "варповое",
+      "ui.tag.primitive": "примитивное",
+      "ui.tag.construct": "конструкции",
+      "ui.tag.blunt": "дробящее",
+      "ui.tag.holy": "освящённое",
+      "ui.synergy.special.crit_boost": "Критические удары бьют в полтора раза сильнее"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -7594,8 +7697,6 @@
       "ui.hud.wave": "Wave",
       "ui.hud.level": "Level",
       "ui.hud.ash": "Ash",
-      "ui.hud.pot": "Pot",
-      "ui.hud.share": "Your share",
       "ui.hud.dead": "down",
       "ui.shop.title": "Shop",
       "ui.shop.reroll": "Reroll",
@@ -7710,7 +7811,42 @@
       "ui.select.relic_mult": "relics",
       "ui.meta.arena_enemies": "Enemy pool",
       "ui.cheat.relics": "+1000 relics",
-      "ui.error.cheat_relics": "Could not grant relics"
+      "ui.error.cheat_relics": "Could not grant relics",
+      "ui.city.title": "City",
+      "ui.city.tavern": "Tavern",
+      "ui.city.tavern_hint": "Factions and characters",
+      "ui.city.forge": "Armoury",
+      "ui.city.forge_hint": "Weapons and gear",
+      "ui.city.chapel": "Chapel",
+      "ui.city.chapel_hint": "Permanent upgrades",
+      "ui.city.crypt": "Crypt",
+      "ui.city.crypt_hint": "Run curses",
+      "ui.city.obelisk": "Obelisk",
+      "ui.city.obelisk_hint": "Achievements and titles",
+      "ui.city.gate": "Gate",
+      "ui.city.gate_hint": "Set out on a run",
+      "ui.city.soon": "Under construction",
+      "ui.city.soon_hint": "Still being built. Opens soon.",
+      "ui.city.locked": "Locked",
+      "ui.city.new": "New",
+      "ui.city.waystation": "Wayfarer's Hall",
+      "ui.city.waystation_hint": "Arenas and lands",
+      "ui.shop.synergies": "Synergies",
+      "ui.synergy.special.melee_sweep": "Sweeping blows: +40% range and +30% arc width for melee weapons",
+      "ui.synergy.special.extra_shot": "Ranged weapons fire +1 projectile per shot",
+      "ui.synergy.special.extra_pierce": "Elemental projectiles pierce +1 target",
+      "ui.synergy.special.extra_turret": "Each engineering weapon deploys +1 turret",
+      "ui.tag.precise": "precise",
+      "ui.tag.heavy": "heavy",
+      "ui.tag.spread": "spread",
+      "ui.tag.gun": "firearms",
+      "ui.tag.blade": "blades",
+      "ui.tag.warp": "warp",
+      "ui.tag.primitive": "primitive",
+      "ui.tag.construct": "constructs",
+      "ui.tag.blunt": "blunt",
+      "ui.tag.holy": "holy",
+      "ui.synergy.special.crit_boost": "Critical hits deal 50% more damage"
     }
   },
   "admin": {
@@ -7936,6 +8072,361 @@
         "type": "pull",
         "value": 22,
         "radius": 240
+      }
+    }
+  },
+  "engineering": {
+    "enabled": true,
+    "copies": 3,
+    "max_turrets": 264,
+    "place_margin": 96,
+    "place_clear": 20,
+    "place_attempts": 12,
+    "range_mult": 1.0,
+    "damage_mult": 1.0,
+    "classes": [
+      "engi"
+    ]
+  },
+  "city": {
+    "background": "bg_city",
+    "width": 1024,
+    "height": 576,
+    "buildings": [
+      {
+        "id": "wip_a",
+        "texture": "bl_wip_a",
+        "x": 64,
+        "y": 104,
+        "w": 160,
+        "h": 160,
+        "color": "#6b6156",
+        "name": "ui.city.soon",
+        "hint": "ui.city.soon_hint",
+        "action": {
+          "type": "none"
+        }
+      },
+      {
+        "id": "tavern",
+        "texture": "bl_tavern",
+        "texture_locked": "bl_tavern_ruin",
+        "x": 248,
+        "y": 104,
+        "w": 160,
+        "h": 160,
+        "color": "#c8a35a",
+        "name": "ui.city.tavern",
+        "hint": "ui.city.tavern_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "factions",
+            "characters"
+          ]
+        }
+      },
+      {
+        "id": "forge",
+        "texture": "bl_forge",
+        "texture_locked": "bl_forge_ruin",
+        "x": 432,
+        "y": 104,
+        "w": 160,
+        "h": 160,
+        "color": "#d2652a",
+        "name": "ui.city.forge",
+        "hint": "ui.city.forge_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "weapons"
+          ]
+        }
+      },
+      {
+        "id": "chapel",
+        "texture": "bl_chapel",
+        "texture_locked": "bl_chapel_ruin",
+        "x": 616,
+        "y": 104,
+        "w": 160,
+        "h": 160,
+        "color": "#7fb0c8",
+        "name": "ui.city.chapel",
+        "hint": "ui.city.chapel_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "upgrades"
+          ]
+        }
+      },
+      {
+        "id": "waystation",
+        "texture": "bl_waystation",
+        "texture_locked": "bl_waystation_ruin",
+        "x": 800,
+        "y": 104,
+        "w": 160,
+        "h": 160,
+        "color": "#5f8f6b",
+        "name": "ui.city.waystation",
+        "hint": "ui.city.waystation_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "arenas"
+          ]
+        }
+      },
+      {
+        "id": "wip_c",
+        "texture": "bl_wip_c",
+        "x": 64,
+        "y": 336,
+        "w": 160,
+        "h": 160,
+        "color": "#6b6156",
+        "name": "ui.city.soon",
+        "hint": "ui.city.soon_hint",
+        "action": {
+          "type": "none"
+        }
+      },
+      {
+        "id": "crypt",
+        "texture": "bl_crypt",
+        "texture_locked": "bl_crypt_ruin",
+        "x": 248,
+        "y": 336,
+        "w": 160,
+        "h": 160,
+        "color": "#8a5bc8",
+        "name": "ui.city.crypt",
+        "hint": "ui.city.crypt_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "curses"
+          ]
+        }
+      },
+      {
+        "id": "gate",
+        "texture": "bl_gate",
+        "x": 432,
+        "y": 336,
+        "w": 160,
+        "h": 160,
+        "color": "#9c2b2b",
+        "name": "ui.city.gate",
+        "hint": "ui.city.gate_hint",
+        "action": {
+          "type": "play"
+        }
+      },
+      {
+        "id": "obelisk",
+        "texture": "bl_obelisk",
+        "texture_locked": "bl_obelisk_ruin",
+        "x": 616,
+        "y": 336,
+        "w": 160,
+        "h": 160,
+        "color": "#b8b0a0",
+        "name": "ui.city.obelisk",
+        "hint": "ui.city.obelisk_hint",
+        "action": {
+          "type": "meta",
+          "tabs": [
+            "achievements"
+          ]
+        }
+      }
+    ]
+  },
+  "synergies": {
+    "enabled": true,
+    "classes": {
+      "melee": {
+        "2": {
+          "melee_dmg": 3
+        },
+        "4": {
+          "attack_speed_pct": 8
+        },
+        "6": {
+          "special": "melee_sweep"
+        }
+      },
+      "ranged": {
+        "2": {
+          "ranged_dmg": 3
+        },
+        "4": {
+          "damage_pct": 6
+        },
+        "6": {
+          "special": "extra_shot"
+        }
+      },
+      "elem": {
+        "2": {
+          "elem_dmg": 4
+        },
+        "4": {
+          "crit_pct": 10
+        },
+        "6": {
+          "special": "extra_pierce"
+        }
+      },
+      "engi": {
+        "2": {
+          "engineering": 4
+        },
+        "4": {
+          "engineering": 8
+        },
+        "6": {
+          "special": "extra_turret"
+        }
+      }
+    },
+    "specials": {
+      "melee_sweep": {
+        "range_mult": 1.4,
+        "arc_mult": 1.3
+      },
+      "extra_shot": {
+        "shots": 1
+      },
+      "extra_pierce": {
+        "pierce": 1
+      },
+      "extra_turret": {
+        "turrets": 1
+      },
+      "crit_boost": {
+        "mult": 1.5
+      }
+    },
+    "tags": {
+      "precise": {
+        "2": {
+          "crit_pct": 5
+        },
+        "4": {
+          "crit_pct": 10
+        },
+        "6": {
+          "special": "crit_boost"
+        }
+      },
+      "heavy": {
+        "2": {
+          "knockback": 6
+        },
+        "4": {
+          "damage_pct": 8
+        },
+        "6": {
+          "damage_pct": 12,
+          "knockback_pct": 50
+        }
+      },
+      "spread": {
+        "2": {
+          "attack_speed_pct": 5
+        },
+        "4": {
+          "range": 10
+        },
+        "6": {
+          "special": "extra_shot"
+        }
+      },
+      "gun": {
+        "2": {
+          "range": 8
+        },
+        "4": {
+          "attack_speed_pct": 8
+        },
+        "6": {
+          "range": 20,
+          "attack_speed_pct": 10
+        }
+      },
+      "blade": {
+        "2": {
+          "attack_speed_pct": 4
+        },
+        "4": {
+          "dodge_pct": 5
+        },
+        "6": {
+          "special": "melee_sweep"
+        }
+      },
+      "warp": {
+        "2": {
+          "range": 6
+        },
+        "4": {
+          "elem_dmg": 8
+        },
+        "6": {
+          "special": "extra_pierce"
+        }
+      },
+      "primitive": {
+        "2": {
+          "max_hp": 8
+        },
+        "4": {
+          "armor": 4
+        },
+        "6": {
+          "max_hp": 16,
+          "hp_regen": 1
+        }
+      },
+      "construct": {
+        "2": {
+          "engineering": 4
+        },
+        "4": {
+          "engineering": 6
+        },
+        "6": {
+          "special": "extra_turret"
+        }
+      },
+      "blunt": {
+        "2": {
+          "knockback": 5
+        },
+        "4": {
+          "armor": 6
+        },
+        "6": {
+          "knockback_pct": 50,
+          "armor": 8
+        }
+      },
+      "holy": {
+        "2": {
+          "hp_regen": 1
+        },
+        "4": {
+          "lifesteal_pct": 8
+        },
+        "6": {
+          "hp_regen": 2,
+          "lifesteal_pct": 12
+        }
       }
     }
   }

@@ -63,7 +63,7 @@
 main.js          точка входа: конфиг, профиль, роутер экранов
 engine/          loop rng pool grid input sprites render audio
 net/             transport lobby host client protocol
-sim/             run player stats weapon projectile enemy spawn pickup level shop economy
+sim/             run player stats weapon turret projectile enemy spawn pickup level shop economy
 ui/              screens hud shop_ui levelup_ui meta_ui tooltip
 ```
 

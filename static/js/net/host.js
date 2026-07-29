@@ -6,7 +6,8 @@
 
 import { CH } from './transport.js';
 import {
-  createInputCodec, createSnapshotCodec, createSpawnCodec,
+  createInputCodec, createSnapshotCodec, createSpawnCodec, createSwingCodec,
+  createPickupCodec, createTurretCodec,
   buildTypeIndex, buildWeaponIndex, buildProjectileIndex, MSG_EVENT,
 } from './protocol.js';
 import { shopSnapshot, loadoutSnapshot, localAdapter } from '../ui/shop_adapter.js';
@@ -18,14 +19,33 @@ export function createHost(run, transport, config) {
   const weapons = buildWeaponIndex(config);
   const projTex = buildProjectileIndex(config);
   const spawnCodec = createSpawnCodec(config);
+  const swingCodec = createSwingCodec(config);
+  const pickupCodec = createPickupCodec(config);
+  const turretCodec = createTurretCodec(config);
   const period = 1 / config.net.snapshot_hz;
+  const pickupPeriod = 1 / config.net.pickup_hz;
+  // Величина кучки праха задаёт только размер спрайта. Порог — из конфига:
+  // «крупная кучка» это вопрос баланса дропа, а не константа рендера.
+  const bigAsh = config.render.ash_big_amount;
 
-  // Копить события спавна имеет смысл только когда есть кому их слать
+  // Копить события спавна и замахов имеет смысл только когда есть кому их слать
   run.spawns.on = true;
+  run.swings.on = true;
 
   let acc = 0;
+  let pickupAcc = 0;
   let seq = 0;
+  // Своё место в комнате: себе снапшот не шлём. Сервер копию хосту всё равно не
+  // доставлял, а кодирование стоило ровно столько же, сколько для настоящего
+  // клиента, — при восьмерых это восьмая часть всей сетевой работы кадра.
+  const selfIdx = transport.isHost && typeof transport.id === 'number' && transport.id >= 0
+    ? transport.id : -1;
   const stats = { bytesOut: 0, kbs: 0, sent: 0 };
+
+  // Размерный класс кучки праха для рендера у клиента: сумма ему не нужна.
+  function ashTier(p) {
+    return p.amount >= bigAsh ? 1 : 0;
+  }
   let window = 0;
   let windowBytes = 0;
 
@@ -129,7 +149,20 @@ export function createHost(run, transport, config) {
       broadcastLoadouts();
     }
 
+    // Расстановка турелей: редкое сообщение, поэтому уходит сразу и вне такта
+    // снапшота. Оно должно доехать раньше первого замаха турели — иначе клиент
+    // получит пульс от установки, которой у него ещё нет.
+    if (run.engineering && run.turretsDirty) {
+      run.clearTurretsDirty();
+      const packed = turretCodec.encode(run.turretPool, weapons);
+      const copy = packed.slice();
+      transport.send(CH.SNAPSHOT, copy);
+      stats.bytesOut += copy.byteLength;
+      windowBytes += copy.byteLength;
+    }
+
     acc += dt;
+    pickupAcc += dt;
     window += dt;
     if (acc < period) return;
     acc -= period;
@@ -138,7 +171,10 @@ export function createHost(run, transport, config) {
     const players = run.state.players;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
-      const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx, weapons);
+      // Хосту снапшот не нужен: он и есть источник истины, а сервер его копию
+      // всё равно выбрасывал. При восьмерых это восьмая часть исходящего.
+      if (i === selfIdx) continue;
+      const packed = snapCodec.encode(run, p.x, p.y, seq, types.toIdx);
       const copy = packed.slice();
       // Адресно: снапшот собран под радиус видимости именно этого игрока
       transport.send(CH.SNAPSHOT, copy, i);
@@ -158,6 +194,32 @@ export function createHost(run, transport, config) {
       spawns.count = 0;
     }
 
+    // Замахи: то же самое для ударов, которые не рождают снаряда
+    const swings = run.swings;
+    if (swings.count > 0) {
+      const packed = swingCodec.encode(swings.items, swings.count, weapons);
+      const copy = packed.slice();
+      transport.send(CH.SNAPSHOT, copy);
+      stats.bytesOut += copy.byteLength;
+      windowBytes += copy.byteLength;
+      swings.count = 0;
+    }
+
+    // Прах: своя частота (net.pickup_hz) и свой отбор по радиусу видимости.
+    // Куча на полу почти не движется, гнать её наравне с врагами незачем.
+    if (pickupAcc >= pickupPeriod) {
+      pickupAcc = 0;
+      for (let i = 0; i < players.length; i++) {
+        if (i === selfIdx) continue;
+        const p = players[i];
+        const packed = pickupCodec.encode(run.pickupPool, p.x, p.y, ashTier);
+        const copy = packed.slice();
+        transport.send(CH.SNAPSHOT, copy, i);
+        stats.bytesOut += copy.byteLength;
+        windowBytes += copy.byteLength;
+      }
+    }
+
     const events = run.events;
     if (events.length > 0) {
       transport.send(CH.EVENT, { t: MSG_EVENT, list: events.slice() });
@@ -173,6 +235,7 @@ export function createHost(run, transport, config) {
 
   function close() {
     run.spawns.on = false;
+    run.swings.on = false;
     transport.off(CH.INPUT, onInput);
     transport.off(CH.EVENT, onClientEvent);
   }

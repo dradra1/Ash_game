@@ -12,11 +12,12 @@ import { makeEnemy, resetEnemy, stepEnemies, initEnemy, updatePhase, enemyCfg } 
 import { makeProjectile, resetProjectile, stepProjectiles } from './projectile.js';
 import { makePickup, resetPickup, dropAsh, stepPickups } from './pickup.js';
 import { stepWeapons } from './weapon.js';
+import { makeTurret, resetTurret, createTurretYard } from './turret.js';
 import { createSpawner, spawnPoint } from './spawn.js';
 import { createShop } from './shop.js';
 import { createEconomy, createWallet } from './economy.js';
 import { createLevelUp } from './level.js';
-import { buildArenaLayout, createPropIndex, separateFromProps } from './arena.js';
+import { buildArenaLayout, createPropIndex, separateFromProps, hashId } from './arena.js';
 import { resolveCurseFx, curseStatMods, applyCurseToDanger } from './curses.js';
 
 export const PHASE_INTRO = 'intro';
@@ -97,6 +98,18 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   const enemyPool = createPool(config.sim.max_enemies_cap, makeEnemy, resetEnemy);
   const projPool = createPool(config.sim.max_projectiles, makeProjectile, resetProjectile);
   const pickupPool = createPool(config.sim.max_pickups, makePickup, resetPickup);
+  // Инженерия: оружие в руках молчит, стреляют его копии на арене (sim/turret.js).
+  // Ручка в конфиге, а не в коде: включать и выключать механику целиком — это
+  // решение баланса, а число копий вообще задаётся на само оружие.
+  const engineering = !!(config.engineering && config.engineering.enabled);
+  const turretPool = createPool(config.engineering.max_turrets, makeTurret, resetTurret);
+  const yard = createTurretYard(config, turretPool);
+  // Свой поток случайности от того же сида — ровно как у раскладки арены.
+  // Тянуть точки установки из rng ЗАБЕГА нельзя: число попыток найти чистое
+  // место зависит от завалов, то есть от арены, и общий поток начал бы зависеть
+  // от карты. Тогда один и тот же сид давал бы разный бой на разных аренах, а
+  // сервер валидирует результат именно по сиду.
+  const turretRng = createRng((seed ^ hashId('turret_yard')) >>> 0);
 
   // Сетка покрывает арену с запасом на зону спавна за её краями
   const margin = config.arena.spawn_margin * 2;
@@ -149,6 +162,27 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     s.x = p.x; s.y = p.y; s.vx = p.vx; s.vy = p.vy;
     s.ttl = p.ttl; s.size = p.size; s.texture = p.texture; s.hostile = p.hostile;
   }
+
+  // Очередь замахов на рассылку. Дуговой удар не рождает снаряда, и без этого
+  // события кооп-клиент видит немой бой (см. MSG_SWING в net/protocol.js).
+  // Копим на 60 Гц, хост выгребает на частоте снапшота.
+  const swings = { on: false, count: 0, items: [] };
+  for (let i = 0; i < config.net.max_swings_per_snapshot; i++) {
+    swings.items.push({ kind: 0, idx: 0, weapon: null, angle: 0 });
+  }
+
+  function noteSwing(kind, idx, weaponId, angle) {
+    if (!swings.on || swings.count >= swings.items.length) return;
+    const s = swings.items[swings.count++];
+    s.kind = kind;
+    s.idx = idx;
+    s.weapon = weaponId;
+    s.angle = angle;
+  }
+
+  // Расстановка турелей изменилась — хост разошлёт новый список. Флаг снимает
+  // net/host.js: симуляция про сеть не знает и сама ничего не шлёт.
+  let turretsDirty = engineering;
 
   function pushEvent(type, a, b) {
     if (events.length < MAX_EVENTS) events.push({ type, a, b });
@@ -224,13 +258,22 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
         // Пикапа нет вовсе. Опыт от этого не страдает: он начисляется ниже
         // напрямую каждому игроку, поле xp у пикапа при подборе не читается.
       } else {
-        // Множитель дропа компенсирует деление котла на число игроков,
-        // wave_ash_mult приводит кривую дохода к целевой (см. patch_config_income).
-        const ashAmount = e.ash * economy.dropMultiplier()
-          * dangerCfg.ash_mult * curseFx.ash_drop_mult * economy.waveMult(state.wave);
-        const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
-        // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
-        if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+        // В коопе прах падает НЕ С КАЖДОГО врага: комната убивает кратно больше
+        // одиночки, и компенсировать это надо частотой дропа, а не размером кучки
+        // (см. dropChance в sim/economy.js). Соло chance = 1, и жребий там даже не
+        // бросается — иначе поток rng забега поехал бы на ровном месте, а сервер
+        // валидирует результат по сиду.
+        const chance = economy.dropChance();
+        if (chance >= 1 || rng.float() < chance) {
+          // wave_ash_mult приводит кривую дохода к целевой (см. patch_config_income)
+          const ashAmount = e.ash * economy.dropAmount()
+            * dangerCfg.ash_mult * curseFx.ash_drop_mult * economy.waveMult(state.wave);
+          const drop = dropAsh(pickupPool, e.x, e.y, ashAmount, xpAmount, config);
+          // Враг мог умереть впритык к завалу: прах внутри препятствия недостижим
+          if (drop) separateFromProps(drop, config.sim.pickup_radius || 0, propIndex, null);
+        }
+        // Пропущенный дроп не крадёт опыт: он начисляется ниже напрямую каждому
+        // игроку, поле xp у пикапа при подборе не читается.
       }
       // Опыт в коопе НЕ делится: каждый получает полный XP со всех убийств
       for (let i = 0; i < state.players.length; i++) {
@@ -287,6 +330,27 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     noteSpawn(p);
   }
 
+  // Досбор в конце фазы collect: всё, что магнит не успел дотянуть, уходит в
+  // котёл, а не остаётся лежать до следующей волны.
+  //
+  // Раньше остаток просто лежал, и это работало, пока прах падал под ногами
+  // игрока. С инженерией враги гибнут у установок, разбросанных по всей арене:
+  // магнит (≈860 px за 1.2 с) физически не дотягивается до дальнего края, и
+  // доход превращался в лотерею — соло собирал меньше кооп-комнаты просто
+  // потому, что восьмерых больше и они стоят в разных местах. Кооп оказывался
+  // вдвое богаче соло на голову, а этого быть не должно (tools/coop_income.js).
+  //
+  // Досбор не «дарит» ничего: этот прах уже начислен на пол за убийства, и
+  // забрать его игрок был обязан по правилам волны.
+  function sweepPickups() {
+    for (let i = pickupPool.count - 1; i >= 0; i--) {
+      const p = pickupPool.items[i];
+      if (p.amount > 0) onCollect(null, p.amount, p.xp);
+      resetPickup(p);
+      pickupPool.release(i);
+    }
+  }
+
   function onCollect(player, amount, xp) {
     // Прах идёт в ОБЩИЙ котёл комнаты, а не в карман поднявшего.
     economy.add(amount);
@@ -300,8 +364,15 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   };
   const weaponDeps = {
     config, rng, enemyPool, enemyGrid: shifted, queryBuf, projPool, damageEnemy,
-    noteSpawn,
+    noteSpawn, noteSwing,
   };
+  // Установки бьют тем же шагом слота, но со своими множителями дальности и
+  // урона. Object.create, а не копия: поля weaponDeps должны оставаться живыми
+  // ссылками, иначе правка одного из них молча разъедет два пути стрельбы.
+  const turretDeps = Object.create(weaponDeps);
+  turretDeps.rangeMult = config.engineering.range_mult;
+  turretDeps.damageMult = config.engineering.damage_mult;
+
   const projDeps = {
     config, players: state.players, enemyPool, enemyGrid: shifted, queryBuf,
     maxEnemySize, damageEnemy, hitPlayer, arenaW, arenaH,
@@ -319,14 +390,57 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     return null;
   }
 
+  // Ввод приходит двумя разными путями, и разница между ними не в режиме игры,
+  // а в транспорте — отдельного «одиночного режима» не существует (CLAUDE.md §2).
+  //
+  // Без номера пакета — локальный путь: main.js у хоста и в соло кладёт {id,x,y}
+  // напрямую. Задержки нет, сам с собой хост не сверяется, а игровой цикл может
+  // прокрутить до sim.max_catchup_steps шагов за кадр — очередь он бы просто
+  // выел. Поэтому здесь по-прежнему защёлка.
+  //
+  // С номером — сетевой путь из net/host.js. Здесь защёлка недопустима: она и
+  // давала «резину» (см. комментарий к inQ в sim/player.js). Пакет становится в
+  // очередь, а подтверждает его stepPlayers, когда действительно проинтегрирует.
   function applyInput(playerId, input) {
     const p = findPlayer(playerId);
-    if (!p || !p.alive || !input) return;
-    p.input.x = input.x || 0;
-    p.input.y = input.y || 0;
-    // Номер последнего учтённого ввода уезжает обратно в снапшоте: по нему клиент
-    // измеряет настоящую ошибку своего предсказания, а не тянется к устаревшей позиции.
-    if (input.seq !== undefined) p.lastInputSeq = input.seq;
+    if (!p || !input) return;
+
+    if (input.seq === undefined) {
+      if (!p.alive) return;
+      p.input.x = input.x || 0;
+      p.input.y = input.y || 0;
+      return;
+    }
+
+    // Мёртвого тоже ставим в очередь: иначе ack замирает, и у клиента бесконечно
+    // растёт список неподтверждённого ввода для переигровки.
+    const q = p.inQ;
+    const seq = input.seq & 0xffff;
+    // Дубликат или опоздавший: 16-битные номера заворачиваются, обычным «>» их
+    // сравнивать нельзя.
+    if (q.lastSeq >= 0 && !seqNewer(seq, q.lastSeq)) return;
+    q.lastSeq = seq;
+
+    const n = q.x.length;
+    if (q.count === n) {
+      // Переполнение — выбрасываем САМОЕ СТАРОЕ. Под затяжной перегрузкой важнее
+      // не отстать от игрока: копить очередь и проигрывать её — это добавленная
+      // задержка управления, а не сглаживание.
+      q.head = (q.head + 1) % n;
+      q.count--;
+    }
+    q.x[q.tail] = quantizeInput(input.x);
+    q.y[q.tail] = quantizeInput(input.y);
+    q.seq[q.tail] = seq;
+    q.tail = (q.tail + 1) % n;
+    q.count++;
+  }
+
+  // Тем же округлением, что в кодеке ввода (net/protocol.js): хост обязан
+  // интегрировать ровно то число, которым клиент предсказывал.
+  function quantizeInput(v) {
+    const r = Math.round((v || 0) * 127);
+    return r < -127 ? -127 : r > 127 ? 127 : r;
   }
 
   transport.on(CH.INPUT, (payload, fromId) => {
@@ -402,6 +516,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     healEveryone();
     payTithe();
     spawnBreakables();
+    deployTurrets();
     spawner.reset();
     spawnDeps.wave = n;
     state.bossUid = -1;
@@ -471,6 +586,24 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     }
   }
 
+  // Турели встают заново каждую волну на новых случайных точках: по ТЗ инженерия
+  // разворачивает копии оружия «где-то на арене», и держаться за прежние места от
+  // волны к волне превратило бы их в стационарную базу, которую игрок один раз
+  // обошёл и забыл.
+  function deployTurrets() {
+    if (!engineering) return;
+    yard.deployAll(state.players, turretRng, arenaW, arenaH, propIndex);
+    turretsDirty = true;
+  }
+
+  // Догнать смену экипировки (покупка, продажа, апгрейд тира, чит). Отдельного
+  // хука на каждый путь нет намеренно: сверка подписи слотов на восьмерых стоит
+  // меньше, чем шанс забыть один из путей и оставить игрока без турелей.
+  function syncTurrets() {
+    if (!engineering) return;
+    if (yard.sync(state.players, turretRng, arenaW, arenaH, propIndex)) turretsDirty = true;
+  }
+
   // Награда за разбитый объект. Достаётся тому, кто его добил: иначе в коопе
   // выгоднее было бы не трогать бочки, а ждать, пока их разобьёт сосед.
   function applyBreakableReward(e, owner) {
@@ -517,6 +650,8 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     state.phaseTime = 0;
     state.paused = false;
     clearEnemies();
+    yard.reset();
+    turretsDirty = true;
     pushEvent('run_over', win ? 1 : 0, {
       wave: state.wave, kills: state.kills, score: state.score,
       time: state.time, bosses: state.bosses, win: !!win,
@@ -670,6 +805,8 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     state.time += dt;
     state.phaseTime -= dt;
 
+    syncTurrets();
+
     // Сетка врагов пересобирается раз в кадр — все запросы соседей идут через неё
     enemyGrid.clear();
     for (let i = 0; i < enemyPool.count; i++) {
@@ -691,6 +828,12 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       for (let i = 0; i < state.players.length; i++) {
         const p = state.players[i];
         if (p.alive) stepWeapons(p, dt, weaponDeps);
+      }
+      if (engineering) {
+        // Турели бьют независимо от того, жив ли хозяин: это постройки, а не он
+        // сам. Иначе выбывший игрок мгновенно снимал бы с арены свои три копии
+        // каждого оружия — а именно они и есть весь его вклад в бой.
+        yard.step(dt, turretDeps, state.players);
       }
     } else if (state.phase === PHASE_COLLECT) {
       stepEnemies(enemyPool, dt, enemyDeps);
@@ -753,6 +896,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
         state.phaseTime = config.run.wave_end_collect_sec;
         pushEvent('wave_end', state.wave);
       } else if (state.phase === PHASE_COLLECT) {
+        sweepPickups();
         if (state.wave >= config.run.waves) endRun(true);
         else if (anyonePending()) openLevelUp();
         else openShop();
@@ -776,12 +920,14 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   // Из-за этого пересчёт статов после наложения проклятий (см. выше) попадал сюда,
   // натыкался на ещё не инициализированный `stats` и валил создание забега — то
   // есть игра с выбранными проклятиями не запускалась вовсе.
-  const stats = { entities: 0, enemies: 0, projectiles: 0, pickups: 0 };
+  const stats = { entities: 0, enemies: 0, projectiles: 0, pickups: 0, turrets: 0 };
   function refreshRunStats() {
     stats.enemies = enemyPool.count;
     stats.projectiles = projPool.count;
     stats.pickups = pickupPool.count;
-    stats.entities = enemyPool.count + projPool.count + pickupPool.count + state.players.length;
+    stats.turrets = turretPool.count;
+    stats.entities = enemyPool.count + projPool.count + pickupPool.count
+      + turretPool.count + state.players.length;
     return stats;
   }
 
@@ -842,15 +988,19 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
   // персонаж со стартовым статом (Падальщик) иначе пропустил бы первую выплату.
   payTithe();
   spawnBreakables();
+  deployTurrets();
 
   return {
     state, step, applyInput, snapshot, stats, refreshStats: refreshRunStats, events, spawns,
-    enemyPool, projPool, pickupPool, rng,
+    enemyPool, projPool, pickupPool, turretPool, rng, swings, engineering,
     startWave, endRun, openShop, openLevelUp, readyUp, shopFor, levelUp, coop,
     economy, wallet, syncAsh, setPaused, applyLevelPick, choicesFor, anyonePending,
     noteShopBuy, curseFx,
     cheatAddAsh, cheatLevelUp, cheatGodMode, cheatKillAll, cheatSkipWave,
     danger: dangerCfg, arenaW, arenaH, layout, propIndex,
+    // Флаг «расстановка изменилась» для net/host.js: симуляция сама не шлёт
+    get turretsDirty() { return turretsDirty; },
+    clearTurretsDirty() { turretsDirty = false; },
   };
 }
 
@@ -870,6 +1020,13 @@ export function waveLength(config, wave, curseFx) {
 function firstKey(obj) {
   for (const k in obj) return k;
   return null;
+}
+
+// Номера ввода 16-битные и заворачиваются: сравнивать их обычным «>» нельзя.
+// Копия такой же функции из net/client.js — сеть импортировать в sim/ незачем,
+// зависимость должна идти только в обратную сторону.
+function seqNewer(a, b) {
+  return a !== b && ((a - b) & 0xffff) < 0x8000;
 }
 
 const MAX_EVENTS = 64;

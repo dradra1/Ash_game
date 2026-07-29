@@ -1,5 +1,6 @@
-// Реликварий: счётчик реликвий, дерево фракций, карточки персонажей,
-// стеллаж оружия, постоянные улучшения, прогресс ачивок.
+// Разделы меты: счётчик реликвий, дерево фракций, карточки персонажей,
+// стеллаж оружия, постоянные улучшения, прогресс ачивок. Отдельной точки
+// входа у экрана нет — его открывают здания города на конкретных вкладках.
 //
 // Экран только ОТОБРАЖАЕТ то, что разрешил сервер: цена, баланс и сама покупка
 // проверяются в /api/meta/unlock. Здесь ничего не начисляется.
@@ -41,6 +42,9 @@ export function createMetaUi(root, config, t, api) {
   let tab = 'factions';
   let profile = null;
   let onBack = null;
+  // Список вкладок от здания города: задан — показываем только их, null —
+  // все подряд (старое поведение для существующих вызовов)
+  let onlyTabs = null;
   let busy = false;
 
   function owns(kind, id) {
@@ -276,18 +280,29 @@ export function createMetaUi(root, config, t, api) {
     }
   }
 
+  function labelOf(key) {
+    for (const [k, label] of TABS) if (k === key) return label;
+    return 'ui.menu.reliquary';
+  }
+
   function renderTop() {
-    titleEl.textContent = t('ui.menu.reliquary');
+    // Одна вкладка от здания — заголовок называет сам раздел, а не реликварий
+    titleEl.textContent = onlyTabs && onlyTabs.length === 1
+      ? t(labelOf(onlyTabs[0]))
+      : t('ui.menu.reliquary');
     relicsEl.textContent = t('ui.meta.relics') + ': '
       + ((profile && profile.relics) || 0);
   }
 
   function renderTabs() {
     tabsEl.innerHTML = '';
+    // Одна вкладка — строка переключателя бессмысленна и не рисуется вовсе
+    if (onlyTabs && onlyTabs.length === 1) return;
     const showCurses = anyCurseUnlocked();
-    if (tab === 'curses' && !showCurses) tab = 'factions';
+    if (tab === 'curses' && !showCurses && !onlyTabs) tab = 'factions';
     for (const [key, label] of TABS) {
-      if (key === 'curses' && !showCurses) continue;
+      if (onlyTabs && onlyTabs.indexOf(key) < 0) continue;
+      if (key === 'curses' && !showCurses && !onlyTabs) continue;
       const btn = doc.createElement('button');
       btn.type = 'button';
       btn.className = 'btn tab' + (tab === key ? ' active' : '');
@@ -316,8 +331,12 @@ export function createMetaUi(root, config, t, api) {
   });
 
   return {
-    async show(back) {
+    // tabs — необязательный список вкладок от здания города: задан — показать
+    // только его, активной станет первая вкладка списка
+    async show(back, tabs) {
       onBack = back;
+      onlyTabs = Array.isArray(tabs) && tabs.length ? tabs.slice() : null;
+      if (onlyTabs) tab = onlyTabs[0];
       profile = await api.profile();
       render();
       panel.style.display = '';

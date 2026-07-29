@@ -11,6 +11,7 @@ import { createLocalTransport, createSocketTransport, CH } from './net/transport
 import { createRun, PHASE_OVER, PHASE_SHOP, PHASE_LEVELUP, PHASE_INTRO } from './sim/run.js';
 import { buildArenaLayout, createPropIndex } from './sim/arena.js';
 import { swingPose, trailAlpha, makePose } from './engine/weapon_anim.js';
+import { isDeployable } from './sim/weapon.js';
 import { createHost } from './net/host.js';
 import { createNetClient } from './net/client.js';
 import { createLobby, roomFromUrl } from './net/lobby.js';
@@ -195,9 +196,20 @@ async function boot() {
   const debugExtra = { entities: 0, kbs: 0, ping: 0, seed: 0, role: '' };
   const ashColor = config.render.ash_color;
   const ashSize = config.render.ash_size;
+  const ashSizeBig = config.render.ash_size_big;
+  const ashBigAmount = config.render.ash_big_amount;
   const ashTexture = config.render.ash_texture;
   const animFps = config.render.anim_fps;
   const projScale = config.render.projectile_scale;
+  const projSpinRate = config.render.projectile_spin_rate;
+  const engineeringOn = !!(config.engineering && config.engineering.enabled);
+  const turretSize = config.render.turret_size;
+  const turretRing = config.render.turret_ring;
+  const turretRingR = config.render.turret_ring_radius;
+  const turretRingW = config.render.turret_ring_width;
+  const telegraphColor = config.render.telegraph_color;
+  const telegraphAlpha = config.render.telegraph_alpha;
+  const telegraphHz = config.render.telegraph_pulse_hz;
   const WALK = '_walk';
 
   let shopSnap = null;
@@ -368,6 +380,9 @@ async function boot() {
       const me = myPlayer();
       if (!st.paused) {
         netClient.step(dt, input.move, (me && me.speed) || config.player.move_speed);
+        // Искры живут и у клиента: их рождает netClient по падению доли HP врага.
+        // Без этого шага они бы вспыхнули и застыли — частицы гаснут по времени.
+        particles.step(dt);
       }
 
       maybeClientLevelUp();
@@ -572,16 +587,47 @@ async function boot() {
     renderer.drawSprite(w.texture, x, y, config.render.weapon_size, a + HALF_PI, left);
   }
 
+  // Турели: копии оружия, стоящие на арене (инженерия, sim/turret.js). У хоста
+  // они из пула симуляции, у клиента — из списка, приехавшего по MSG_TURRET;
+  // слот в обоих случаях один и тот же объект, поэтому анимация замаха общая.
+  function drawTurrets() {
+    if (!engineeringOn) return;
+    const host = !!run;
+    const list = host ? run.turretPool : netClient.turrets;
+    const players = world().players;
+    for (let i = 0; i < list.count; i++) {
+      const t = list.items[i];
+      const slot = host ? t.slot : t.slots[0];
+      if (!slot.cfg) continue;
+      if (turretRing) {
+        const owner = players[host ? t.ownerIdx : t.owner];
+        const chCfg = owner ? config.characters[owner.character] : null;
+        renderer.drawRing(t.x, t.y, turretRingR,
+          (chCfg && chCfg.color) || ashColor, turretRingW);
+      }
+      if (slot.swingT > 0 && slot.cfg.shape.type === 'arc') {
+        drawSwing(t, turretSize, slot.cfg, slot.lastAngle, 1 - slot.swingT / slot.swingLen);
+      } else {
+        renderer.drawSprite(slot.cfg.texture, t.x, t.y, turretSize,
+          slot.lastAngle + HALF_PI, Math.cos(slot.lastAngle) < 0);
+      }
+    }
+  }
+
   function drawWeapons(p, size) {
     // Хост знает слоты целиком и рисует все замахи сразу. Клиенту слоты соседей
     // неизвестны: до него доходит пульс из снапшота — одно оружие и один угол.
     if (p.slots && p.slots.length) {
+      // Инженерное оружие в руке не рисуем: оно стоит на арене. Иначе у игрока
+      // в руках висела бы копия того, что он только что развернул.
       let held = 0;
-      for (let s = 0; s < p.slots.length; s++) if (p.slots[s].cfg) held++;
+      for (let s = 0; s < p.slots.length; s++) {
+        if (p.slots[s].cfg && !isDeployable(config, p.slots[s].cfg)) held++;
+      }
       let idx = 0;
       for (let s = 0; s < p.slots.length; s++) {
         const slot = p.slots[s];
-        if (!slot.cfg) continue;
+        if (!slot.cfg || isDeployable(config, slot.cfg)) continue;
         const seat = idx++;
         if (slot.swingT > 0 && slot.cfg.shape.type === 'arc') {
           drawSwing(p, size, slot.cfg, slot.lastAngle, 1 - slot.swingT / slot.swingLen);
@@ -609,16 +655,27 @@ async function boot() {
     if (arenaLayout) renderer.drawProps(arenaLayout.props);
 
     // Прах на полу — обычный объект мира: одна картинка без направлений, с
-    // деградацией в цветной квадрат, пока текстуры нет. Пикапы не ездят по сети,
-    // поэтому у подключившегося клиента (run === null) пол пуст — давняя дыра,
-    // закрывать её надо снапшотом, а не здесь.
+    // деградацией в цветной квадрат, пока текстуры нет. У клиента он приезжает
+    // своим дешёвым каналом (MSG_PICKUP): раньше пикапы не ездили по сети вовсе,
+    // и у подключившегося пол был пуст — деньги «не выпадали».
     if (run) {
       const pickups = run.pickupPool;
       for (let i = 0; i < pickups.count; i++) {
         const p = pickups.items[i];
-        renderer.drawObject(ashTexture, p.x, p.y, ashSize, ashColor);
+        const size = p.amount >= ashBigAmount ? ashSizeBig : ashSize;
+        renderer.drawObject(ashTexture, p.x, p.y, size, ashColor);
+      }
+    } else {
+      const pickups = netClient.pickups;
+      for (let i = 0; i < pickups.count; i++) {
+        const p = pickups.items[i];
+        renderer.drawObject(ashTexture, p.x, p.y, p.tier ? ashSizeBig : ashSize, ashColor);
       }
     }
+
+    // Турели: копии оружия, стоящие на арене (инженерия). Рисуются до врагов —
+    // это пол, а не сущность, и толпа должна проходить поверх них.
+    drawTurrets();
 
     const pool = netClient ? netClient.enemies : run.enemyPool;
     for (let i = 0; i < pool.count; i++) {
@@ -630,9 +687,21 @@ async function boot() {
         renderer.drawObject(e.cfg.texture, e.x, e.y, e.sprite, e.cfg.color);
         continue;
       }
-      const moving = netClient ? true : (e.vx !== 0 || e.vy !== 0);
-      renderer.drawEntity(e.cfg.texture, e.dir, (e.animT * animFps) | 0,
-        e.x, e.y, e.sprite, e.cfg.color, moving ? e.cfg.texture + WALK : null);
+      // «Идёт ли» у клиента берётся из снапшота (бит moving), а не выдумывается:
+      // скорости чужих сущностей он не знает, и прежнее безусловное true гоняло
+      // лист ходьбы даже у стоящих столбом.
+      const moving = netClient ? e.moving : (e.vx !== 0 || e.vy !== 0);
+      const frame = (e.animT * animFps) | 0;
+      const walk = moving ? e.cfg.texture + WALK : null;
+      renderer.drawEntity(e.cfg.texture, e.dir, frame,
+        e.x, e.y, e.sprite, e.cfg.color, walk);
+      // Подготовка рывка: спрайт заливается цветом, доля заливки пульсирует.
+      // Ровная заливка в толпе теряется, мигание видно боковым зрением.
+      if (e.telegraph) {
+        const k = 0.5 + 0.5 * Math.sin(st.time * TAU * telegraphHz);
+        renderer.drawEntityTint(e.cfg.texture, walk, e.dir, frame,
+          e.x, e.y, e.sprite, telegraphColor, telegraphAlpha * k);
+      }
     }
 
     const players = st.players;
@@ -645,7 +714,9 @@ async function boot() {
       if (config.render.player_ring) {
         renderer.drawRing(p.x, p.y, size * 0.3, chCfg.color, config.render.player_ring_width);
       }
-      const moving = p.vx !== 0 || p.vy !== 0;
+      // У соседа скорости нет — она не едет по сети; «идёт ли» приходит битом.
+      // Свой персонаж предсказывается локально, и его vx/vy честнее снапшота.
+      const moving = netClient && i !== myIndex ? p.moving : (p.vx !== 0 || p.vy !== 0);
       renderer.drawEntity(chCfg.texture, p.dir, (p.animT * animFps) | 0,
         p.x, p.y, size, chCfg.color, moving ? chCfg.texture + WALK : null);
       drawWeapons(p, size);
@@ -670,7 +741,7 @@ async function boot() {
         // на 600 снарядах это разница в бюджете рендера, а не придирка.
         let angle = 0;
         if (pr.spin === 'heading') angle = Math.atan2(pr.vy, pr.vx);
-        else if (pr.spin === 'spin') angle = pr.age * PROJ_SPIN_RATE;
+        else if (pr.spin === 'spin') angle = pr.age * projSpinRate;
         if (!renderer.drawSprite(pr.texture, pr.x, pr.y, r * projScale, angle, false)) {
           renderer.drawDot(pr.x, pr.y, r, pr.color || ashColor);
         }
@@ -740,11 +811,13 @@ async function boot() {
     lastSetup = { character, arena: arenaId, danger, curses };
     // Осечка старта не должна выглядеть как «мастер закрылся и всё». Панель
     // мастера к этому моменту уже спрятана, поэтому единственный способ хоть
-    // что-то сказать игроку — вернуть меню и написать причину в нём.
-    const failToMenu = (e) => {
+    // что-то сказать игроку — вернуть меню и написать причину в нём. Причина
+    // пишется ПОСЛЕ showMenu: тот перечитывает профиль, и показ города чистит
+    // строку ошибки — дождаться надо, иначе текст затирается.
+    const failToMenu = async (e) => {
       if (e) console.error('старт забега не удался:', e);
       teardownRun();
-      showMenu();
+      await showMenu();
       screens.error(t('ui.error.run_start'));
     };
 
@@ -874,8 +947,11 @@ async function boot() {
       const w = Math.round(config.arena.size[0] * scale);
       const h = Math.round(config.arena.size[1] * scale);
       arenaLayout = buildArenaLayout(config, arenaId, msg.seed, w, h);
+      // onImpact тот же, что у хоста: клиент не считает урон, но видит падение
+      // доли HP врага между снапшотами — этого хватает на искры, и это не стоит
+      // ни байта трафика.
       netClient = createNetClient(transport, config, myIndex,
-        createPropIndex(arenaLayout, config), w, h);
+        createPropIndex(arenaLayout, config), w, h, onImpact);
       transport.on(CH.EVENT, (msg) => {
         if (!msg) return;
         if (msg.t === 'loadout') {
@@ -926,7 +1002,7 @@ async function boot() {
     globalThis.location.href = '/login';
   }
 
-  function showMenu() {
+  async function showMenu() {
     setupUi.hide();
     // Меню — тоже фаза со своей музыкой. Сбрасываем метку последней синхронизации:
     // иначе возврат в тот же номер волны после рестарта не переключил бы трек.
@@ -934,11 +1010,15 @@ async function boot() {
     musicPhase = null;
     audio.playMusic((config.audio && config.audio.playlist)
       ? config.audio.playlist.menu : null);
+    // Профиль перечитывается при каждом возврате в город: после забега счётчик
+    // реликвий и бейджи зданий должны считаться от свежих данных, а не от того,
+    // что лежало в памяти до забега.
+    try { profile = await fetchJson('/api/profile'); } catch (e) { /* играть можно и так */ }
     screens.show('menu', {
       onPlay: openSoloSetup,
       onCoop: openCoopSetup,
       onJoin: coopJoin,
-      onMeta: () => metaUi.show(showMenu),
+      onMeta: (tabs) => metaUi.show(showMenu, tabs),
       onAudio: () => {
         // Любое имя, кроме 'menu', прячет панель меню — настройки открываются
         // поверх пустого экрана, а кнопка «Назад» возвращает сюда же.
@@ -948,6 +1028,7 @@ async function boot() {
       onAdmin: isAdmin && adminUi ? () => adminUi.show(showMenu) : null,
       onLogout: doLogout,
       invited,
+      profile,
     });
   }
   showMenu();
@@ -960,6 +1041,6 @@ const PING_INTERVAL_MS = 2000;
 // Сид генератора косметики. Фиксированный и свой: искры не имеют права влиять на
 // случайность забега, которую сервер сверяет при валидации результата.
 const FX_SEED = 0x5eed1;
-const PROJ_SPIN_RATE = 14;      // рад/с для снарядов со spin='spin'
+const TAU = Math.PI * 2;
 
 boot();

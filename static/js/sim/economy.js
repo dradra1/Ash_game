@@ -21,20 +21,58 @@ export function createEconomy(config, playerCount) {
     players: playerCount,
   };
 
-  // Множитель дропа: компенсирует деление котла на N.
+  // Во сколько раз комната РЕАЛЬНО убивает больше одиночки. Таблица измерена
+  // `node tools/coop_income.js` и лежит в конфиге (coop.kill_scale).
   //
-  // Считать его независимой константой нельзя — это была причина «в коопе слишком
-  // много денег». Кооп уже умножает число врагов на budget_per_player (spawn.js),
-  // то есть убийств и так больше в budgetScale раз. Личный доход выходит
-  //   (убийства × budgetScale × dropMultiplier) / N,
-  // и чтобы он совпал с соло, компенсация обязана быть N / budgetScale, а не
-  // произвольным линейным коэффициентом: при 8 игроках старая формула давала
-  // 5.55 × 4.85 / 8 ≈ 3.4 дохода соло.
+  // Здесь была главная ошибка модели: вместо измеренного роста подставлялся
+  // ПЛАНОВЫЙ рост спавна (`1 + budget_per_player*(N-1)`). Это разные величины.
+  // Спавн задаёт, сколько врагов ВЫПУЩЕНО, а доход зависит от того, сколько их
+  // УБИТО, — и доля дожития меняется вместе с составом: чем плотнее комната, тем
+  // меньше врагов доживает до конца волны. Замер: восьмером убийств в 9.6 раза
+  // больше соло при плановых 5.55, вчетвером — в 5.4 при плановых 2.95. Отсюда и
+  // брался лишний доход.
   //
-  // ash_share_target — единственная ручка: 1.0 значит «на брата столько же, сколько соло».
+  // Без таблицы падаем на прежнюю формулу: конфиг может быть старым, а считать
+  // что-то надо.
+  function killScale() {
+    const curve = coop.kill_scale;
+    if (!curve || !curve.length) return 1 + coop.budget_per_player * (state.players - 1);
+    const i = Math.max(0, Math.min(curve.length - 1, state.players - 1));
+    return curve[i] || 1;
+  }
+
+  // Полная компенсация деления котла на N. Личный доход равен
+  //   (убийства × killScale × dropFactor) / N,
+  // значит для совпадения с соло dropFactor обязан быть N / killScale.
+  // ash_share_target — единственная ручка: 1.0 значит «на брата столько же».
+  function dropFactor() {
+    return (state.players / killScale()) * coop.ash_share_target;
+  }
+
+  // Ожидаемая величина дропа. Для дохода, который идёт СРАЗУ в котёл (проклятия,
+  // награда за разбитые объекты), — множитель: разыгрывать монету на редком
+  // событии значит добавить разброса там, где его никто не просил.
   function dropMultiplier() {
-    const budgetScale = 1 + coop.budget_per_player * (state.players - 1);
-    return (state.players / budgetScale) * coop.ash_share_target;
+    return dropFactor();
+  }
+
+  // А вот прах с убийств урезается ЧАСТОТОЙ, а не размером кучки: падает не с
+  // каждого врага, зато кучка остаётся полноразмерной.
+  //
+  // Так лучше по трём причинам. Кучка в 0.6 праха неотличима от кучки в 3 и
+  // выглядит как обман; вдвое меньше кучек — это вдвое меньше пикапов в пуле и в
+  // канале праха при восьмерых (CLAUDE.md §4); и «дропает не каждый» — понятное
+  // игроку правило, в отличие от «у всех дроп урезан на 26%».
+  //
+  // Матожидание то же самое: chance × amount = dropFactor.
+  function dropChance() {
+    const f = dropFactor();
+    return f < 1 ? f : 1;
+  }
+
+  function dropAmount() {
+    const f = dropFactor();
+    return f > 1 ? f : 1;
   }
 
   // Калибровка кривой дохода по волнам. Число убийств растёт почти квадратично
@@ -104,7 +142,7 @@ export function createEconomy(config, playerCount) {
 
   return {
     state, add, shareOf, spend, refund, gift, onDeath, zero,
-    dropMultiplier, waveMult, solo,
+    dropMultiplier, dropChance, dropAmount, killScale, waveMult, solo,
   };
 }
 

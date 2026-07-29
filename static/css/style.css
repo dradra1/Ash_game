@@ -363,6 +363,9 @@ html, body {
 .shop-cols { display: flex; gap: 18px; }
 .col { flex: 1 1 0; }
 .col-title { color: #7a7568; font-size: 12px; margin-bottom: 8px; }
+/* Третья колонка лавки делится пополам: статы | синергии */
+.col-split { display: flex; gap: 12px; }
+.col-split .half { flex: 1 1 0; min-width: 0; }
 
 .inv-cell {
     position: relative;
@@ -421,6 +424,15 @@ html, body {
    существует, ещё до того как впервые его возьмёт. */
 .stat-row.zero { opacity: 0.4; }
 .stat-row:hover { background: #22262f; }
+
+/* Синергии оружия: строка класса со счётом и пипками порогов 2/4/6 */
+.syn-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; padding: 1px 0; }
+.syn-row.zero { opacity: 0.4; }
+.syn-row:hover { background: #22262f; }
+.syn-pips { display: flex; gap: 3px; margin-left: auto; }
+.syn-pip { color: #4a463c; }
+.syn-pip.on { color: var(--gold); }
+.syn-count { color: #7a7568; }
 
 /* Ростер готовности в лавке: кого ещё ждём перед следующей волной */
 .shop-allies { margin-top: 14px; }
@@ -519,6 +531,225 @@ html, body {
     min-width: 0;
 }
 
+/* ---- Город (главное меню) ------------------------------------------------ */
+
+/* Тот же #screen-menu, что был у списка кнопок: id и класс `menu` сохранены,
+   потому что на них завязан focus.js (пад ищет `.menu`). Центрирование и
+   рамка-панель сняты — город занимает весь экран. */
+#screen-menu.menu.city-screen {
+    left: 0;
+    top: 0;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    background: none;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Размеры фона приходят из конфига через --city-w/--city-h (их ставит JS) —
+   чисел фона в стилях нет. Ширина подобрана так, чтобы и высота влезала. */
+.city {
+    position: relative;
+    width: min(1120px, 96vw, calc(92vh * var(--city-w) / var(--city-h)));
+    aspect-ratio: var(--city-w) / var(--city-h);
+    /* Город — один слой, а не россыпь: без своего контекста наложения z-index
+       зданий и плашек (1…4) вылезал поверх модалок, и мастер настройки забега
+       открывался ПОД вратами, по которым его только что позвали. */
+    isolation: isolate;
+}
+
+.city-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+/* Верхняя панель — оверлей поверх картинки, а не часть её. На узком экране
+   переносится на несколько строк за счёт flex-wrap. */
+.city-top {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 6px 10px;
+    background: rgba(10, 11, 14, 0.85);
+}
+.city-relics { color: var(--gold); margin-right: auto; }
+.city-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.city-join input { padding: 3px 8px; }
+.city-error {
+    flex-basis: 100%;
+    color: var(--red);
+    font-size: 12px;
+    text-align: center;
+}
+.city-error:empty { display: none; }
+
+/* Здание — кнопка в процентах от фона. Координаты приходят переменными,
+   чтобы компактный режим мог отменить их классом, не трогая инлайн. */
+.city-b {
+    position: absolute;
+    left: var(--l);
+    top: var(--t);
+    width: var(--w);
+    height: var(--h);
+    padding: 0;
+    border: 0;
+    /* без appearance/background кнопка тянет системный светлый ButtonFace,
+       и каждое здание с альфой садится на белый прямоугольник */
+    appearance: none;
+    background: none;
+    font-family: monospace;
+    color: var(--ink);
+    cursor: pointer;
+    /* плашка-подсказка и бейдж живут за краем кнопки */
+    overflow: visible;
+    z-index: 1;
+}
+.city-b img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    /* contain, а не cover: у зданий в PNG запечена своя земля и тень, и обрезка
+       по краю срезала бы именно их */
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+/* Плейсхолдер по §3.3: заливка и подпись появляются, только если PNG не
+   загрузился (класс ставит JS по onerror). С картинкой имя даёт плашка. */
+.city-b.no-tex { background: var(--accent); }
+.city-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 2px 4px;
+    font-size: 12px;
+    text-align: center;
+    background: rgba(10, 11, 14, 0.8);
+    pointer-events: none;
+}
+.city-b:not(.no-tex) .city-label { display: none; }
+/* Подсветка — outline, а не filter: последний запрещён бюджетом рендера (§4).
+   Перекрывает золотой `.menu :focus` цветом самого здания (специфичность
+   поднята намеренно: общее правило фокуса лежит ниже по файлу). */
+.city-b:hover:not(:disabled), .menu .city-b:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    z-index: 2;
+}
+.city-b:disabled { cursor: default; }
+
+.city-tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 120px;
+    padding: 6px 10px;
+    background: rgba(10, 11, 14, 0.94);
+    border: 1px solid var(--line);
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 4;
+}
+.city-tip b { display: block; color: var(--accent); font-weight: normal; }
+.city-tip i { color: var(--ink-mute); font-style: italic; }
+.city-b:hover .city-tip, .city-b:focus .city-tip, .city-b.poke .city-tip {
+    opacity: 1;
+    visibility: visible;
+}
+/* Крайние дома: плашка прижимается к краю, чтобы не вылезать за контейнер */
+.city-b.tip-left .city-tip { left: 0; transform: none; }
+.city-b.tip-right .city-tip { left: auto; right: 0; transform: none; }
+
+.badge {
+    display: none;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    background: rgba(10, 11, 14, 0.85);
+    pointer-events: none;
+    z-index: 2;
+}
+.badge.locked { display: block; color: var(--red); border: 1px solid var(--red); }
+.badge.new { display: block; color: var(--gold-bright); border: 1px solid var(--gold-bright); }
+
+/* Компактный режим: фона и абсолютной раскладки нет, те же кнопки зданий
+   становятся сеткой карточек. Меняется ТОЛЬКО CSS — разметка одна. */
+@media (max-width: 700px), (max-height: 480px) and (orientation: landscape) {
+    #screen-menu.menu.city-screen { display: block; overflow-y: auto; padding: 8px; }
+    .city {
+        width: 100%;
+        aspect-ratio: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+    }
+    .city-bg { display: none; }
+    .city-top { position: static; grid-column: 1 / -1; order: -1; margin-bottom: 4px; }
+    .city-b {
+        position: relative;
+        left: auto;
+        top: auto;
+        width: auto;
+        height: auto;
+        /* тап-таргет: не ниже 44 px */
+        min-height: 44px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 8px 6px;
+        border: 1px solid var(--line);
+    }
+    /* 40 = ровно 160/4: при pixelated целочисленное ужатие берёт по одному
+       исходному пикселю, а 48 (160/3.33) даёт рябь на черепице */
+    .city-b img { position: static; width: 40px; height: 40px; }
+    /* в карточке подпись нужна всегда — картинки тут мелкие, а места хватает */
+    .city-b .city-label,
+    .city-b:not(.no-tex) .city-label {
+        display: block;
+        position: static;
+        background: none;
+    }
+    /* подсказка перестаёт быть всплывающей и ложится в карточку */
+    .city-tip {
+        position: static;
+        transform: none;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        white-space: normal;
+        opacity: 1;
+        visibility: visible;
+    }
+    /* имя в карточке уже даёт .city-label */
+    .city-tip b { display: none; }
+    .badge { top: 2px; right: 2px; }
+}
+
 .lobby-code { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .lobby-code .code {
     font-size: 30px;
@@ -592,6 +823,7 @@ html, body {
     .shop-slots { flex-wrap: wrap; }
     .card { min-width: 44%; min-height: 108px; }
     .shop-cols { flex-direction: column; gap: 10px; }
+    .col-split { flex-direction: column; gap: 10px; }
     .meta-body { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     /* Пальцем нужно куда попадать: увеличиваем все интерактивные элементы */
     .btn, .mini, .choice { min-height: 40px; padding: 10px 14px; font-size: 13px; }

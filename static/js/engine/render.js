@@ -1,7 +1,7 @@
 // Рендер на одном canvas: камера с запаздыванием, целочисленный масштаб,
 // devicePixelRatio, никаких shadowBlur/filter в горячем пути.
 
-import { drawSheet, getSprite } from './sprites.js';
+import { drawSheet, drawSheetTint, getSprite } from './sprites.js';
 
 const TEXT_FONT = '12px monospace';
 
@@ -254,6 +254,20 @@ export function createRenderer(canvas, config, arenaSize) {
     ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
   }
 
+  // Заливка спрайта цветом поверх него самого: враг, готовящий рывок, «краснеет».
+  // Деградация та же, что у drawEntity: нет PNG — красим плейсхолдер целиком,
+  // иначе подготовка рывка была бы не видна ровно там, где нет графики.
+  function drawEntityTint(textureId, altId, dir, frame, x, y, size, color, alpha) {
+    if (altId && drawSheetTint(ctx, altId, color, alpha, dir, frame, x, y, size)) return;
+    if (drawSheetTint(ctx, textureId, color, alpha, dir, 0, x, y, size)) return;
+    const half = size / 2;
+    const prev = ctx.globalAlpha;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x - half), Math.round(y - half), size, size);
+    ctx.globalAlpha = prev;
+  }
+
   // Неподвижный объект мира одной картинкой: ломаемые бочки и урны. Отдельно от
   // drawEntity, потому что у них НЕТ листа направлений — четыре ракурса объекту,
   // который не поворачивается, не нужны. Различать лист и одиночную картинку по
@@ -305,6 +319,7 @@ export function createRenderer(canvas, config, arenaSize) {
     drawProps,
     drawSprite,
     drawEntity,
+    drawEntityTint,
     drawObject,
     drawRect,
     drawDot,

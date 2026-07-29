@@ -1,5 +1,5 @@
 // Лавка между волнами: 4 карточки, реролл, лок, инвентарь оружия со слиянием
-// и продажей, сетка предметов, панель статов, кнопка «Готов».
+// и продажей, сетка предметов, панели статов и синергий, кнопка «Готов».
 // Геймпад: фокус слота + buy/lock/merge/reroll/ready через input.consumePressed.
 
 import { mergeable, mergeAfterBuy } from '../sim/shop.js';
@@ -22,7 +22,11 @@ export function createShopUi(root, config, t, tip) {
     + '<div class="shop-cols">'
     + '<div class="col"><div class="col-title"></div><div class="inv-weapons"></div></div>'
     + '<div class="col"><div class="col-title"></div><div class="inv-items"></div></div>'
-    + '<div class="col"><div class="col-title"></div><div class="stat-list"></div></div>'
+    // Третья колонка делится пополам: слева статы, справа синергии оружия.
+    + '<div class="col"><div class="col-split">'
+    + '<div class="half"><div class="col-title"></div><div class="stat-list"></div></div>'
+    + '<div class="half"><div class="col-title"></div><div class="syn-list"></div></div>'
+    + '</div></div>'
     + '</div>'
     + '<div class="shop-allies"></div>';
   root.appendChild(panel);
@@ -37,11 +41,13 @@ export function createShopUi(root, config, t, tip) {
   const weaponsEl = q('.inv-weapons');
   const itemsEl = q('.inv-items');
   const statsEl = q('.stat-list');
+  const synEl = q('.syn-list');
   const alliesEl = q('.shop-allies');
 
   cols[0].textContent = t('ui.shop.inventory');
   cols[1].textContent = t('ui.shop.items');
   cols[2].textContent = t('ui.shop.stats');
+  cols[3].textContent = t('ui.shop.synergies');
 
   // Адаптер: UI не знает, своя это лавка или чужая, полученная по сети.
   // У хоста и в соло действия применяются сразу, у клиента — уезжают событием.
@@ -332,6 +338,62 @@ export function createShopUi(root, config, t, tip) {
       + (meta.desc ? `<div class="card-desc">${meta.desc}</div>` : '');
   }
 
+  // Синергии: строка на сет — сначала классы оружия, потом теги. Ствол
+  // участвует сразу во всех своих сетах, поэтому строки зажигаются пачкой.
+  // Сеты без пары приглушены, как нулевые статы: механику видно сразу,
+  // а не после того как случайно собрал два ствола одного сета.
+  function renderSynergies() {
+    synEl.innerHTML = '';
+    const syn = config.synergies;
+    if (!syn || !syn.enabled) return;
+    const p = ctx.player();
+    const counts = {};
+    for (let i = 0; i < p.slots.length; i++) {
+      const cfg = p.slots[i].cfg;
+      if (!cfg) continue;
+      counts[cfg.class] = (counts[cfg.class] || 0) + 1;
+      const tags = cfg.tags || [];
+      for (let j = 0; j < tags.length; j++) {
+        counts[tags[j]] = (counts[tags[j]] || 0) + 1;
+      }
+    }
+    for (const cls in syn.classes) {
+      synRow(synEl, t('ui.class.' + cls), syn.classes[cls], counts[cls] || 0, p);
+    }
+    if (syn.tags) {
+      for (const tag in syn.tags) {
+        synRow(synEl, t('ui.tag.' + tag), syn.tags[tag], counts[tag] || 0, p);
+      }
+    }
+  }
+
+  function synRow(parent, name, tiers, n, p) {
+    const row = doc.createElement('div');
+    row.className = 'syn-row' + (n < 2 ? ' zero' : '');
+    let pips = '';
+    for (const th in tiers) {
+      pips += `<span class="syn-pip${n >= +th ? ' on' : ''}">${th}</span>`;
+    }
+    row.innerHTML = `<span>${name}</span>`
+      + `<span class="syn-pips">${pips}</span>`
+      + `<span class="syn-count">${n}/${p.slots.length}</span>`;
+    tip.bind(row, () => synTipHtml(name, tiers, n));
+    parent.appendChild(row);
+  }
+
+  function synTipHtml(name, tiers, n) {
+    let html = `<div class="card-name">${name}</div>`;
+    for (const th in tiers) {
+      const bonus = tiers[th];
+      const body = bonus.special
+        ? t('ui.synergy.special.' + bonus.special)
+        : statsHtml(config, bonus);
+      html += `<div class="col-title">${th}</div>`
+        + `<div class="card-line${n >= +th ? '' : ' zero'}">${body}</div>`;
+    }
+    return html;
+  }
+
   function renderTop() {
     const p = ctx.player();
     titleEl.textContent = t('ui.shop.title') + ' — ' + t('ui.hud.wave') + ' ' + ctx.wave();
@@ -351,6 +413,7 @@ export function createShopUi(root, config, t, tip) {
     renderSlots();
     renderInventory();
     renderStats();
+    renderSynergies();
     renderAllies();
   }
 

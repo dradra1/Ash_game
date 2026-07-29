@@ -1,8 +1,13 @@
 // Прах: падает с врага, притягивается магнитом, подбирается касанием.
 // В конце волны остаток собирается автоматически (фаза collect в run.js).
 
+// uid — стабильный опознаватель кучки, ровно как у врага. Индексы пула
+// переиспользуются (swap-remove при подборе), а по сети кучки едут отобранными
+// по радиусу видимости КОНКРЕТНОГО клиента и в произвольном порядке. Без uid
+// клиенту нечем понять, та же это кучка или соседняя, и он сопоставлял их по
+// номеру записи в пакете — отсюда и брался «прах телепортируется по карте».
 export function makePickup() {
-  return { x: 0, y: 0, vx: 0, vy: 0, amount: 0, xp: 0, magnet: false, alive: false };
+  return { uid: 0, x: 0, y: 0, vx: 0, vy: 0, amount: 0, xp: 0, magnet: false, alive: false };
 }
 
 export function resetPickup(p) {
@@ -25,6 +30,7 @@ export function dropAsh(pool, x, y, amount, xp, config) {
     return null;
   }
   p.alive = true;
+  p.uid = nextUid++;
   p.x = x;
   p.y = y;
   p.amount = amount;
@@ -32,6 +38,11 @@ export function dropAsh(pool, x, y, amount, xp, config) {
   p.magnet = false;
   return p;
 }
+
+// Счётчик кучек. По сети uid едет 16-битным и заворачивается — этого хватает:
+// одновременно живых кучек максимум max_pickups (400), а между двумя оборотами
+// счётчика проходит 65 тысяч дропов.
+let nextUid = 1;
 
 // Шаг подборов. collectAll — фаза сбора в конце волны: тянем всё к ближайшему игроку.
 // deps: {config, players, onCollect(player, amount, xp)}

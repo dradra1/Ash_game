@@ -8,23 +8,55 @@
 
 import { CH } from './transport.js';
 import {
-  createInputCodec, createSnapshotCodec, createSpawnCodec,
+  createInputCodec, createSnapshotCodec, createSpawnCodec, createSwingCodec,
+  createPickupCodec, createTurretCodec,
   buildTypeIndex, buildWeaponIndex, buildProjectileIndex,
-  PHASE_NAME, MSG_SNAPSHOT, MSG_SPAWN,
+  PHASE_NAME, MSG_SNAPSHOT, MSG_SPAWN, MSG_SWING, MSG_PICKUP, MSG_TURRET,
 } from './protocol.js';
 import { separateFromProps } from '../sim/arena.js';
 import { enemyCfg } from '../sim/enemy.js';
+import { SWING_TURRET } from '../sim/turret.js';
 
 // propIndex — препятствия арены. Клиент не симулирует мир, но своего персонажа
 // предсказывает, и без коллизий предсказание въезжало бы в завал, а сверка с
 // хостом выдёргивала бы обратно: у каждого препятствия управление «резинит».
-export function createNetClient(transport, config, myIndex, propIndex, arenaW, arenaH) {
+// onImpact — колбэк искр в точке попадания (engine/particles.js у main.js).
+// Клиент не считает урон и не знает о нём ничего, но ПАДЕНИЕ доли HP врага
+// между снапшотами видит. Этого достаточно, чтобы бой перестал быть немым, и
+// это не стоит ни байта трафика: отдельный канал событий урона на 450 врагах
+// сожрал бы весь бюджет ради косметики.
+export function createNetClient(transport, config, myIndex, propIndex, arenaW, arenaH, onImpact) {
   const inputCodec = createInputCodec();
   const snapCodec = createSnapshotCodec(config);
   const types = buildTypeIndex(config);
   const weapons = buildWeaponIndex(config);
   const projTex = buildProjectileIndex(config);
   const spawnCodec = createSpawnCodec(config);
+  const swingCodec = createSwingCodec(config);
+  const pickupCodec = createPickupCodec(config);
+  const turretCodec = createTurretCodec(config);
+
+  // Прах на полу. У клиента он чисто декоративный: подбирает и считает хост,
+  // сюда едут только точки (MSG_PICKUP). До этого канала пол у клиента был пуст.
+  const pickups = { items: [], count: 0 };
+  for (let i = 0; i < config.net.max_pickups_per_snapshot; i++) {
+    pickups.items.push({ uid: 0, x: 0, y: 0, tx: 0, ty: 0, tier: 0 });
+  }
+  // Кто из кучек пришёл в этом пакете. Кучек максимум max_pickups_per_snapshot
+  // (64), поэтому поиск по uid линейный — таблица на 65536 записей, как у врагов,
+  // тут была бы четвертью мегабайта ради шести десятков элементов.
+  const pickupSeen = new Int32Array(config.net.max_pickups_per_snapshot);
+  let pickupStamp = 0;
+
+  // Турели: неподвижные копии оружия. Список приходит целиком при изменении,
+  // замахи — пульсом MSG_SWING по индексу в этом же списке.
+  const turrets = { items: [], count: 0 };
+  for (let i = 0; i < config.engineering.max_turrets; i++) {
+    turrets.items.push({
+      x: 0, y: 0, owner: 0, id: null, cfg: null,
+      slots: [{ id: null, cfg: null, cd: 0, flash: 0, swingT: 0, swingLen: 0, lastAngle: 0 }],
+    });
+  }
 
   // Снаряды у клиента — чистая косметика: урон считает хост, сюда приходит только
   // факт рождения, дальше полёт ведётся по прямой. Пул фиксированный, лишнее
@@ -65,7 +97,7 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
   // идеальной сети: получив ввод, хост крутит его ещё несколько тиков, пока не
   // приедет следующий. Разница уходила в corr и подталкивала игрока вперёд, а после
   // отпускания клавиши — назад. Это и есть «желе».
-  const HISTORY = 256;                    // ~4 с при 60 fps
+  const HISTORY = config.net.predict_history_frames;   // ~4 с при 60 fps
   const frames = [];
   for (let i = 0; i < HISTORY; i++) frames.push({ seq: -1, dt: 0, ix: 0, iy: 0, speed: 0 });
   let framesAt = 0;
@@ -130,8 +162,22 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
       if (f.seq < 0 || !seqNewer(f.seq, ackSeq)) continue;
       integrate(scratch, f.ix, f.iy, f.speed, f.dt);
     }
-    p.simX = scratch.x;
-    p.simY = scratch.y;
+    // Мёртвая зона: позиция едет в снапшоте как int16, то есть округлённая до
+    // целого пикселя. Пересобирая предсказание от округлённой базы каждый раз,
+    // мы затаскивали ошибку округления (до 0.5 px по оси) прямо в результат —
+    // и она меняла знак по мере дрейфа истинной позиции хоста относительно
+    // целых. Выходила пила ±0.3 px: глазу невидимая, но в сумме «назад» за
+    // долгую остановку набегала пара пикселей, и чем чаще снапшоты, тем больше.
+    //
+    // Если расхождение меньше кванта, сверять нечего: провод не в состоянии
+    // выразить эту разницу. Держим предсказание как есть. Настоящий рассинхрон
+    // даёт кратно больше и порог перешагнёт.
+    const offX = scratch.x - wasX;
+    const offY = scratch.y - wasY;
+    if (offX * offX + offY * offY > deadzone2) {
+      p.simX = scratch.x;
+      p.simY = scratch.y;
+    }
     // Остаток гасим ВИЗУАЛЬНО: симуляция уже стоит там, где сказал хост, а на
     // экране игрок доезжает до неё за SMOOTH_TIME вместо рывка.
     const dx = wasX - p.simX;
@@ -194,8 +240,19 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     }
   }
   const inputPeriod = 1 / config.net.input_hz;
-  const snapPeriod = 1 / config.net.snapshot_hz;
+  const inputCatchup = config.net.input_catchup_max;
   const teleport = config.net.teleport_threshold;
+  const deadzone2 = config.net.reconcile_deadzone_px * config.net.reconcile_deadzone_px;
+  // Буфер интерполяции: чужие сущности показываем на interp_delay позже, чем они
+  // приехали. Это и есть запас, который съедает дрожание доставки.
+  const interpDelay = config.net.interp_delay_ms / 1000;
+  // Дальше этого предела вперёд не экстраполируем: сеть моргнула — сущность
+  // замирает, а не улетает. Деградация, а не лаг (CLAUDE.md §4).
+  const interpMaxExtra = config.net.interp_max_extrapolate_ms / 1000;
+  // За сколько секунд гаснет ВИДИМЫЙ остаток расхождения после пересборки
+  // предсказания. Симуляция к этому моменту уже стоит на авторитетной позиции;
+  // это чисто косметика, чтобы редкие поправки не выглядели рывком.
+  const SMOOTH_TIME = config.net.smooth_time;
 
   // Мир глазами клиента. Ровно та же форма, что у state в sim/run.js, чтобы
   // рендер и HUD не знали, кто мы — хост или клиент.
@@ -204,14 +261,41 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     players: [], pot: 0, kills: 0, score: 0, bosses: 0, win: false,
     shopOpen: false, bossUid: -1,
   };
-  // Пул отображаемых врагов: интерполируем между снапшотами
+  // Пул отображаемых врагов: интерполируем между снапшотами.
+  //
+  // Две выборки (a → b) со штампом ВРЕМЕНИ ПРИХОДА, а не «предыдущая и целевая
+  // за один период»: снапшоты приезжают неровно, и раньше клиент тянулся к самому
+  // свежему ровно за snapPeriod. Опоздавший снапшот означал, что сущность доехала
+  // до цели и замерла, а потом прыгнула; пришедший раньше срока — скачок скорости.
+  const SAMPLES = config.net.interp_samples;
+  const makeTrack = () => ({
+    x: new Float32Array(SAMPLES), y: new Float32Array(SAMPLES),
+    t: new Float32Array(SAMPLES), n: 0, head: 0,
+  });
+
   const enemies = { items: [], count: 0 };
   for (let i = 0; i < config.net.max_entities_per_snapshot; i++) {
     enemies.items.push({
       uid: 0, type: null, cfg: null, sprite: 0, dir: 0, animT: 0,
-      x: 0, y: 0, prevX: 0, prevY: 0, tx: 0, ty: 0, hpPct: 1, vx: 0, vy: 0, alive: true,
+      x: 0, y: 0, hpPct: 1, vx: 0, vy: 0, alive: true, moving: false, telegraph: false,
+      track: makeTrack(),
     });
   }
+  // Результат выборки: один объект на модуль, чтобы не мусорить на кадр
+  const at = { x: 0, y: 0 };
+
+  // uid → слот в enemies.items. Раньше враг из снапшота ложился в слот с тем же
+  // НОМЕРОМ, под которым приехал, а «тот ли это враг» решалось сравнением uid.
+  // Но пул на хосте делает swap-remove при смерти, а отбор видимых сортирует их
+  // по дистанции до зрителя — порядок перетасовывается каждый снапшот, сравнение
+  // почти всегда ложно, и вместо интерполяции враг ЖЁСТКО переставлялся.
+  //
+  // Таблица прямого доступа: uid на проводе 16-битный, так что 65536 записей
+  // накрывают всё пространство ключей. 256 КБ выделяются один раз при создании
+  // клиента — это не горячая аллокация.
+  const slotOf = new Int32Array(65536).fill(-1);
+  const seenStamp = new Int32Array(config.net.max_entities_per_snapshot);
+  let stamp = 0;
 
   const stats = { bytesIn: 0, kbs: 0, snaps: 0, lastSeq: -1, lost: 0 };
   // Счётчики для приёмки коопа: без снарядов и замахов клиент видит немой бой
@@ -219,7 +303,10 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
   let swingSeen = 0;
   let window = 0;
   let windowBytes = 0;
-  let sinceSnap = 0;
+  // Монотонные часы клиента: ими штампуются приходящие выборки, по ним же идёт
+  // воспроизведение. Ни Date.now(), ни времени хоста — прогон должен быть
+  // детерминированным, а рассинхрону часов взяться неоткуда.
+  let netTime = 0;
   let inputAcc = 0;
   let seq = 0;
   let ready = false;
@@ -235,8 +322,10 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     while (state.players.length < n) {
       state.players.push({
         id: state.players.length, name: '', character: null,
-        x: 0, y: 0, prevX: 0, prevY: 0, tx: 0, ty: 0,
-        vx: 0, vy: 0, dir: 0, animT: 0,
+        x: 0, y: 0,
+        // Кольцо выборок со штампом прихода — то же, что у врагов
+        track: makeTrack(), seeded: false,
+        vx: 0, vy: 0, dir: 0, animT: 0, moving: false,
         // maxHp и speed до первого сообщения о лоадауте — базовые из конфига,
         // чтобы HUD не показывал «1 / 1», а предсказание не стояло на месте.
         hp: config.player.base.max_hp, maxHp: config.player.base.max_hp,
@@ -248,8 +337,121 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         // визуальный остаток, который гасится за SMOOTH_TIME. На экран идёт сумма:
         // симуляция не должна дёргаться ради красоты, а картинка — рвано прыгать.
         simX: 0, simY: 0, smoothX: 0, smoothY: 0,
-        swingSeq: -1, swingId: null, swingAngle: 0, swingT: 0, swingLen: 0.22,
+        swingId: null, swingAngle: 0, swingT: 0,
+        swingLen: config.render.weapon_swing_default,
       });
+    }
+  }
+
+  // Замах соседа или его турели. Слот — тот же объект, что у хоста, поэтому
+  // рендер не различает, чей удар рисует (main.js drawWeapons).
+  function applySwing(dec) {
+    for (let i = 0; i < dec.count; i++) {
+      const s = dec.items[i];
+      const id = weapons.toId[s.weapon];
+      if (!id) continue;
+      const cfg = config.weapons[id];
+      const len = (cfg && cfg.shape.anim_time) || config.render.weapon_swing_default;
+      let slot = null;
+      if (s.kind === SWING_TURRET) {
+        const t = s.idx < turrets.count ? turrets.items[s.idx] : null;
+        if (t) slot = t.slots[0];
+      } else {
+        const p = state.players[s.idx];
+        if (!p) continue;
+        // У игрока бьёт конкретный слот — ищем его по оружию. Номер слота по сети
+        // не едет намеренно: индекс оружия самодостаточен, а лоадаут соседа
+        // клиент и так знает из надёжного сообщения.
+        for (let k = 0; k < p.slots.length; k++) {
+          if (p.slots[k].id === id) { slot = p.slots[k]; break; }
+        }
+        // Пульс кладём и в игрока: пока лоадаут не доехал, слотов ещё нет,
+        // а замах показать уже надо.
+        p.swingId = id;
+        p.swingAngle = s.angle;
+        p.swingLen = len;
+        p.swingT = len;
+      }
+      swingSeen++;
+      if (!slot) continue;
+      slot.lastAngle = s.angle;
+      slot.swingLen = len;
+      slot.swingT = len;
+      slot.flash = config.render.weapon_flash_time;
+      // Кулдаун приблизительный: паспортный из конфига, без attack_speed_pct.
+      // Он рисует только кольцо готовности в HUD и ни на что не влияет.
+      slot.cd = cfg ? cfg.cooldown : 0;
+    }
+  }
+
+  function applyTurrets(dec) {
+    turrets.count = Math.min(dec.count, turrets.items.length);
+    for (let i = 0; i < turrets.count; i++) {
+      const src = dec.items[i];
+      const t = turrets.items[i];
+      t.x = src.x;
+      t.y = src.y;
+      t.owner = src.owner;
+      const id = weapons.toId[src.weapon] || null;
+      if (t.id !== id) {
+        t.id = id;
+        t.cfg = id ? config.weapons[id] : null;
+        const slot = t.slots[0];
+        slot.id = id;
+        slot.cfg = t.cfg;
+        slot.cd = 0;
+        slot.swingT = 0;
+        slot.flash = 0;
+        slot.lastAngle = 0;
+      }
+    }
+  }
+
+  // Кучки сопоставляются ПО uid, а не по номеру записи в пакете.
+  //
+  // Пул праха на хосте делает swap-remove при каждом подборе, а в пакет кучки
+  // отбираются по радиусу видимости конкретного клиента — порядок меняется
+  // постоянно. Пока клиент верил номеру записи, слот i от пакета к пакету
+  // означал разные кучки, и плавный доезд до «своей» цели превращал это в прах,
+  // скачущий по всей карте.
+  function applyPickups(dec) {
+    pickupStamp++;
+    for (let i = 0; i < dec.count && i < pickups.items.length; i++) {
+      const src = dec.items[i];
+      let slot = -1;
+      for (let k = 0; k < pickups.count; k++) {
+        if (pickups.items[k].uid === src.uid) { slot = k; break; }
+      }
+      if (slot < 0) {
+        if (pickups.count >= pickups.items.length) continue;   // деградация, не рост
+        slot = pickups.count++;
+        const fresh = pickups.items[slot];
+        fresh.uid = src.uid;
+        // Новую кучку ставим сразу: тянуть её через полэкрана от чужого места
+        // было бы хуже любого прыжка.
+        fresh.x = src.x;
+        fresh.y = src.y;
+      }
+      const p = pickups.items[slot];
+      // Прах едет на 10 Гц: лёжа на полу он неподвижен, но подхваченный магнитом
+      // летит к игроку, и на такой частоте это выглядело бы прыжками по 8 пикселей.
+      p.tx = src.x;
+      p.ty = src.y;
+      p.tier = src.tier;
+      pickupSeen[slot] = pickupStamp;
+    }
+    // Чего не было в пакете — подобрано или ушло за горизонт. Сверху вниз со
+    // swap-remove: порядок кучек ни на что не влияет.
+    for (let i = pickups.count - 1; i >= 0; i--) {
+      if (pickupSeen[i] === pickupStamp) continue;
+      const last = pickups.count - 1;
+      if (i !== last) {
+        const tmp = pickups.items[i];
+        pickups.items[i] = pickups.items[last];
+        pickups.items[last] = tmp;
+        pickupSeen[i] = pickupSeen[last];
+      }
+      pickups.count--;
     }
   }
 
@@ -260,6 +462,33 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
       if (sp) {
         spawnProjectiles(sp);
         projSeen += sp.count;
+        stats.bytesIn += byteLength(payload);
+        windowBytes += byteLength(payload);
+      }
+      return;
+    }
+    if (kind === MSG_SWING) {
+      const sw = swingCodec.decode(payload);
+      if (sw) {
+        applySwing(sw);
+        stats.bytesIn += byteLength(payload);
+        windowBytes += byteLength(payload);
+      }
+      return;
+    }
+    if (kind === MSG_PICKUP) {
+      const pk = pickupCodec.decode(payload);
+      if (pk) {
+        applyPickups(pk);
+        stats.bytesIn += byteLength(payload);
+        windowBytes += byteLength(payload);
+      }
+      return;
+    }
+    if (kind === MSG_TURRET) {
+      const tr = turretCodec.decode(payload);
+      if (tr) {
+        applyTurrets(tr);
         stats.bytesIn += byteLength(payload);
         windowBytes += byteLength(payload);
       }
@@ -276,7 +505,6 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
       if (gap > 1) stats.lost += gap - 1;
     }
     stats.lastSeq = dec.seq;
-    sinceSnap = 0;
     ready = true;
 
     state.wave = dec.wave;
@@ -289,11 +517,17 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
     for (let i = 0; i < dec.playerCount; i++) {
       const src = dec.players[i];
       const p = state.players[i];
-      p.prevX = p.x;
-      p.prevY = p.y;
-      p.tx = src.x;
-      p.ty = src.y;
+      if (!p.seeded) {
+        // Первая выборка: интерполировать не от чего, ставим сразу в присланную
+        // точку и подпираем её выборкой в прошлом, чтобы кольцо не было пустым.
+        p.seeded = true;
+        pushSample(p.track, src.x, src.y, netTime - interpDelay);
+        p.x = src.x;
+        p.y = src.y;
+      }
+      pushSample(p.track, src.x, src.y, netTime);
       p.dir = src.dir;
+      p.moving = src.moving;
       p.alive = src.alive;
       p.level = src.level;
       p.pendingLevels = src.pendingLevels || 0;
@@ -303,30 +537,6 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
       p.ash = src.ash;
       p.xp = src.xpPct;
       p.xpNext = 1;
-      // Пульс удара: новый замах виден по выросшему swingSeq. Слоты соседа
-      // клиенту неизвестны, поэтому оружие приходит индексом, а не номером слота.
-      if (src.swingWeapon >= 0 && src.swingSeq !== p.swingSeq) {
-        p.swingSeq = src.swingSeq;
-        p.swingId = weapons.toId[src.swingWeapon] || null;
-        p.swingAngle = src.swingAngle;
-        const cfg = p.swingId ? config.weapons[p.swingId] : null;
-        p.swingLen = cfg && cfg.shape.anim_time ? cfg.shape.anim_time : 0.22;
-        p.swingT = p.swingLen;
-        swingSeen++;
-        // Пульс переносится и в слот: раз лоадаут известен, замах и кулдаун
-        // рисуются из слотов, как у хоста. Кулдаун здесь приблизительный —
-        // берётся паспортный из конфига, без учёта attack_speed_pct.
-        for (let s = 0; s < p.slots.length; s++) {
-          const slot = p.slots[s];
-          if (slot.id !== p.swingId) continue;
-          slot.lastAngle = src.swingAngle;
-          slot.swingLen = p.swingLen;
-          slot.swingT = p.swingLen;
-          slot.flash = FLASH_TIME;
-          slot.cd = cfg ? cfg.cooldown : 0;
-          break;
-        }
-      }
       if (i === myIndex) {
         // Свой персонаж: не «подтягиваемся» к присланной точке, а ПЕРЕСОБИРАЕМ
         // предсказание от неё, проиграв заново весь ввод, который хост ещё не учёл.
@@ -343,19 +553,34 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         } else {
           reconcile(p, src.x, src.y, src.ackSeq);
         }
-      } else {
-        // Чужие: интерполяция между снапшотами (prevPos → tx/ty за snapPeriod)
-        if (p.x === 0 && p.y === 0) { p.x = src.x; p.y = src.y; p.prevX = src.x; p.prevY = src.y; }
       }
     }
 
-    // Враги: сопоставляем по uid, чтобы не дёргались при перестановке в снапшоте
-    enemies.count = dec.enemyCount;
+    // Враги: слот ищем по uid, а не по номеру записи в снапшоте (см. slotOf)
+    stamp++;
     for (let k = 0; k < dec.enemyCount; k++) {
       const src = dec.enemies[k];
-      const e = enemies.items[k];
-      const same = e.uid === src.uid;
-      e.uid = src.uid;
+      let idx = slotOf[src.uid];
+      if (idx < 0 || idx >= enemies.count || enemies.items[idx].uid !== src.uid) {
+        // Новичок. Интерполировать не от чего — ставим сразу в присланную точку,
+        // обе выборки одинаковые.
+        if (enemies.count >= enemies.items.length) continue;   // деградация, не рост
+        idx = enemies.count++;
+        const e0 = enemies.items[idx];
+        e0.uid = src.uid;
+        e0.type = null;                       // заставим пересчитать cfg ниже
+        slotOf[src.uid] = idx;
+        e0.track.n = 0;
+        e0.track.head = 0;
+        // Подпираем выборкой в прошлом: кольцо не должно быть пустым, а
+        // интерполировать новичка не от чего.
+        pushSample(e0.track, src.x, src.y, netTime - interpDelay);
+        e0.x = src.x;
+        e0.y = src.y;
+      }
+      pushSample(enemies.items[idx].track, src.x, src.y, netTime);
+
+      const e = enemies.items[idx];
       const id = types.toId[src.type];
       if (e.type !== id) {
         e.type = id;
@@ -366,13 +591,31 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         e.breakable = !!(e.cfg && e.cfg.breakable);
         e.sprite = (e.cfg && e.cfg.sprite) || config.render.sprite_default;
       }
-      e.prevX = same ? e.x : src.x;
-      e.prevY = same ? e.y : src.y;
-      e.tx = src.x;
-      e.ty = src.y;
-      if (!same) { e.x = src.x; e.y = src.y; }
+      // Искры по ПАДЕНИЮ доли HP. Урона в снапшоте нет и быть не должно, но
+      // упавший hpPct означает, что по врагу попали — этого хватает, чтобы у
+      // клиента бой перестал быть немым, и это не стоит ни байта.
+      if (onImpact && src.hpPct < e.hpPct) onImpact(e.x, e.y, false);
       e.hpPct = src.hpPct;
+      e.moving = src.moving;
+      e.telegraph = src.telegraph;
       e.alive = true;
+      seenStamp[idx] = stamp;
+    }
+
+    // Кого в этом снапшоте не было — того больше нет в поле зрения. Сверху вниз
+    // со swap-remove: индекс, куда переезжает уцелевший, чинится в таблице.
+    for (let i = enemies.count - 1; i >= 0; i--) {
+      if (seenStamp[i] === stamp) continue;
+      slotOf[enemies.items[i].uid] = -1;
+      const last = enemies.count - 1;
+      if (i !== last) {
+        const tmp = enemies.items[i];
+        enemies.items[i] = enemies.items[last];
+        enemies.items[last] = tmp;
+        slotOf[enemies.items[i].uid] = i;
+        seenStamp[i] = seenStamp[last];
+      }
+      enemies.count--;
     }
   }
 
@@ -397,21 +640,83 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
   transport.on(CH.SNAPSHOT, onSnapshot);
   transport.on(CH.EVENT, onEvent);
 
+  // Положить выборку в кольцо сущности.
+  function pushSample(tr, x, y, t) {
+    const cap = tr.x.length;
+    tr.head = (tr.head + 1) % cap;
+    tr.x[tr.head] = x;
+    tr.y[tr.head] = y;
+    tr.t[tr.head] = t;
+    if (tr.n < cap) tr.n++;
+  }
+
+  // Позиция сущности на момент renderTime, в out. Идём от новейшей выборки назад
+  // и ищем отрезок, накрывающий это время.
+  //
+  // Кольца, а не пары выборок: время воспроизведения отстаёт на interp_delay,
+  // и при задержке больше периода снапшота пара всегда оказывается СВЕЖЕЕ
+  // нужного момента — сущность залипала бы на старой точке и прыгала на каждом
+  // снапшоте, то есть ровно тот стук, ради которого буфер и заводится.
+  //
+  // За новейшей выборкой разрешена экстраполяция (снапшот задержался — сущность
+  // продолжает ехать), но не дальше interp_max_extrapolate: после него она
+  // встаёт. Улететь в бесконечность на оборванной связи она не должна —
+  // деградация, а не лаг (CLAUDE.md §4).
+  function trackAt(tr, renderTime, out) {
+    if (tr.n === 0) return false;
+    const cap = tr.x.length;
+    let iNew = tr.head;
+    if (tr.n === 1) {
+      out.x = tr.x[iNew];
+      out.y = tr.y[iNew];
+      return true;
+    }
+    for (let k = 0; k < tr.n - 1; k++) {
+      const iOld = (iNew - 1 + cap) % cap;
+      if (tr.t[iOld] <= renderTime) {
+        const span = tr.t[iNew] - tr.t[iOld];
+        let f = span > 0 ? (renderTime - tr.t[iOld]) / span : 1;
+        if (f > 1) {
+          const max = 1 + interpMaxExtra / span;
+          if (f > max) f = max;
+        }
+        out.x = tr.x[iOld] + (tr.x[iNew] - tr.x[iOld]) * f;
+        out.y = tr.y[iOld] + (tr.y[iNew] - tr.y[iOld]) * f;
+        return true;
+      }
+      iNew = iOld;
+    }
+    // Время старше всего кольца: держим самую старую выборку, а не выдумываем
+    out.x = tr.x[iNew];
+    out.y = tr.y[iNew];
+    return true;
+  }
+
   // Локальное предсказание своего движения + интерполяция всего остального
   function step(dt, input, moveSpeed) {
     state.time += dt;
-    sinceSnap += dt;
+    netTime += dt;
     window += dt;
 
+    // Хост снимает по одному пакету за тик симуляции, поэтому слать надо столько
+    // же. Одно вычитание за кадр означало, что просевший ниже 60 fps клиент
+    // отправляет меньше, чем хост снимает, и НАВСЕГДА голодит его очередь: ack
+    // перестаёт двигаться, переигровка растёт. Досылаем, но не больше
+    // input_catchup_max за кадр — иначе возврат на вкладку выстрелит пачкой.
     inputAcc += dt;
-    if (inputAcc >= inputPeriod) {
+    let sent = 0;
+    while (inputAcc >= inputPeriod && sent < inputCatchup) {
       inputAcc -= inputPeriod;
+      sent++;
       seq = (seq + 1) & 0xffff;
       // Квантуем ДО отправки и предсказываем тем же числом, что уедет по сети
       heldIx = quantize(input.x);
       heldIy = quantize(input.y);
       transport.send(CH.INPUT, inputCodec.encode(myIndex, seq, heldIx, heldIy, 0).slice(0));
     }
+    // Если упёрлись в кап, копить остаток бессмысленно: он превратится в вечный
+    // долг и будет выстреливать пачками каждый следующий кадр.
+    if (inputAcc >= inputPeriod) inputAcc = 0;
 
     stepProjectiles(dt);
     for (let i = 0; i < state.players.length; i++) {
@@ -427,8 +732,27 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         if (slot.swingT > 0) slot.swingT -= dt;
       }
     }
+    // Прах доезжает до присланной точки за то же время, что и остальная
+    // интерполяция: канал редкий, но рывков на экране быть не должно.
+    const pk = interpDelay > 0 ? Math.min(1, dt / interpDelay) : 1;
+    for (let i = 0; i < pickups.count; i++) {
+      const p = pickups.items[i];
+      p.x += (p.tx - p.x) * pk;
+      p.y += (p.ty - p.y) * pk;
+    }
 
-    const k = Math.min(1, sinceSnap / snapPeriod);
+    // Турели: тот же слот и те же таймеры, только хозяин не двигается
+    for (let i = 0; i < turrets.count; i++) {
+      const slot = turrets.items[i].slots[0];
+      if (slot.cd > 0) slot.cd -= dt;
+      if (slot.flash > 0) slot.flash -= dt;
+      if (slot.swingT > 0) slot.swingT -= dt;
+    }
+
+    // Время воспроизведения: показываем чужих на interp_delay позже, чем они
+    // приехали. Отдельных «часов, догоняющих хост» не нужно — выборки штампуются
+    // теми же локальными часами, так что расходиться нечему.
+    const renderTime = netTime - interpDelay;
     for (let i = 0; i < state.players.length; i++) {
       const p = state.players[i];
       if (i === myIndex) {
@@ -458,19 +782,18 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
         p.smoothY -= p.smoothY * c;
         p.x = p.simX + p.smoothX;
         p.y = p.simY + p.smoothY;
-      } else {
-        const nx = p.prevX + (p.tx - p.prevX) * k;
-        const ny = p.prevY + (p.ty - p.prevY) * k;
-        if (nx !== p.x || ny !== p.y) p.animT += dt;
-        p.x = nx;
-        p.y = ny;
+      } else if (p.seeded && trackAt(p.track, renderTime, at)) {
+        if (at.x !== p.x || at.y !== p.y) p.animT += dt;
+        p.x = at.x;
+        p.y = at.y;
       }
     }
 
     for (let e2 = 0; e2 < enemies.count; e2++) {
       const e = enemies.items[e2];
-      const nx = e.prevX + (e.tx - e.prevX) * k;
-      const ny = e.prevY + (e.ty - e.prevY) * k;
+      if (!trackAt(e.track, renderTime, at)) continue;
+      const nx = at.x;
+      const ny = at.y;
       const dx = nx - e.x;
       const dy = ny - e.y;
       if (dx !== 0 || dy !== 0) {
@@ -495,7 +818,7 @@ export function createNetClient(transport, config, myIndex, propIndex, arenaW, a
   }
 
   return {
-    state, enemies, projectiles, step, stats, close, applyLoadout,
+    state, enemies, projectiles, pickups, turrets, step, stats, close, applyLoadout,
     get projSeen() { return projSeen; },
     get swingSeen() { return swingSeen; },
     get ready() { return ready; },
@@ -516,12 +839,3 @@ function byteLength(p) {
   if (!p) return 0;
   return p.byteLength !== undefined ? p.byteLength : 64;
 }
-
-// За сколько секунд гаснет ВИДИМЫЙ остаток расхождения после пересборки
-// предсказания. Симуляция к этому моменту уже стоит на авторитетной позиции;
-// это чисто косметика, чтобы редкие поправки не выглядели рывком.
-const SMOOTH_TIME = 0.1;
-
-// Та же длительность подсветки иконки оружия, что в sim/weapon.js: у клиента
-// слоты приходят лоадаутом, а таймеры тикают локально.
-const FLASH_TIME = 0.08;

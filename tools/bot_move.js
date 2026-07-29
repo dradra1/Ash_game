@@ -10,12 +10,16 @@
 // радиусе оружия. Чистое «убежать подальше» дало бы ноль убийств, ноль праха и ту
 // же смерть, только позже.
 
+import { isDeployable } from '../static/js/sim/weapon.js';
+
 const WALL_R = 140;
 const DIRS = 16;         // сколько направлений перебираем
 const LOOKAHEAD = 0.5;   // на сколько секунд заглядываем вперёд
 const WALL_PENALTY = 1.5;
 const DANGER_W = 6;      // штраф за подпускание врага в контакт
 const KILL_W = 7;        // премия за каждую цель в радиусе оружия
+const COVER_W = 30;      // премия за каждую свою установку, простреливающую точку
+const UNCOVERED_KILL = 0.15;   // чего стоит цель рядом, если по ней никто не бьёт
 
 // Записывает выбранное направление прямо в p.input.
 export function steer(p, run, config) {
@@ -26,9 +30,15 @@ export function steer(p, run, config) {
   const ah = run.arenaH;
   const pad = config.arena.wall_padding;
 
-  // Дальность самого длинного оружия — по ней и собираем цели
+  // Дальность самого длинного оружия — по ней и собираем цели. Заодно смотрим,
+  // осталось ли хоть что-то стреляющее В РУКАХ: инженерное уехало на арену.
   let reach = 0;
-  for (const s of p.slots) if (s.cfg && s.cfg.range > reach) reach = s.cfg.range;
+  let handArmed = false;
+  for (const s of p.slots) {
+    if (!s.cfg) continue;
+    if (s.cfg.range > reach) reach = s.cfg.range;
+    if (!isDeployable(config, s.cfg)) handArmed = true;
+  }
   if (reach === 0) reach = 120;
   const reach2 = reach * reach;
   const safeD = config.player.radius + 30;
@@ -60,11 +70,42 @@ export function steer(p, run, config) {
     }
     const minD = Math.sqrt(minD2);
     let score = minD < safeD ? (minD - safeD) * DANGER_W : 0;
-    score += inRange * KILL_W;
+    // Инженерное оружие не бьёт из рук: за него работают установки на арене.
+    // Премия за «цель в радиусе моего оружия» без поправки увела бы бота водить
+    // толпу туда, где по ней никто не стреляет.
+    //
+    // Два слагаемых, а не одно. Прямое притяжение к своему полю огня — потому
+    // что встать под свои стволы это самостоятельная цель; без него бот с одной
+    // инженерией вырождался в беглеца, жался от толпы, упирался в стену и гиб на
+    // первой волне, ни разу не подойдя к собственным турелям.
+    //
+    // Обесценивание целей вне покрытия — только для того, у кого В РУКАХ ПУСТО.
+    // С тесаком в слоте цель рядом стоит полной премии независимо от установок:
+    // иначе бот с обычным оружием разучился бы драться на ровном месте.
+    const cover = coverAt(nx, ny, run);
+    score += cover * COVER_W;
+    score += inRange * KILL_W * (handArmed || cover > 0 ? 1 : UNCOVERED_KILL);
     const wall = Math.min(nx, ny, aw - nx, ah - ny);
     if (wall < WALL_R) score -= (WALL_R - wall) * WALL_PENALTY;
     if (score > bestScore) { bestScore = score; bx = dx; by = dy; }
   }
   p.input.x = bx;
   p.input.y = by;
+}
+
+// Сколько СВОИХ установок держит точку под огнём. Ноль, если их нет вовсе, —
+// тогда оба слагаемых выше молчат и бот ведёт себя как до инженерии.
+function coverAt(x, y, run) {
+  const pool = run.turretPool;
+  if (!pool || pool.count === 0) return 0;
+  let n = 0;
+  for (let i = 0; i < pool.count; i++) {
+    const t = pool.items[i];
+    if (!t.slot.cfg) continue;
+    const r = t.slot.cfg.range;
+    const dx = t.x - x;
+    const dy = t.y - y;
+    if (dx * dx + dy * dy <= r * r) n++;
+  }
+  return n;
 }

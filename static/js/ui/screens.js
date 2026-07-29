@@ -1,119 +1,42 @@
-// Экраны: menu (соло / кооп / вход по коду) и game (панель скрыта, играет canvas).
+// Экраны: menu — это город (ui/city_ui.js), game — панель скрыта, играет canvas.
 // Все тексты — только через t(key) из config.i18n.
 
+import { createCity } from './city_ui.js';
+
 export function createScreens(root, config, t) {
-  const doc = root.ownerDocument;
-
-  const panel = doc.createElement('div');
-  panel.id = 'screen-menu';
-  panel.className = 'menu';
-
-  const title = doc.createElement('div');
-  title.className = 'menu-title';
-  title.textContent = t('ui.menu.play');
-  panel.appendChild(title);
-
-  const playBtn = doc.createElement('button');
-  playBtn.type = 'button';
-  playBtn.id = 'btn-play';
-  playBtn.className = 'btn';
-  playBtn.textContent = t('ui.menu.solo');
-  panel.appendChild(playBtn);
-
-  const coopBtn = doc.createElement('button');
-  coopBtn.type = 'button';
-  coopBtn.id = 'btn-coop';
-  coopBtn.className = 'btn';
-  coopBtn.textContent = t('ui.menu.coop');
-  panel.appendChild(coopBtn);
-
-  const metaBtn = doc.createElement('button');
-  metaBtn.type = 'button';
-  metaBtn.id = 'btn-meta';
-  metaBtn.className = 'btn';
-  metaBtn.textContent = t('ui.menu.reliquary');
-  panel.appendChild(metaBtn);
-
-  // Звук из главного меню, а не только из паузы: музыка играет уже в меню, и
-  // первое, что делает игрок, которому она мешает, — ищет ползунок здесь.
-  const audioBtn = doc.createElement('button');
-  audioBtn.type = 'button';
-  audioBtn.id = 'btn-audio';
-  audioBtn.className = 'btn';
-  audioBtn.textContent = t('ui.audio.title');
-  panel.appendChild(audioBtn);
-
-  const adminBtn = doc.createElement('button');
-  adminBtn.type = 'button';
-  adminBtn.id = 'btn-admin';
-  adminBtn.className = 'btn';
-  adminBtn.textContent = t('ui.admin.title');
-  adminBtn.style.display = 'none';
-  panel.appendChild(adminBtn);
-
-  const joinRow = doc.createElement('div');
-  joinRow.className = 'join-row';
-  const codeInput = doc.createElement('input');
-  codeInput.id = 'join-code';
-  codeInput.maxLength = config.net.room_code_len;
-  codeInput.placeholder = t('ui.lobby.code');
-  const joinBtn = doc.createElement('button');
-  joinBtn.type = 'button';
-  joinBtn.id = 'btn-join';
-  joinBtn.className = 'btn';
-  joinBtn.textContent = t('ui.lobby.ready');
-  joinRow.appendChild(codeInput);
-  joinRow.appendChild(joinBtn);
-  panel.appendChild(joinRow);
-
-  const logoutBtn = doc.createElement('button');
-  logoutBtn.type = 'button';
-  logoutBtn.id = 'btn-logout';
-  logoutBtn.className = 'btn';
-  logoutBtn.textContent = t('ui.menu.logout');
-  panel.appendChild(logoutBtn);
-
-  const errEl = doc.createElement('div');
-  errEl.className = 'error';
-  panel.appendChild(errEl);
-
-  root.appendChild(panel);
-
   let handlers = {};
 
-  playBtn.addEventListener('click', () => handlers.onPlay && handlers.onPlay());
-  coopBtn.addEventListener('click', () => handlers.onCoop && handlers.onCoop());
-  metaBtn.addEventListener('click', () => handlers.onMeta && handlers.onMeta());
-  audioBtn.addEventListener('click', () => handlers.onAudio && handlers.onAudio());
-  adminBtn.addEventListener('click', () => handlers.onAdmin && handlers.onAdmin());
-  logoutBtn.addEventListener('click', () => handlers.onLogout && handlers.onLogout());
-  joinBtn.addEventListener('click', async () => {
-    if (!handlers.onJoin) return;
-    errEl.textContent = '';
-    const res = await handlers.onJoin(codeInput.value.trim().toUpperCase());
-    if (res && res.error) errEl.textContent = t('ui.error.' + res.error);
+  // Город строится один раз, а набор колбэков приходит с каждым show('menu'),
+  // поэтому ему отдаются стабильные обёртки, зовущие актуальные обработчики.
+  const city = createCity(root, config, null, t, {
+    play: () => handlers.onPlay && handlers.onPlay(),
+    meta: (tabs) => handlers.onMeta && handlers.onMeta(tabs),
+    coop: () => handlers.onCoop && handlers.onCoop(),
+    join: (code) => (handlers.onJoin ? handlers.onJoin(code) : null),
+    audio: () => handlers.onAudio && handlers.onAudio(),
+    admin: () => handlers.onAdmin && handlers.onAdmin(),
+    logout: () => handlers.onLogout && handlers.onLogout(),
   });
 
   const screens = {
     current: 'menu',
 
-    // Показать причину прямо в меню. Нужно на случай осечки старта забега: мастер
-    // настройки к этому моменту уже спрятался, и без строчки текста игрок видит
-    // только необъяснимый возврат в меню.
+    // Показать причину прямо в городе. Нужно на случай осечки старта забега:
+    // мастер настройки к этому моменту уже спрятался, и без строчки текста
+    // игрок видит только необъяснимый возврат в меню.
     error(text) {
-      errEl.textContent = text || '';
+      city.error(text);
     },
 
     show(name, data) {
       screens.current = name;
       if (name === 'menu') {
-        panel.style.display = '';
-        errEl.textContent = '';
         if (data) handlers = data;
-        if (data && data.invited) codeInput.value = data.invited;
-        adminBtn.style.display = data && data.onAdmin ? '' : 'none';
+        city.setAdminVisible(!!(data && data.onAdmin));
+        if (data && data.invited) city.setCode(data.invited);
+        city.show(data && data.profile);
       } else {
-        panel.style.display = 'none';
+        city.hide();
       }
     },
   };

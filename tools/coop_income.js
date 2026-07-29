@@ -10,6 +10,12 @@
 //   node tools/coop_income.js                    1/2/4/8 игроков, 10 волн
 //   node tools/coop_income.js --waves 15 --buy   с закупкой в лавке
 //   node tools/coop_income.js --players 1,8 --seed 777
+//   node tools/coop_income.js --seed 11,22,33    среднее по трём сидам
+//
+// Сидов по умолчанию три, и это не перестраховка. Один прогон — это одна
+// раскладка арены, одна расстановка установок и одна последовательность
+// поворотов бота; разброс между сидами доходит до полутора раз. Калибровать
+// компенсацию дропа по одному сиду значит подгонять её под случайность.
 //
 // Боты бессмертны намеренно: смерть штрафует котёл (coop.death_penalty) и меняет
 // состав, а мерить надо формулу дохода, а не живучесть ботов.
@@ -32,7 +38,7 @@ function arg(name, def) {
 const has = (name) => process.argv.indexOf('--' + name) >= 0;
 
 const WAVES = Number(arg('waves', 10));
-const SEED = Number(arg('seed', 4242));
+const SEEDS = String(arg('seed', '4242,777,31337')).split(',').map(Number);
 const DANGER = Number(arg('danger', 1));
 const BUY = has('buy');
 const COMPS = String(arg('players', '1,2,4,8')).split(',').map(Number);
@@ -91,9 +97,9 @@ function doShop(run) {
   }
 }
 
-function measure(players) {
+function measure(players, seed) {
   const run = createRun({
-    config, seed: SEED, transport,
+    config, seed, transport,
     players: makePlayers(players),
     arena: 'ar_hive', danger: DANGER,
   });
@@ -130,14 +136,34 @@ function measure(players) {
   return perWave;
 }
 
+// Среднее по сидам поволново: складываем одинаковые волны разных прогонов.
 const data = {};
 for (const n of COMPS) {
-  process.stdout.write(`считаю состав ${n}...\r`);
-  data[n] = measure(n);
+  const runs = [];
+  for (const seed of SEEDS) {
+    process.stdout.write(`считаю состав ${n}, сид ${seed}...\r`);
+    runs.push(measure(n, seed));
+  }
+  const len = Math.min(...runs.map((r) => r.length));
+  const avg = [];
+  for (let i = 0; i < len; i++) {
+    let per = 0;
+    let pot = 0;
+    let kills = 0;
+    for (const r of runs) { per += r[i].per; pot += r[i].pot; kills += r[i].kills; }
+    avg.push({
+      wave: runs[0][i].wave,
+      per: Math.round(per / runs.length),
+      pot: Math.round(pot / runs.length),
+      kills: kills / runs.length,
+    });
+  }
+  data[n] = avg;
 }
 
 const waves = Math.min(...COMPS.map((n) => data[n].length));
-console.log(`сид ${SEED}, сложность ${DANGER}, закупка в лавке: ${BUY ? 'да' : 'нет'}`);
+console.log(`сиды ${SEEDS.join(', ')}, сложность ${DANGER}, `
+  + `закупка в лавке: ${BUY ? 'да' : 'нет'}`);
 console.log('прах НА ОДНОГО игрока за волну (в скобках — общий котёл)\n');
 console.log('  волна | ' + COMPS.map((n) => `${n} игр.`.padStart(13)).join(' | '));
 for (let i = 0; i < waves; i++) {
@@ -160,3 +186,24 @@ for (const n of COMPS) {
 
 const worst = Math.max(...COMPS.map((n) => Math.abs(total[n] / base - 1)));
 console.log(`\nмаксимальное отклонение от соло: ${(worst * 100).toFixed(0)}%`);
+
+// Во сколько раз кооп убивает больше соло. Именно это число обязана
+// компенсировать economy.dropMultiplier: личный доход = убийства × дроп / N, и
+// чтобы он совпал с соло, дроп должен равняться N / (рост убийств). Раньше вместо
+// измеренного роста туда подставлялся ПЛАНОВЫЙ рост спавна (budget_per_player) —
+// а это разные числа: часть волны просто не доживает до конца, и с инженерией
+// разрыв стал кратным.
+// Убийства складываем по ТОМУ ЖЕ окну волн, что и доход. Иначе состав, добравшийся
+// до десятой волны, сравнивается с тем, кто дошёл до восьмой, и рост убийств
+// оказывается завышен вдвое — а по этой колонке калибруют kill_scale.
+const killsOf = {};
+for (const n of COMPS) {
+  killsOf[n] = data[n].slice(0, waves).reduce((a, w) => a + w.kills, 0);
+}
+const kBase = killsOf[COMPS[0]] || 1;
+console.log('\n  состав | убийств за прогон | рост убийств | нужный дроп (N/рост)');
+for (const n of COMPS) {
+  const grow = killsOf[n] / kBase;
+  console.log(`  ${String(n).padStart(6)} | ${String(Math.round(killsOf[n])).padStart(17)} `
+    + `| ${grow.toFixed(2).padStart(12)} | ${(n / grow).toFixed(2).padStart(20)}`);
+}

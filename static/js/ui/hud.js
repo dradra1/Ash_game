@@ -100,12 +100,14 @@ export function createHud(config, t) {
     }
 
     // --- правый верх ниже: прах
+    //
+    // Одна строка и в соло, и в коопе — та, на которую игрок может что-то купить.
+    // Раньше под ней висели «котёл» и «твоя доля»: три числа про одни и те же
+    // деньги, из которых два не значат ничего в отрыве от состава комнаты. Котёл
+    // растёт от чужих убийств и пугает, доля дублирует прах с точностью до
+    // потраченного. Внутренняя кухня экономики (sim/economy.js) осталась прежней,
+    // но игроку показываем ровно то, что у него на руках.
     label(ctx, t('ui.hud.ash') + ' ' + Math.floor(me.ash), right, pad + 44, h.ash, 'right');
-    if (state.players.length > 1) {
-      label(ctx, t('ui.hud.pot') + ' ' + Math.floor(state.pot), right, pad + 60, h.dim, 'right');
-      label(ctx, t('ui.hud.share') + ' ' + Math.floor(state.pot / state.players.length),
-        right, pad + 76, h.dim, 'right');
-    }
 
     // --- панель союзников (кооп)
     if (state.players.length > 1) {
