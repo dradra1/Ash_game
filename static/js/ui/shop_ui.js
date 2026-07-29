@@ -82,10 +82,50 @@ export function createShopUi(root, config, t, tip) {
       return head + tierRow
         + `<div class="card-line">${t('ui.class.' + cfg.class)}</div>`
         + `<div class="card-line">${Math.round(cfg.damage)} / `
-        + `${cfg.cooldown.toFixed(2)}${t('ui.unit.sec')}</div>`;
+        + `${cfg.cooldown.toFixed(2)}${t('ui.unit.sec')}</div>`
+        + weaponSynHtml(cfg);
     }
     return head + tierRow + statsHtml(config, cfg.stats)
       + (cfg.desc ? `<div class="card-desc">${cfg.desc}</div>` : '');
+  }
+
+  // Счёт стволов по сетам (класс + каждый тег) текущего лоадаута.
+  // Общая для панели и тултипов: разойтись им нельзя, иначе пипки на панели
+  // и строки в тултипе будут рассказывать разное.
+  function synCounts() {
+    const counts = {};
+    const p = ctx ? ctx.player() : null;
+    if (!p) return counts;
+    for (let i = 0; i < p.slots.length; i++) {
+      const cfg = p.slots[i].cfg;
+      if (!cfg) continue;
+      counts[cfg.class] = (counts[cfg.class] || 0) + 1;
+      const tags = cfg.tags || [];
+      for (let j = 0; j < tags.length; j++) {
+        counts[tags[j]] = (counts[tags[j]] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  // Блок «синергии ствола» внизу тултипа оружия: все его сеты (класс + теги)
+  // с бонусами порогов; недостижённые пока пороги приглушены.
+  function weaponSynHtml(cfg) {
+    const syn = config.synergies;
+    if (!syn || !syn.enabled) return '';
+    const counts = synCounts();
+    const sets = [[t('ui.class.' + cfg.class), syn.classes[cfg.class],
+      counts[cfg.class] || 0]];
+    for (const tag of cfg.tags || []) {
+      if (syn.tags && syn.tags[tag]) {
+        sets.push([t('ui.tag.' + tag), syn.tags[tag], counts[tag] || 0]);
+      }
+    }
+    let html = `<div class="col-title">${t('ui.shop.synergies')}</div>`;
+    for (const [name, tiers, n] of sets) {
+      html += synTipHtml(name, tiers, n);
+    }
+    return html;
   }
 
   function renderSlots() {
@@ -338,38 +378,30 @@ export function createShopUi(root, config, t, tip) {
       + (meta.desc ? `<div class="card-desc">${meta.desc}</div>` : '');
   }
 
-  // Синергии: строка на сет — сначала классы оружия, потом теги. Ствол
-  // участвует сразу во всех своих сетах, поэтому строки зажигаются пачкой.
-  // Сеты без пары приглушены, как нулевые статы: механику видно сразу,
-  // а не после того как случайно собрал два ствола одного сета.
+  // Синергии: строка на АКТИВНЫЙ сет (собрано хотя бы 2 ствола) — сначала
+  // классы оружия, потом теги. Несобранные сеты не показываем: панель читается
+  // как «что уже работает», а состав любого ствола виден в его тултипе.
   function renderSynergies() {
     synEl.innerHTML = '';
     const syn = config.synergies;
     if (!syn || !syn.enabled) return;
     const p = ctx.player();
-    const counts = {};
-    for (let i = 0; i < p.slots.length; i++) {
-      const cfg = p.slots[i].cfg;
-      if (!cfg) continue;
-      counts[cfg.class] = (counts[cfg.class] || 0) + 1;
-      const tags = cfg.tags || [];
-      for (let j = 0; j < tags.length; j++) {
-        counts[tags[j]] = (counts[tags[j]] || 0) + 1;
-      }
-    }
+    const counts = synCounts();
     for (const cls in syn.classes) {
-      synRow(synEl, t('ui.class.' + cls), syn.classes[cls], counts[cls] || 0, p);
+      const n = counts[cls] || 0;
+      if (n >= 2) synRow(synEl, t('ui.class.' + cls), syn.classes[cls], n, p);
     }
     if (syn.tags) {
       for (const tag in syn.tags) {
-        synRow(synEl, t('ui.tag.' + tag), syn.tags[tag], counts[tag] || 0, p);
+        const n = counts[tag] || 0;
+        if (n >= 2) synRow(synEl, t('ui.tag.' + tag), syn.tags[tag], n, p);
       }
     }
   }
 
   function synRow(parent, name, tiers, n, p) {
     const row = doc.createElement('div');
-    row.className = 'syn-row' + (n < 2 ? ' zero' : '');
+    row.className = 'syn-row';
     let pips = '';
     for (const th in tiers) {
       pips += `<span class="syn-pip${n >= +th ? ' on' : ''}">${th}</span>`;

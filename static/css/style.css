@@ -425,14 +425,15 @@ html, body {
 .stat-row.zero { opacity: 0.4; }
 .stat-row:hover { background: #22262f; }
 
-/* Синергии оружия: строка класса со счётом и пипками порогов 2/4/6 */
+/* Синергии оружия: строка активного сета со счётом и пипками порогов 2/4/6.
+   На панели только активные; несобранные пороги приглушаются в тултипах. */
 .syn-row { display: flex; align-items: baseline; gap: 6px; font-size: 12px; padding: 1px 0; }
-.syn-row.zero { opacity: 0.4; }
 .syn-row:hover { background: #22262f; }
 .syn-pips { display: flex; gap: 3px; margin-left: auto; }
 .syn-pip { color: #4a463c; }
 .syn-pip.on { color: var(--gold); }
 .syn-count { color: #7a7568; }
+.card-line.zero { opacity: 0.4; }
 
 /* Ростер готовности в лавке: кого ещё ждём перед следующей волной */
 .shop-allies { margin-top: 14px; }
@@ -823,7 +824,6 @@ html, body {
     .shop-slots { flex-wrap: wrap; }
     .card { min-width: 44%; min-height: 108px; }
     .shop-cols { flex-direction: column; gap: 10px; }
-    .col-split { flex-direction: column; gap: 10px; }
     .meta-body { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     /* Пальцем нужно куда попадать: увеличиваем все интерактивные элементы */
     .btn, .mini, .choice { min-height: 40px; padding: 10px 14px; font-size: 13px; }
