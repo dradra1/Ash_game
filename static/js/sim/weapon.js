@@ -150,7 +150,7 @@ export function stepSlot(slot, ox, oy, stats, ownerId, dt, deps, swingKind, swin
     swingArc(ox, oy, w, shape, range, nx, ny, dmg, stats, ownerId, deps,
       syn ? syn.meleeArcMult : 1);
   } else {
-    fireShots(ox, oy, w, shape, nx, ny, dmg, stats, ownerId, deps, syn);
+    fireShots(ox, oy, w, shape, range, nx, ny, dmg, stats, ownerId, deps, syn);
   }
 
   // Пульс замаха для кооп-клиентов. Дуговой удар не рождает снаряда, и без этого
@@ -217,8 +217,19 @@ function swingArc(ox, oy, w, shape, range, nx, ny, dmg, stats, ownerId, deps, ar
 // syn — синергии владельца: +снарядов за выстрел (ranged-сет и тег spread)
 // действует на любое стреляющее оружие, +пробитие — на стихийное, а криты
 // усиливает пер-игрока множитель от тега precise.
-function fireShots(ox, oy, w, shape, nx, ny, dmg, stats, ownerId, deps, syn) {
+//
+// range — та же дальность, по которой выбиралась цель, и снаряд обязан гаснуть
+// ровно на ней. Пока временем жизни правил один shape.ttl, реальный долёт
+// (speed × ttl) у половины стволов был вдвое больше паспортной дальности: копьё
+// брало цель на 420, а снаряд летел 840 и рвал всё на пути — оружие било по тому,
+// что заведомо вне его дистанции атаки. Ограничение живёт здесь, а не в
+// sim/projectile.js: полёт по прямой с постоянной скоростью, значит запас хода
+// переводится во время один раз на выстреле, и горячий цикл снарядов не платит
+// за это ничего. Мин, а не присваивание: у огнемёта и пшикалки ttl короче своей
+// же дальности намеренно — струя не должна долетать до края радиуса.
+function fireShots(ox, oy, w, shape, range, nx, ny, dmg, stats, ownerId, deps, syn) {
   const config = deps.config;
+  const ttl = shape.speed > 0 ? Math.min(shape.ttl, range / shape.speed) : shape.ttl;
   const count = (shape.count || 1) + (syn ? syn.extraShots : 0);
   const pierce = (shape.pierce || 0) + (syn && w.class === 'elem' ? syn.extraPierce : 0);
   const critMult = config.stats.crit_mult * (syn ? syn.critDmgMult : 1);
@@ -241,7 +252,7 @@ function fireShots(ox, oy, w, shape, nx, ny, dmg, stats, ownerId, deps, syn) {
     p.y = oy;
     p.vx = Math.cos(a) * shape.speed;
     p.vy = Math.sin(a) * shape.speed;
-    p.ttl = shape.ttl;
+    p.ttl = ttl;
     p.dmg = crit ? dmg * critMult : dmg;
     p.crit = crit;
     p.pierce = pierce;
