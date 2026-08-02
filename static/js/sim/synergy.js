@@ -14,6 +14,8 @@
 // Пересчёт — только из refreshStats (покупка, продажа, слияние, левелап),
 // в горячем цикле этот код не бегает. Все числа — config.synergies.
 
+import { setCount, thresholdShift, fullSets } from './unique.js';
+
 // Значения по умолчанию держим в одном месте: ими же refreshSynergies
 // обнуляет состояние, а не свежим объектом — ссылка на mods сидит в
 // sources игрока, пересоздавать её нельзя.
@@ -69,9 +71,14 @@ function applySpecial(state, name, specials) {
 }
 
 // Применить все пороги одного сета (класса или тега), которые покрывает счёт n.
-function applyTiers(state, tiers, n, specials) {
+//
+// shift двигает планку (Калибровщик: -1, то есть 1/3/5), full открывает сет
+// целиком при единственном стволе (Разнобой) — sim/unique.js.
+function applyTiers(state, tiers, n, specials, shift, full) {
   for (const threshold in tiers) {
-    if (n < +threshold) continue;
+    let need = full ? 1 : +threshold + shift;
+    if (need < 1) need = 1;
+    if (n < need) continue;
     const bonus = tiers[threshold];
     if (bonus.special) {
       applySpecial(state, bonus.special, specials);
@@ -93,24 +100,41 @@ export function refreshSynergies(player, config) {
 
   // Один счёт на классы и на теги: пространства имён не пересекаются,
   // а ствол участвует сразу во всех своих сетах (класс + каждый тег).
-  const slots = player.slots;
+  //
+  // mult — вес одного ствола (Разломный: каждый считается за два), retired —
+  // печати проданного оружия у персонажа с памятью синергий (sim/unique.js).
+  const u = player.uniq;
+  const mult = setCount(u);
   const counts = state.counts;
+  const slots = player.slots;
   for (let i = 0; i < slots.length; i++) {
-    const cfg = slots[i].cfg;
-    if (!cfg) continue;
-    counts[cfg.class] = (counts[cfg.class] || 0) + 1;
-    const tags = cfg.tags;
-    for (let j = 0; j < tags.length; j++) {
-      counts[tags[j]] = (counts[tags[j]] || 0) + 1;
+    countWeapon(counts, slots[i].cfg, mult);
+  }
+  const retired = player.retired;
+  if (retired && retired.length) {
+    for (let i = 0; i < retired.length; i++) {
+      countWeapon(counts, config.weapons[retired[i]], mult);
     }
   }
 
+  const shift = thresholdShift(u);
+  const full = fullSets(u);
   for (const cls in syn.classes) {
-    applyTiers(state, syn.classes[cls], counts[cls] || 0, syn.specials);
+    applyTiers(state, syn.classes[cls], counts[cls] || 0, syn.specials, shift, full);
   }
   if (syn.tags) {
     for (const tag in syn.tags) {
-      applyTiers(state, syn.tags[tag], counts[tag] || 0, syn.specials);
+      applyTiers(state, syn.tags[tag], counts[tag] || 0, syn.specials, shift, full);
     }
+  }
+}
+
+function countWeapon(counts, cfg, mult) {
+  if (!cfg) return;
+  counts[cfg.class] = (counts[cfg.class] || 0) + mult;
+  const tags = cfg.tags;
+  if (!tags) return;
+  for (let j = 0; j < tags.length; j++) {
+    counts[tags[j]] = (counts[tags[j]] || 0) + mult;
   }
 }

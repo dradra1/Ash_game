@@ -3,6 +3,7 @@
 // Геймпад: фокус слота + buy/lock/merge/reroll/ready через input.consumePressed.
 
 import { mergeable, mergeAfterBuy } from '../sim/shop.js';
+import { thresholdShift, fullSets } from '../sim/unique.js';
 import { statsHtml, iconHtml } from './tooltip.js';
 
 export function createShopUi(root, config, t, tip) {
@@ -89,23 +90,22 @@ export function createShopUi(root, config, t, tip) {
       + (cfg.desc ? `<div class="card-desc">${cfg.desc}</div>` : '');
   }
 
-  // Счёт стволов по сетам (класс + каждый тег) текущего лоадаута.
-  // Общая для панели и тултипов: разойтись им нельзя, иначе пипки на панели
-  // и строки в тултипе будут рассказывать разное.
+  // Счёт стволов по сетам берётся ГОТОВЫМ из симуляции (player.synergy.counts):
+  // считать его здесь второй раз значит разойтись с ней на первой же особенности
+  // персонажа — Разломный весит каждый ствол за два, Реликварий считает печати
+  // проданного (sim/unique.js). Панель обязана показывать то, что реально
+  // применилось к статам.
   function synCounts() {
-    const counts = {};
     const p = ctx ? ctx.player() : null;
-    if (!p) return counts;
-    for (let i = 0; i < p.slots.length; i++) {
-      const cfg = p.slots[i].cfg;
-      if (!cfg) continue;
-      counts[cfg.class] = (counts[cfg.class] || 0) + 1;
-      const tags = cfg.tags || [];
-      for (let j = 0; j < tags.length; j++) {
-        counts[tags[j]] = (counts[tags[j]] || 0) + 1;
-      }
-    }
-    return counts;
+    return (p && p.synergy && p.synergy.counts) || EMPTY_COUNTS;
+  }
+
+  // Порог, на котором сет сработает у ЭТОГО персонажа: особенность может
+  // сдвинуть планку (Калибровщик: 1/3/5) или открыть сет целиком (Разнобой).
+  function needOf(th, u) {
+    if (fullSets(u)) return 1;
+    const n = +th + thresholdShift(u);
+    return n < 1 ? 1 : n;
   }
 
   // Строка «синергии ствола» внизу тултипа оружия: ТОЛЬКО названия его сетов
@@ -213,6 +213,7 @@ export function createShopUi(root, config, t, tip) {
     const node = card || focusedCard();
     if (res === 'poor' && node) flash(node, t('ui.shop.cant_afford'));
     else if (res === 'full' && node) flash(node, t('ui.shop.slots_full'));
+    else if (res === 'dupe' && node) flash(node, t('ui.shop.no_duplicates'));
     else renderAll();
   }
 
@@ -371,7 +372,7 @@ export function createShopUi(root, config, t, tip) {
       + (meta.desc ? `<div class="card-desc">${meta.desc}</div>` : '');
   }
 
-  // Синергии: строка на АКТИВНЫЙ сет (собрано хотя бы 2 ствола) — сначала
+  // Синергии: строка на АКТИВНЫЙ сет (сработал хотя бы первый порог) — сначала
   // классы оружия, потом теги. Несобранные сеты не показываем: панель читается
   // как «что уже работает», а состав любого ствола виден в его тултипе.
   function renderSynergies() {
@@ -382,39 +383,60 @@ export function createShopUi(root, config, t, tip) {
     const counts = synCounts();
     for (const cls in syn.classes) {
       const n = counts[cls] || 0;
-      if (n >= 2) synRow(synEl, t('ui.class.' + cls), syn.classes[cls], n, p);
+      if (synActive(syn.classes[cls], n, p.uniq)) {
+        synRow(synEl, t('ui.class.' + cls), syn.classes[cls], n, p);
+      }
     }
     if (syn.tags) {
       for (const tag in syn.tags) {
         const n = counts[tag] || 0;
-        if (n >= 2) synRow(synEl, t('ui.tag.' + tag), syn.tags[tag], n, p);
+        if (synActive(syn.tags[tag], n, p.uniq)) {
+          synRow(synEl, t('ui.tag.' + tag), syn.tags[tag], n, p);
+        }
       }
     }
+  }
+
+  function synActive(tiers, n, u) {
+    for (const th in tiers) {
+      if (n >= needOf(th, u)) return true;
+    }
+    return false;
   }
 
   function synRow(parent, name, tiers, n, p) {
     const row = doc.createElement('div');
     row.className = 'syn-row';
+    // Пипсы — по РАЗНЫМ порогам: у Разнобоя все три сходятся в единицу, и три
+    // одинаковые пипки «1 1 1» читались бы как сломанная разметка.
     let pips = '';
+    let prev = 0;
     for (const th in tiers) {
-      pips += `<span class="syn-pip${n >= +th ? ' on' : ''}">${th}</span>`;
+      const need = needOf(th, p.uniq);
+      if (need === prev) continue;
+      prev = need;
+      pips += `<span class="syn-pip${n >= need ? ' on' : ''}">${need}</span>`;
     }
+    // Знаменатель — число слотов: у Разломного счёт идёт по два за ствол и
+    // может его перерасти, поэтому берём максимум, а не врём про «7/3».
+    const total = Math.max(n, p.slots.length);
     row.innerHTML = `<span>${name}</span>`
       + `<span class="syn-pips">${pips}</span>`
-      + `<span class="syn-count">${n}/${p.slots.length}</span>`;
-    tip.bind(row, () => synTipHtml(name, tiers, n));
+      + `<span class="syn-count">${n}/${total}</span>`;
+    tip.bind(row, () => synTipHtml(name, tiers, n, p.uniq));
     parent.appendChild(row);
   }
 
-  function synTipHtml(name, tiers, n) {
+  function synTipHtml(name, tiers, n, u) {
     let html = `<div class="card-name">${name}</div>`;
     for (const th in tiers) {
       const bonus = tiers[th];
+      const need = needOf(th, u);
       const body = bonus.special
         ? t('ui.synergy.special.' + bonus.special)
         : statsHtml(config, bonus);
-      html += `<div class="col-title">${th}</div>`
-        + `<div class="card-line${n >= +th ? '' : ' zero'}">${body}</div>`;
+      html += `<div class="col-title">${need}</div>`
+        + `<div class="card-line${n >= need ? '' : ' zero'}">${body}</div>`;
     }
     return html;
   }
@@ -486,3 +508,6 @@ export function createShopUi(root, config, t, tip) {
     },
   };
 }
+
+// Лавку открывают до первого пересчёта синергий — тогда счёта ещё нет.
+const EMPTY_COUNTS = {};

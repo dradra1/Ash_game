@@ -4,6 +4,10 @@
 // поэтому все числа — из конфига и легко перебалансируются.
 
 import { equip } from './weapon.js';
+import {
+  shopAllows, tierCap, weaponPriceMult, mergeAllowed, replaceOnFull, freePair,
+  holdsWeapon, rememberRetired,
+} from './unique.js';
 
 export function priceOf(config, base, wave, danger) {
   const s = config.shop;
@@ -33,9 +37,11 @@ export function maxTier(config, wave) {
   return max;
 }
 
-// Выбор тира с поправкой на удачу: удача сдвигает распределение к высоким тирам
-export function rollTier(config, wave, luck, rng) {
-  const cap = maxTier(config, wave);
+// Выбор тира с поправкой на удачу: удача сдвигает распределение к высоким тирам.
+// u — уникальная особенность покупателя: она двигает потолок (Курганный кузнец
+// торгует выше волны, Барон Хлама — только хламом), см. sim/unique.js.
+export function rollTier(config, wave, luck, rng, u) {
+  const cap = tierCap(u, maxTier(config, wave), config);
   const weights = config.shop.tier_weights;
   const shift = luck * config.shop.luck_tier_shift;
   let total = 0;
@@ -62,7 +68,7 @@ export function createShop(config, unlockedWeapons, curseFx) {
     slots[i] = { kind: null, id: null, cfg: null, price: 0, locked: false, sold: false };
   }
   const fx = curseFx || EMPTY_CURSE;
-  const state = { rerolls: 0, wave: 1, freeRerollsLeft: 0 };
+  const state = { rerolls: 0, wave: 1, danger: null, freeRerollsLeft: 0 };
 
   // Пул оружия ограничен открытым метапрогрессией (M6 передаст сюда реальный список)
   const weaponIds = [];
@@ -83,9 +89,15 @@ export function createShop(config, unlockedWeapons, curseFx) {
     }
   }
 
-  // Оружие подбирается с оглядкой на инвентарь: шанс совпасть по типу и по тегу
+  // Оружие подбирается с оглядкой на инвентарь: шанс совпасть по типу и по тегу.
+  //
+  // Фильтр особенности (класс, тег, запрет дубликатов) применяется ко ВСЕМ трём
+  // веткам подбора: пропусти его в «том же типе» — и Носителю Роя прилетит
+  // карабин, а Разнобою — второй такой же стилет, то есть карточка, которую его
+  // же buy() откажется продавать.
   function pickWeapon(player, tier, rng) {
     const s = config.shop;
+    const u = player.uniq;
     const roll = rng.float();
     let sameType = null;
     let sameTag = null;
@@ -95,6 +107,7 @@ export function createShop(config, unlockedWeapons, curseFx) {
       for (let k = 0; k < weaponIds.length; k++) {
         const w = config.weapons[weaponIds[k]];
         if (w.tier !== tier) continue;
+        if (!shopAllows(u, weaponIds[k], w, player)) continue;
         if (!sameType && w.texture === held.texture) sameType = weaponIds[k];
         if (!sameTag && shareTag(w.tags, held.tags)) sameTag = weaponIds[k];
       }
@@ -104,15 +117,20 @@ export function createShop(config, unlockedWeapons, curseFx) {
 
     let count = 0;
     for (let k = 0; k < weaponIds.length; k++) {
-      if (config.weapons[weaponIds[k]].tier === tier) count++;
+      if (allowed(weaponIds[k], tier, u, player)) count++;
     }
     if (count === 0) return null;
     let idx = rng.int(0, count - 1);
     for (let k = 0; k < weaponIds.length; k++) {
-      if (config.weapons[weaponIds[k]].tier !== tier) continue;
+      if (!allowed(weaponIds[k], tier, u, player)) continue;
       if (idx-- === 0) return weaponIds[k];
     }
     return null;
+  }
+
+  function allowed(id, tier, u, player) {
+    const w = config.weapons[id];
+    return w.tier === tier && shopAllows(u, id, w, player);
   }
 
   function pickItem(tier, rng) {
@@ -131,7 +149,7 @@ export function createShop(config, unlockedWeapons, curseFx) {
 
   function fillSlot(slot, player, wave, danger, rng) {
     if (slot.locked) return;                      // цена залоченного слота фиксируется
-    const tier = rollTier(config, wave, player.stats.luck, rng);
+    const tier = rollTier(config, wave, player.stats.luck, rng, player.uniq);
     const wantWeapon = rng.float() < config.shop.weapon_chance;
 
     let kind = wantWeapon ? 'weapon' : 'item';
@@ -152,14 +170,21 @@ export function createShop(config, unlockedWeapons, curseFx) {
     } else if (fx.shop_free) {
       slot.price = 0;
     } else {
-      slot.price = priceOf(config, slot.cfg.price, wave, danger);
+      // Наценка особенности — только на оружие: предметы к её правилам отношения
+      // не имеют, а Кузнец платит именно за ранние высокие тиры.
+      const mult = kind === 'weapon' ? weaponPriceMult(player.uniq) : 1;
+      slot.price = Math.round(priceOf(config, slot.cfg.price, wave, danger) * mult);
     }
     slot.sold = false;
   }
 
-  // Открыть лавку на волне wave для игрока player
+  // Открыть лавку на волне wave для игрока player.
+  //
+  // Сложность запоминается в state: по ней считается возврат за ствол, который
+  // вытесняет покупка у персонажа с одним слотом (replace_on_full в buy).
   function open(player, wave, danger, rng, coop) {
     state.wave = wave;
+    state.danger = danger;
     state.rerolls = 0;
     state.freeRerollsLeft = fx.free_rerolls || 0;
     rebuildPools(coop);
@@ -168,6 +193,7 @@ export function createShop(config, unlockedWeapons, curseFx) {
   }
 
   function reroll(player, danger, rng, wallet) {
+    state.danger = danger;
     let cost = 0;
     if (state.freeRerollsLeft > 0) {
       state.freeRerollsLeft -= 1;
@@ -201,7 +227,7 @@ export function freeSlotIndex(player) {
   return -1;
 }
 
-// Купить. Возвращает код: 'ok' | 'poor' | 'full' | 'empty'
+// Купить. Возвращает код: 'ok' | 'poor' | 'full' | 'dupe' | 'empty'
 //
 // withMerge — покупка ради слияния: слоты могут быть заняты, потому что сразу за
 // покупкой merge_count копий схлопнутся в одну вещь и слотов станет больше, а не меньше.
@@ -212,19 +238,41 @@ export function buy(player, shop, slotIndex, config, wallet, onChange, withMerge
 
   // Сначала проверяем всё, что может отказать, и только потом платим и меняем
   // инвентарь: половинчатая покупка списала бы прах и ничего не выдала.
+  const u = player.uniq;
   const merging = !!withMerge && slot.kind === 'weapon' && mergeAfterBuy(player, slot, config);
   let target = -1;
+  let replaced = -1;
   if (slot.kind === 'weapon') {
+    if (u && u.no_duplicates && holdsWeapon(player, slot.id)) return 'dupe';
     target = freeSlotIndex(player);
     // Слотов нет, но слияние их освободит: кладём поверх одной из копий,
     // которую слияние всё равно поглотит.
     if (target < 0 && merging) target = indexOfWeapon(player, slot.id);
+    // Обетнику слот не освободить иначе: новый ствол вытесняет старый, за
+    // старый возвращается его цена продажи — иначе смена оружия за забег
+    // была бы для него запрещена вовсе.
+    if (target < 0 && replaceOnFull(u)) {
+      replaced = worstSlotIndex(player);
+      target = replaced;
+    }
     if (target < 0) return 'full';
   }
   if (!wallet.spend(player, slot.price)) return 'poor';
 
   if (slot.kind === 'weapon') {
+    if (replaced >= 0) {
+      const old = player.slots[replaced];
+      wallet.add(player, sellValue(config, old.cfg.price, shop.state.wave,
+        shop.state.danger || NO_DANGER));
+      rememberRetired(player, old.id);
+    }
     equip(player.slots[target], slot.id, config);
+    // Двоедушный: пара кладётся сразу и бесплатно. Свободного слота нет —
+    // покупка остаётся обычной, а не отменяется.
+    if (freePair(u)) {
+      const twin = freeSlotIndex(player);
+      if (twin >= 0) equip(player.slots[twin], slot.id, config);
+    }
   } else {
     player.items.push(slot.id);
     player.sources.push(config.items[slot.id].stats);
@@ -235,6 +283,25 @@ export function buy(player, shop, slotIndex, config, wallet, onChange, withMerge
   if (onChange) onChange();
   return 'ok';
 }
+
+// Кого вытеснит покупка при полных слотах: самый дешёвый ствол — он же самый
+// слабый, и выбор не зависит от порядка слотов.
+function worstSlotIndex(player) {
+  let best = -1;
+  let bestPrice = Infinity;
+  for (let i = 0; i < player.slots.length; i++) {
+    const cfg = player.slots[i].cfg;
+    if (!cfg) continue;
+    if (cfg.price < bestPrice) {
+      bestPrice = cfg.price;
+      best = i;
+    }
+  }
+  return best;
+}
+
+// Лавку могли не открывать (тесты, ботопрогон) — множители сложности по умолчанию.
+const NO_DANGER = { price_mult: 1 };
 
 function indexOfWeapon(player, weaponId) {
   for (let i = 0; i < player.slots.length; i++) {
@@ -250,6 +317,7 @@ export function sell(player, kind, index, config, wave, danger, wallet, onChange
     if (!s || !s.cfg) return 0;
     const back = sellValue(config, s.cfg.price, wave, danger);
     wallet.add(player, back);
+    rememberRetired(player, s.id);
     s.id = null;
     s.cfg = null;
     s.cd = 0;
@@ -263,7 +331,7 @@ export function sell(player, kind, index, config, wave, danger, wallet, onChange
   const back = sellValue(config, config.items[id].price, wave, danger);
   wallet.add(player, back);
   player.items.splice(index, 1);
-  // sources[0] — персонаж, sources[1] — копилка левелапов, предметы идут с индекса 2.
+  // Первые ITEM_SOURCE_START источников постоянные, предметы идут после них.
   // Одинаковые предметы кладут одну и ту же ссылку — удаляем первое вхождение.
   const si = player.sources.indexOf(config.items[id].stats);
   if (si >= ITEM_SOURCE_START) player.sources.splice(si, 1);
@@ -273,6 +341,7 @@ export function sell(player, kind, index, config, wave, danger, wallet, onChange
 
 // Слияние: merge_count одинаковых одного тира → одно следующего тира
 export function mergeable(player, config) {
+  if (!mergeAllowed(player.uniq)) return null;
   const counts = MERGE_COUNTS;
   for (const k in counts) delete counts[k];
   for (let i = 0; i < player.slots.length; i++) {
@@ -289,15 +358,24 @@ export function mergeable(player, config) {
 // Слияние сразу после покупки: хватит ли копий этого оружия, если купить ещё одну.
 // Отвечает на вопрос лавки «показывать ли кнопку „купить и объединить“».
 export function mergeAfterBuy(player, slot, config) {
+  if (!mergeAllowed(player.uniq)) return false;
   if (!slot || slot.kind !== 'weapon' || !slot.cfg || !slot.cfg.next_tier) return false;
+  const need = config.shop.merge_count;
   let have = 0;
   for (let i = 0; i < player.slots.length; i++) {
     if (player.slots[i].id === slot.id) have++;
   }
-  return have + 1 >= config.shop.merge_count;
+  if (have + 1 < need) return false;
+  // Покупаемой копии нужно куда-то лечь. Свободного слота нет — она встанет
+  // ПОВЕРХ одной из уже одетых копий, и их число не вырастет: слияние сорвётся,
+  // а прах уже списан. Значит без свободного слота обещать слияние можно только
+  // тогда, когда копий хватает и без покупаемой (у персонажа с одним слотом —
+  // никогда).
+  return freeSlotIndex(player) >= 0 || have >= need;
 }
 
 export function merge(player, weaponId, config, onChange) {
+  if (!mergeAllowed(player.uniq)) return false;
   const need = config.shop.merge_count;
   const cfg = config.weapons[weaponId];
   if (!cfg || !cfg.next_tier) return false;
@@ -306,6 +384,7 @@ export function merge(player, weaponId, config, onChange) {
     if (player.slots[i].id === weaponId) {
       player.slots[i].id = null;
       player.slots[i].cfg = null;
+      rememberRetired(player, weaponId);
       removed++;
     }
   }
@@ -318,5 +397,7 @@ export function merge(player, weaponId, config, onChange) {
 }
 
 const MERGE_COUNTS = {};
-const ITEM_SOURCE_START = 2;
+// Постоянных источников статов у игрока четыре: персонаж, левелапы, синергии,
+// уникальная особенность (sim/player.js). Предметы начинаются после них.
+const ITEM_SOURCE_START = 4;
 const EMPTY_CURSE = { shop_free: false, free_rerolls: 0 };

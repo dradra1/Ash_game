@@ -60,12 +60,30 @@ export function characterTipHtml(config, id, t) {
     const w = config.weapons[start[i]];
     if (w) weapons += `<div class="card-line">${iconHtml(w.texture, 'icon-xs')}${w.name}</div>`;
   }
+  // Уникальная особенность — отдельной строкой над статами: у половины
+  // персонажей она решает больше, чем все их цифры вместе.
+  const uniq = uniqueHtml(c, t);
   return `<div class="tip-head">${face}`
     + `<div class="card-name" style="color:${c.color}">${c.name}</div></div>`
     + (c.desc ? `<div class="card-desc">${c.desc}</div>` : '')
+    + uniq
     + `<div class="col-title">${t('ui.select.traits')}</div>`
     + statsHtml(config, c.stats)
     + (weapons ? `<div class="col-title">${t('ui.select.start_weapons')}</div>${weapons}` : '');
+}
+
+// Строка уникальной особенности персонажа. Текста в коде нет: описание лежит
+// в i18n под ключом ui.unique.<type>, ключ приходит из config.characters.
+// Особенности без описания (объявленные, но не реализованные движком) молчат —
+// обещать игроку то, чего нет, хуже, чем не сказать ничего.
+export function uniqueHtml(character, t) {
+  const u = character && character.unique;
+  if (!u || !u.type) return '';
+  const key = 'ui.unique.' + u.type;
+  const text = t(key);
+  if (text === key) return '';
+  return `<div class="col-title">${t('ui.select.unique')}</div>`
+    + `<div class="card-line uniq">${text}</div>`;
 }
 
 // Разметка описания статов сущности: «+4 Ближний урон», «−20% Здоровье»

@@ -101,8 +101,15 @@ attack, иначе листы разъезжаются по масштабу) л
 - дополнительно клиент рисует под спрайтом эллипс цветом игрока и плашку с ником над
   головой — но спрайт обязан читаться и без них.
 
-Проверка: контактный лист из 14 персонажей рядом, уменьшенный до игрового размера.
+Проверка: контактный лист из 24 персонажей рядом, уменьшенный до игрового размера.
 Если два силуэта путаются — перерисовывается тот, что появился позже.
+
+Так и вышло с Разноликим: первый заход дал очередного «humanoid в глубоком капюшоне» —
+третьего после Пилигрима и Полого, да ещё с фиолетовым акцентом, ушедшим в мелкие
+детали. Помогло не уточнение стиля, а **снос части силуэта**: капюшон запрещён капсом
+(`NO HOOD AT ALL`), маски вынесены веером-воротником вокруг головы, акцент переведён
+в глаза. Правило то же, что с ракурсом в §6: если модель рисует не то, дешевле убрать
+из промпта деталь, которую она достраивает по привычке, чем добавлять прилагательные.
 
 ---
 
@@ -228,24 +235,36 @@ python3 tools/contact_sheet.py static/textures/ch_*.png -o scratch/sheet.png --s
 
 Статусы: ✅ готово · 🔸 в работе · ⬜ не начато
 
-### Персонажи (14)
+### Персонажи (24)
+
+Колонка `px` — игровой размер из `config.characters[].sprite`, а не размер генерации.
 
 | texture | персонаж | фракция | px | статус |
 |---|---|---|---|---|
 | `ch_pilgrim` | Пилигрим | cov | 48 | ✅ idle + walk |
-| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle |
-| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle |
-| `ch_conductor` | Хормейстер | cov | 32 | ✅ idle |
-| `ch_brute` | Громила | scrap | 64 | ✅ idle |
-| `ch_scavenger` | Падальщик | scrap | 32 | ✅ idle |
-| `ch_artificer` | Артифекс | forge | 32 | ✅ idle |
-| `ch_censor` | Цензор | forge | 48 | ✅ idle |
-| `ch_thrall` | Невольник | chit | 32 | ✅ idle |
-| `ch_broodmate` | Выводковый | chit | 32 | ✅ idle |
-| `ch_hierophant` | Иерофант | rift | 32 | ✅ idle |
-| `ch_hollow` | Полый | rift | 32 | ✅ idle |
-| `ch_warden` | Хранитель Гробниц | tomb | 64 | ✅ idle |
-| `ch_mirrorblade` | Зеркальный клинок | mirror | 32 | ✅ idle |
+| `ch_zealot` | Ревнитель | cov | 48 | ✅ idle + walk |
+| `ch_flagellant` | Флагеллант | cov | 48 | ✅ idle + walk |
+| `ch_conductor` | Хормейстер | cov | 48 | ✅ idle + walk |
+| `ch_oathkeeper` | Обетник | cov | 48 | ✅ idle + walk |
+| `ch_brute` | Громила | scrap | 64 | ✅ idle + walk |
+| `ch_scavenger` | Падальщик | scrap | 48 | ✅ idle + walk |
+| `ch_junkbaron` | Барон Хлама | scrap | 64 | ✅ idle + walk |
+| `ch_artificer` | Артифекс | forge | 48 | ✅ idle + walk |
+| `ch_censor` | Цензор | forge | 48 | ✅ idle + walk |
+| `ch_calibrator` | Калибровщик | forge | 48 | ✅ idle + walk |
+| `ch_thrall` | Невольник | chit | 48 | ✅ idle + walk |
+| `ch_broodmate` | Выводковый | chit | 48 | ✅ idle + walk |
+| `ch_swarmcarrier` | Носитель Роя | chit | 48 | ✅ idle + walk |
+| `ch_hierophant` | Иерофант | rift | 48 | ✅ idle + walk |
+| `ch_hollow` | Полый | rift | 48 | ✅ idle + walk |
+| `ch_riftbound` | Разломный | rift | 48 | ✅ idle + walk |
+| `ch_manyfaced` | Разноликий | rift | 48 | ✅ idle + walk |
+| `ch_warden` | Хранитель Гробниц | tomb | 64 | ✅ idle + walk |
+| `ch_reliquary` | Реликварий | tomb | 64 | ✅ idle + walk |
+| `ch_barrowsmith` | Курганный кузнец | tomb | 48 | ✅ idle + walk |
+| `ch_mirrorblade` | Зеркальный клинок | mirror | 48 | ✅ idle + walk |
+| `ch_discordant` | Разнобой | mirror | 48 | ✅ idle + walk |
+| `ch_twinsoul` | Двоедушный | mirror | 48 | ✅ idle + walk |
 
 ### Враги, элиты, боссы
 

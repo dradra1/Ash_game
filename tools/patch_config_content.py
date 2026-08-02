@@ -27,7 +27,7 @@ REPO = os.path.join(ROOT, "config", "game_config.json")
 LIVE = os.path.join(os.environ.get("ASH_DATA", os.path.join(ROOT, "data")),
                     "game_config.json")
 
-CONTENT_VERSION = 4
+CONTENT_VERSION = 54
 
 
 def patch(cfg):
@@ -64,7 +64,9 @@ def patch(cfg):
             cfg[key] = value
             changed.append(label)
 
-    if cfg.get("content_version") != CONTENT_VERSION and changed:
+    # Строго вверх и через "<", а не "!=": с "!=" прогон этого скрипта ОТКАТЫВАЛ
+    # версию до своей, и вся комната зря перекачивала конфиг.
+    if changed and cfg.get("content_version", 0) < CONTENT_VERSION:
         cfg["content_version"] = CONTENT_VERSION
         changed.append(f"content_version → {CONTENT_VERSION}")
 

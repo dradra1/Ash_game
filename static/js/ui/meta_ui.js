@@ -5,7 +5,7 @@
 // Экран только ОТОБРАЖАЕТ то, что разрешил сервер: цена, баланс и сама покупка
 // проверяются в /api/meta/unlock. Здесь ничего не начисляется.
 
-import { statsHtml, iconHtml } from './tooltip.js';
+import { statsHtml, iconHtml, uniqueHtml } from './tooltip.js';
 
 export function createMetaUi(root, config, t, api) {
   const doc = root.ownerDocument;
@@ -157,6 +157,7 @@ export function createMetaUi(root, config, t, api) {
       const owned = isDefault(c) || owns('character', id);
       const need = (c.unlock || {}).achievement;
       let body = `<div class="meta-line">${f.name}</div>`;
+      body += uniqueHtml(c, t);
       if (Object.keys(c.stats).length) body += statsHtml(config, c.stats);
       if (need) {
         body += `<div class="meta-line${hasAch(need) ? ' done' : ''}">`

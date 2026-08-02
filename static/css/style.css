@@ -343,6 +343,8 @@ html, body {
 .card-name { font-size: 13px; margin-bottom: 2px; }
 .card-tier { color: #7a7568; font-size: 11px; margin-bottom: 6px; }
 .card-line { color: #9a9488; }
+/* Уникальная особенность персонажа: читается раньше статов, поэтому светлее их */
+.card-line.uniq { color: #c8a35a; }
 .card-desc { color: #7a7568; margin-top: 6px; font-style: italic; }
 .card-price { position: absolute; right: 10px; bottom: 8px; color: #c8a35a; }
 

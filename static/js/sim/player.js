@@ -3,20 +3,25 @@
 import { createStats, resolveStats, moveSpeed, armorFactor, dodgeChance } from './stats.js';
 import { makeSlot, equip } from './weapon.js';
 import { createSynergyState, refreshSynergies } from './synergy.js';
+import { slotCount, refreshUniqueMods } from './unique.js';
 import { separateFromProps } from './arena.js';
 
 export function createPlayer(config, id, name, characterId, x, y) {
   const chCfg = config.characters[characterId];
   const stats = createStats(config);
   // Источники модификаторов по порядку: персонаж, копилка левелапов, синергии,
-  // дальше предметы. levelMods и synergy.mods — стабильные ссылки, которые
-  // растут: пересоздавать их нельзя, sources держит именно эти объекты.
+  // уникальная особенность, дальше предметы. levelMods, synergy.mods и uniqMods —
+  // стабильные ссылки, которые растут: пересоздавать их нельзя, sources держит
+  // именно эти объекты.
   const levelMods = {};
   const synergy = createSynergyState();
-  const sources = [chCfg.stats, levelMods, synergy.mods];
+  const uniqMods = {};
+  const sources = [chCfg.stats, levelMods, synergy.mods, uniqMods];
   resolveStats(stats, config, sources);
 
-  const slots = new Array(config.run.weapon_slots);
+  // Число слотов задаёт персонаж: у Обетника один, у Барона Хлама десять
+  // (sim/unique.js). config.run.weapon_slots — только дефолт.
+  const slots = new Array(slotCount(config, characterId));
   for (let i = 0; i < slots.length; i++) slots[i] = makeSlot();
   const start = chCfg.start_weapons || [];
   for (let i = 0; i < start.length && i < slots.length; i++) {
@@ -48,6 +53,11 @@ export function createPlayer(config, id, name, characterId, x, y) {
     sources,
     levelMods,
     synergy,
+    // Уникальная особенность персонажа и её состояние: uniqMods — статы от
+    // лоадаута, retired — печати проданного оружия (память синергий).
+    uniq: chCfg.unique || null,
+    uniqMods,
+    retired: [],
     items: [],
     slots,
     alive: true,
@@ -108,6 +118,7 @@ export function refreshStats(player, config) {
   // лоадаута (лавка зовёт refreshStats через onChange), поэтому отдельных
   // точек пересчёта синергий не нужно.
   refreshSynergies(player, config);
+  refreshUniqueMods(player, config);
   const before = player.stats.max_hp;
   resolveStats(player.stats, config, player.sources);
   player.speed = moveSpeed(config, player.stats);

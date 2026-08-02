@@ -253,6 +253,113 @@ CHARACTERS = {
                            weights={"crit_pct": 2.0, "dodge_pct": 1.8, "max_hp": 0.4},
                            unique={"type": "crit_iframes", "value": 0.3, "cooldown": 2.0},
                            unlock={"type": "relics", "cost": 700}),
+
+    # --- Персонажи с особенностями лоадаута -------------------------------
+    # У этих десяти поле unique читает движок (static/js/sim/unique.js): каждый
+    # ломает обращение с оружием по-своему — числом слотов, счётом синергий,
+    # ассортиментом лавки, запретом дубликатов. Поля unique — не украшение,
+    # менять их значит менять правила игры за персонажа.
+    "ch_oathkeeper": dict(name="Обетник", faction="cov", color="#a8853a",
+                          desc="Дал обет одного оружия. Оно у него стоит шестерых.",
+                          start=["w_censer_1"],
+                          stats={"damage_pct": 120, "attack_speed_pct": 30, "max_hp": 20},
+                          weights={"damage_pct": 2.0, "crit_pct": 1.2, "max_hp": 1.0},
+                          unique={"type": "single_oath", "slots": 1, "set_count": 6,
+                                  "replace_on_full": True},
+                          unlock={"type": "relics", "cost": 900}),
+    "ch_junkbaron": dict(name="Барон Хлама", faction="scrap", color="#5a7a2f", sprite=64,
+                         desc="Десять стволов на ремнях. Все дрянные, зато все стреляют.",
+                         start=["w_nailer_1"],
+                         stats={"damage_pct": -30, "tithe": 4},
+                         weights={"tithe": 1.8, "max_hp": 1.2, "attack_speed_pct": 1.2},
+                         unique={"type": "many_slots", "slots": 10, "shop_max_tier": 2},
+                         unlock={"type": "relics", "cost": 1000}),
+    "ch_calibrator": dict(name="Калибровщик", faction="forge", color="#8f3020",
+                          desc="Признаёт только огнестрел — зато выверен до последнего сета.",
+                          start=["w_carbine_1"],
+                          stats={"range": 1, "attack_speed_pct": 5},
+                          weights={"ranged_dmg": 2.0, "crit_pct": 1.4, "melee_dmg": 0.0},
+                          unique={"type": "tag_lock", "shop_tag": "gun",
+                                  "threshold_shift": -1},
+                          unlock={"type": "relics", "cost": 850}),
+    "ch_swarmcarrier": dict(name="Носитель Роя", faction="chit", color="#3f7a58",
+                            desc="Чем больше клинков на нём, тем быстрее работают все.",
+                            start=["w_claws_1"],
+                            stats={"armor": -1},
+                            weights={"melee_dmg": 2.0, "attack_speed_pct": 1.6,
+                                     "ranged_dmg": 0.0},
+                            unique={"type": "class_lock", "shop_class": "melee",
+                                    "per_weapon": {"attack_speed_pct": 4, "damage_pct": 3}},
+                            unlock={"type": "relics", "cost": 950}),
+    "ch_riftbound": dict(name="Разломный", faction="rift", color="#6a2a7a",
+                         desc="Три руки, три ствола — и каждый весит как два.",
+                         start=["w_rod_1"],
+                         stats={"damage_pct": 55, "max_hp_pct": -10},
+                         weights={"elem_dmg": 2.0, "damage_pct": 1.5},
+                         unique={"type": "few_heavy", "slots": 3, "set_count": 2},
+                         unlock={"type": "relics", "cost": 800}),
+    "ch_manyfaced": dict(name="Разноликий", faction="rift", color="#8f3fa0",
+                         desc="Живёт разнообразием: два одинаковых ствола ему бесполезны.",
+                         start=["w_pike_1"],
+                         stats={"max_hp_pct": -10},
+                         weights={"damage_pct": 1.6, "move_speed_pct": 1.4, "luck": 1.2},
+                         unique={"type": "distinct_tags",
+                                 "per_distinct_tag": {"damage_pct": 5, "move_speed_pct": 3}},
+                         unlock={"type": "relics", "cost": 1100}),
+    "ch_reliquary": dict(name="Реликварий", faction="tomb", color="#2a8f88", sprite=64,
+                         desc="Ничего не выбрасывает: проданное оружие остаётся печатью.",
+                         start=["w_hammer_1"],
+                         stats={"armor": 2, "move_speed_pct": -10},
+                         weights={"armor": 1.8, "max_hp": 1.5, "melee_dmg": 1.2},
+                         unique={"type": "synergy_memory_seals", "slots": 5,
+                                 "synergy_memory": 8},
+                         unlock={"type": "relics", "cost": 1200}),
+    "ch_barrowsmith": dict(name="Курганный кузнец", faction="tomb", color="#3fbdb4",
+                           desc="Торгует с лавкой на два тира выше — и платит за это.",
+                           start=["w_pike_1"],
+                           stats={"tithe": 6, "damage_pct": -10},
+                           weights={"tithe": 1.8, "melee_dmg": 1.4, "armor": 1.2},
+                           unique={"type": "high_tier", "slots": 4, "shop_tier_bonus": 2,
+                                   "weapon_price_mult": 1.7},
+                           unlock={"type": "relics", "cost": 1300}),
+    "ch_discordant": dict(name="Разнобой", faction="mirror", color="#3f6ab0",
+                          desc="Двух одинаковых не носит. Каждый сет открыт целиком.",
+                          start=["w_stilettos_1"],
+                          stats={"max_hp_pct": -15},
+                          weights={"crit_pct": 1.6, "dodge_pct": 1.4, "damage_pct": 1.2},
+                          unique={"type": "no_twins", "no_duplicates": True,
+                                  "no_merge": True, "full_sets": True},
+                          unlock={"type": "relics", "cost": 1500,
+                                  "achievement": "ac_wave20"}),
+    "ch_twinsoul": dict(name="Двоедушный", faction="mirror", color="#6a9ad8",
+                        desc="Всё берёт парами. Разрывать пару слиянием не станет.",
+                        start=["w_cleaver_1", "w_cleaver_1"],
+                        stats={"damage_pct": -20},
+                        weights={"attack_speed_pct": 1.6, "melee_dmg": 1.4,
+                                 "dodge_pct": 1.2},
+                        unique={"type": "paired_buy", "free_pair": True,
+                                "no_merge": True},
+                        unlock={"type": "relics", "cost": 1100}),
+}
+
+# Поля unique, которые понимает движок (static/js/sim/unique.js). Опечатка в
+# ключе иначе прошла бы молча: движок не знает про поле — особенность просто
+# не работает, а персонаж выглядит как обычный.
+UNIQUE_FIELDS = {
+    "type", "slots", "set_count", "full_sets", "threshold_shift", "synergy_memory",
+    "per_weapon", "per_distinct_tag", "shop_class", "shop_tag", "shop_max_tier",
+    "shop_tier_bonus", "weapon_price_mult", "no_duplicates", "no_merge",
+    "free_pair", "replace_on_full",
+}
+
+# Особенности, объявленные до появления движка: движок их не читает, интерфейс
+# про них молчит. Список нужен, чтобы валидация не ругалась на их поля и при
+# этом ловила опечатки в новых.
+LEGACY_UNIQUE_TYPES = {
+    "low_hp_haste", "self_harm_stack", "ally_aura", "damage_per_enemy",
+    "crate_chance", "repair_between_waves", "no_melee", "lifesteal_per_melee",
+    "larva_companion", "elem_chain", "double_levelup", "only_self_regen",
+    "crit_iframes",
 }
 
 ACHIEVEMENTS = {
@@ -368,6 +475,38 @@ def build_achievements():
             for aid, (n, d, c) in ACHIEVEMENTS.items()}
 
 
+def validate_unique(cid, c, weapons):
+    """Особенность персонажа: опечатки в полях и лоадаут, который сам себе противоречит."""
+    u = c.get("unique")
+    if not u:
+        return []
+    problems = []
+    if u.get("type") in LEGACY_UNIQUE_TYPES:
+        return []
+    unknown = set(u) - UNIQUE_FIELDS
+    if unknown:
+        problems.append(f"{cid}: движок не знает полей unique {sorted(unknown)}")
+    # Стартовое оружие обязано проходить собственный фильтр лавки: иначе игрок
+    # начинает с того, что ему же нельзя купить, а после продажи такого уже не найдёт.
+    for wid in c["start_weapons"]:
+        w = weapons.get(wid)
+        if not w:
+            continue
+        if u.get("shop_class") and w["class"] != u["shop_class"]:
+            problems.append(f"{cid}: стартовое {wid} не класса {u['shop_class']}")
+        if u.get("shop_tag") and u["shop_tag"] not in w.get("tags", []):
+            problems.append(f"{cid}: у стартового {wid} нет тега {u['shop_tag']}")
+        tier_cap = u.get("shop_max_tier")
+        if tier_cap and w["tier"] > tier_cap:
+            problems.append(f"{cid}: стартовое {wid} выше потолка тира {tier_cap}")
+    slots = u.get("slots")
+    if slots is not None and len(c["start_weapons"]) > slots:
+        problems.append(f"{cid}: стартового оружия больше, чем слотов ({slots})")
+    if u.get("no_duplicates") and len(set(c["start_weapons"])) != len(c["start_weapons"]):
+        problems.append(f"{cid}: дубликаты в старте при запрете дубликатов")
+    return problems
+
+
 def validate(characters, weapons, arenas, factions):
     problems = []
     for cid, c in characters.items():
@@ -376,6 +515,7 @@ def validate(characters, weapons, arenas, factions):
         for w in c["start_weapons"]:
             if w not in weapons:
                 problems.append(f"{cid}: стартовое оружие {w} не существует")
+        problems += validate_unique(cid, c, weapons)
     for aid, a in arenas.items():
         if not a["enemy_pool"]:
             problems.append(f"{aid}: пустой пул врагов")

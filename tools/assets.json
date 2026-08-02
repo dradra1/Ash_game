@@ -115,6 +115,96 @@
       "silhouette": "стройный и удлинённый, гладкая зеркальная маска, парные клинки, плащ с гранями",
       "prompt": "slender elongated duellist in a fitted dark blue coat, a smooth featureless mirror mask reflecting cold light, twin slim stiletto blades held reversed, a cloak cut into sharp mirrored facets, silver filigree at the cuffs, elegant poised stance, accent color #4a7fc8",
       "attack": "crossing twin stilettos in a fast slash"
+    },
+    "ch_oathkeeper": {
+      "faction": "cov",
+      "accent": "#a8853a",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "обе руки на одном вертикальном клинке, цепь от запястья к рукояти — единственный, кто держит оружие двумя руками",
+      "prompt": "gaunt sworn warrior in a long dark tabard over segmented plate armour, head fully wrapped in wax-soaked bandages with no visible face, a single long straight blade held upright in both hands in front of the body, a heavy chain padlocked from the wrist to the hilt so the weapon can never be let go, melted candle stubs stuck to both shoulder plates, accent color #a8853a",
+      "attack": "driving the single upright blade straight down"
+    },
+    "ch_junkbaron": {
+      "faction": "scrap",
+      "accent": "#5a7a2f",
+      "size": 96,
+      "fit": 64,
+      "silhouette": "широкий, за спиной веер-стойка из десятка разнокалиберных стволов",
+      "prompt": "hulking scrap warlord in welded armour of flattened road-sign plates, a tall rack harness bolted to the back bristling with ten mismatched crude guns cleavers and pipes on straps and hooks, thick arms, a riveted tin helm with a short smokestack, belts of scrap ammunition crossing the chest, accent color #5a7a2f",
+      "attack": "swinging a pipe club sideways"
+    },
+    "ch_calibrator": {
+      "faction": "forge",
+      "accent": "#8f3020",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "узкий, длинный ствол на плечевом упоре и линзовый визор — единственный с прицельным штативом",
+      "prompt": "narrow gunsmith in deep red robes and a leather work apron, a brass ranging-lens visor covering the eyes, one long precision rifle braced on a shoulder mount, a thin mechanical arm holding a sighting rod, small calipers and brass gauges hanging in rows from the belt, accent color #8f3020",
+      "attack": "firing the braced long rifle forward"
+    },
+    "ch_swarmcarrier": {
+      "faction": "chit",
+      "accent": "#3f7a58",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "сгорбленный, четыре сложенных клинковых конечности спереди, горб-улей на спине",
+      "prompt": "hunched carrier whose back is a living hive of ridged chitin plates, four insectile blade-arms folded forward across the chest, a smooth carapace helm with no visible eyes, faint green bioluminescence showing only in the seams between the plates, wet leather straps, accent color #3f7a58",
+      "attack": "lashing out with all four blade-arms at once"
+    },
+    "ch_riftbound": {
+      "faction": "rift",
+      "accent": "#6a2a7a",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "резко асимметричный: правая половина раздута, левая иссохла и закована",
+      "prompt": "tall asymmetric figure in torn violet vestments, the right side of the body swollen with warped muscle and gripping an oversized rune-carved rod, the left side withered and bound in iron shackles, a third burned eye in the forehead, ragged hem trailing smoke, accent color #6a2a7a",
+      "attack": "slamming the oversized rod down"
+    },
+    "ch_manyfaced": {
+      "faction": "rift",
+      "accent": "#8f3fa0",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "веер масок вокруг головы вместо капюшона, фиолетовые точки глаз — не спутать с капюшонными Пилигримом и Полым",
+      "prompt": "wanderer whose head is ringed by a wide fan of a dozen mismatched masks of wood bone and beaten tin, worn like a broad collar around the neck and shoulders, NO HOOD AT ALL, its own face an empty dark hollow with two bright violet points of light, layered violet and black rags, bare thin arms, a long spear held across the body, accent color #8f3fa0",
+      "attack": "thrusting the long spear forward"
+    },
+    "ch_reliquary": {
+      "faction": "tomb",
+      "accent": "#2a8f88",
+      "size": 96,
+      "fit": 64,
+      "silhouette": "массивный конструкт-шкаф: грудь и спина — ряды опечатанных ячеек",
+      "prompt": "broad funerary construct of dark tarnished metal, a hinged cabinet built into the chest and back with rows of small sealed compartments holding old broken weapon fragments, a single green lens for a face, a heavy maul in one fist, wax seals and hanging paper tags fluttering from the compartments, accent color #2a8f88",
+      "attack": "bringing the heavy maul down with both arms"
+    },
+    "ch_barrowsmith": {
+      "faction": "tomb",
+      "accent": "#3fbdb4",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "фартук из металлической чешуи, рука-молот и тлеющий тигель за спиной",
+      "prompt": "grave-forge smith in a heavy apron of overlapping metal scales, one arm ending in a hydraulic hammer-fist, a portable crucible strapped to the back glowing dull green through its grate, long spear-tipped tongs in the other hand, tarnished mask with two green lenses, accent color #3fbdb4",
+      "attack": "hammering forward with the hydraulic fist"
+    },
+    "ch_discordant": {
+      "faction": "mirror",
+      "accent": "#3f6ab0",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "поджарый дуэлянт, на теле десяток РАЗНЫХ клинков под разными углами",
+      "prompt": "lean duelist in a smooth featureless mirror mask and a layered slate-blue coat, every weapon on the body a different shape — a stiletto, a hooked dagger, a short saber, a spike, a narrow blade — sheathed at odd angles across chest and thighs, no two alike, accent color #3f6ab0",
+      "attack": "drawing two different blades in a crossing cut"
+    },
+    "ch_twinsoul": {
+      "faction": "mirror",
+      "accent": "#6a9ad8",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "две одинаковые зеркальные головы на одних плечах, идеальная симметрия",
+      "prompt": "duelist with two identical mirror-masked heads on one pair of shoulders, perfectly symmetrical stance, a matched pair of identical straight blades held low at both sides, twin cloaks split down the middle in mirrored colours, mirrored greaves, accent color #6a9ad8",
+      "attack": "cutting with both identical blades in perfect mirror"
     }
   },
   "enemies": {

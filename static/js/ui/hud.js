@@ -50,42 +50,48 @@ export function createHud(config, t) {
     y += XP_H + 18;
 
     // --- иконки оружия с кулдаунами
+    //
+    // Ряд переносится после SLOT_ROW штук: у персонажа со слотами сверх обычных
+    // (Барон Хлама носит десять) одна строка уезжала бы под таймер волны.
     const slots = me.slots;
-    let sx = pad;
     const sy = y;
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
+      const sx = pad + (i % SLOT_ROW) * (h.slot + 4);
+      const row = sy + Math.floor(i / SLOT_ROW) * (h.slot + 4);
       ctx.fillStyle = h.slot_bg;
-      ctx.fillRect(sx, sy, h.slot, h.slot);
+      ctx.fillRect(sx, row, h.slot, h.slot);
       // Гнездо-обойма поверх заливки; нет PNG — прежняя штриховая рамка
-      if (!draw9Slice(ctx, 'ui_slot', sx - 2, sy - 2, h.slot + 4, h.slot + 4, 40, 6)) {
+      if (!draw9Slice(ctx, 'ui_slot', sx - 2, row - 2, h.slot + 4, h.slot + 4, 40, 6)) {
         ctx.strokeStyle = slot && slot.flash > 0 ? h.crit : h.slot_border;
         ctx.lineWidth = 1;
-        ctx.strokeRect(sx + 0.5, sy + 0.5, h.slot - 1, h.slot - 1);
+        ctx.strokeRect(sx + 0.5, row + 0.5, h.slot - 1, h.slot - 1);
       } else if (slot && slot.flash > 0) {
         // Вспышка после удара: рамку рисует картинка, поэтому подсветку кладём
         // отдельным контуром, иначе сигнал «оружие сработало» пропал бы.
         ctx.strokeStyle = h.crit;
         ctx.lineWidth = 1;
-        ctx.strokeRect(sx + 0.5, sy + 0.5, h.slot - 1, h.slot - 1);
+        ctx.strokeRect(sx + 0.5, row + 0.5, h.slot - 1, h.slot - 1);
       }
 
       if (slot && slot.cfg) {
         const w = slot.cfg;
-        if (!drawIcon(ctx, w.texture, sx + h.slot / 2, sy + h.slot / 2, h.slot - 6)) {
+        if (!drawIcon(ctx, w.texture, sx + h.slot / 2, row + h.slot / 2, h.slot - 6)) {
           ctx.fillStyle = config.shop.tier_color[w.tier - 1] || h.text;
-          ctx.fillRect(sx + 8, sy + 8, h.slot - 16, h.slot - 16);
+          ctx.fillRect(sx + 8, row + 8, h.slot - 16, h.slot - 16);
         }
         // Затемнение снизу вверх по остатку кулдауна
         const total = w.cooldown > 0 ? w.cooldown : 1;
         const frac = slot.cd > 0 ? Math.min(1, slot.cd / total) : 0;
         if (frac > 0) {
           ctx.fillStyle = h.cd_fill;
-          ctx.fillRect(sx, sy + h.slot * (1 - frac), h.slot, h.slot * frac);
+          ctx.fillRect(sx, row + h.slot * (1 - frac), h.slot, h.slot * frac);
         }
       }
-      sx += h.slot + 4;
     }
+    // Панель союзников идёт под последним рядом слотов, а не под первым.
+    const slotRows = Math.ceil(slots.length / SLOT_ROW) || 1;
+    const slotsBottom = sy + slotRows * (h.slot + 4) - 4;
 
     // --- правый верх: волна и таймер
     const right = view.w - pad;
@@ -111,7 +117,7 @@ export function createHud(config, t) {
 
     // --- панель союзников (кооп)
     if (state.players.length > 1) {
-      let ay = sy + h.slot + 16;
+      let ay = slotsBottom + 16;
       for (let i = 0; i < state.players.length; i++) {
         const p = state.players[i];
         if (p.id === me.id) continue;
@@ -143,4 +149,7 @@ const FONT = '12px monospace';
 const FONT_BIG = '16px monospace';
 const XP_H = 6;
 const LOW_HP = 0.3;
+// Сколько иконок оружия помещается в один ряд HUD: шесть — обычный лоадаут,
+// всё сверх переносится вниз (sim/unique.js даёт персонажам до десяти слотов).
+const SLOT_ROW = 6;
 const ALLY_BAR_W = 90;

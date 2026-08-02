@@ -71,8 +71,11 @@ function allyRoster(run) {
 // --- Клиент: снимок по сети, действия событием ---------------------------
 // snapshot — то, что прислал хост: {slots, ash, rerollCost, wave, weapons, items, stats}
 export function remoteAdapter(getSnapshot, sendAction) {
+  // synergy.counts и uniq приезжают в снимке: панель синергий читает их напрямую
+  // из игрока, а у клиента симуляции нет и посчитать их самому нечем.
   const player = {
     ash: 0, slots: [], items: [], stats: {},
+    synergy: { counts: {} }, uniq: null,
   };
 
   function sync() {
@@ -82,6 +85,8 @@ export function remoteAdapter(getSnapshot, sendAction) {
     player.slots = s.weapons;
     player.items = s.items;
     player.stats = s.stats;
+    player.synergy.counts = s.counts || {};
+    player.uniq = s.uniq || null;
     return player;
   }
 
@@ -138,6 +143,8 @@ export function shopSnapshot(run, player, shop, config) {
     items: player.items.slice(),
     stats: Object.assign({}, player.stats),
     ash: player.ash,
+    counts: Object.assign({}, player.synergy.counts),
+    uniq: player.uniq,
     allies: allyRoster(run),
     meReady: !!run.state.ready[player.id],
     wave: run.state.wave + 1,

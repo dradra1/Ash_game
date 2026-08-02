@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Генерация врагов, элит и боссов по промптам из tools/assets.json.
+"""Генерация играбельных персонажей, врагов, элит и боссов по промптам из tools/assets.json.
 
 Три фазы на юнита: create_character (v3) → animate_character (walk) → сборка листов.
 Состояние пишется в scratch/gen_units_state.json, поэтому прогон возобновляемый:
@@ -28,7 +28,7 @@ ASSETS = os.path.join(ROOT, "tools", "assets.json")
 STATE = os.path.join(ROOT, "scratch", "gen_units_state.json")
 TEXDIR = os.path.join(ROOT, "static", "textures")
 DIRS = ["south", "east", "north", "west"]
-SECTIONS = ("enemies", "elites", "bosses")
+SECTIONS = ("characters", "enemies", "elites", "bosses")
 POLL = 20
 DEADLINE = 6 * 3600
 
