@@ -81,6 +81,17 @@ def asset(body, w, h, alpha=True, seamless=False):
 # Порядок словаря = порядок генерации = приоритет при нехватке баланса.
 
 BUILDINGS = {
+    # Ловчий Дом занял площадку резервного bl_wip_a (patch_config_lodge.py).
+    # Доска с листами у двери — единственный опознавательный знак: без неё
+    # контора не отличается от таверны, у обеих дверь, фонарь и черепица.
+    "bl_lodge": (
+        "narrow two-storey gothic guild office of dark timber and grey stone, "
+        "steep slate roof, iron-banded door under a hanging lantern with pale "
+        "ochre flame, large notice board beside the door thick with nailed paper "
+        "sheets and red wax seals, mounted beast skull over the lintel, coiled "
+        "chains and traps hanging under the eaves, accent color #c8a35a",
+        "narrow two-storey guild office of dark timber and grey stone",
+    ),
     "bl_tavern": (
         "squat stone tavern with a sagging tiled roof, iron-banded oak door, "
         "hanging lantern with warm green flame, ale barrels and a bone-carved "

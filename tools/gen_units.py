@@ -7,6 +7,11 @@
 
     python3 tools/gen_units.py                 всё, чего нет в static/textures
     python3 tools/gen_units.py e_hiverat e_brute   только указанные
+    python3 tools/gen_units.py --no-walk np_master только idle, без ходьбы
+
+`--no-walk` пропускает фазу animate целиком: персонажам Ловчего Дома ходьба не
+нужна, они стоят в зале и рисуются одним кадром idle. Экономит 4 джоба на юнита
+и, что важнее, не занимает слоты очереди ради спрайтов, которые никто не увидит.
 
 Почему системный python3, а не .venv: сборке листов нужен Pillow, он есть в системном
 интерпретаторе. В .venv лежат только зависимости сервера (CLAUDE.md §5), и тащить туда
@@ -28,7 +33,7 @@ ASSETS = os.path.join(ROOT, "tools", "assets.json")
 STATE = os.path.join(ROOT, "scratch", "gen_units_state.json")
 TEXDIR = os.path.join(ROOT, "static", "textures")
 DIRS = ["south", "east", "north", "west"]
-SECTIONS = ("characters", "enemies", "elites", "bosses")
+SECTIONS = ("characters", "enemies", "elites", "bosses", "npcs")
 POLL = 20
 DEADLINE = 6 * 3600
 
@@ -152,15 +157,21 @@ def animate(key, cid, entry):
     return True
 
 
-def sheets(key, cid, entry):
+def sheets(key, cid, entry, no_walk=False):
     code, out = pxl("sheets", cid, key, "--fit", str(entry["fit"]))
-    ok = code == 0 and os.path.exists(os.path.join(TEXDIR, f"{key}_walk.png"))
+    # Признак успеха разный: с ходьбой ждём лист _walk, без неё — сам idle.
+    # Проверять по idle всегда нельзя: он собирается из ротаций и появляется
+    # раньше анимаций, так что обычный юнит считался бы готовым без ходьбы.
+    want = f"{key}.png" if no_walk else f"{key}_walk.png"
+    ok = code == 0 and os.path.exists(os.path.join(TEXDIR, want))
     log(f"  = листы {key}: {'ok' if ok else 'ПРОВАЛ ' + out.strip()[-200:]}")
     return ok
 
 
 def main():
-    only = set(sys.argv[1:])
+    args = sys.argv[1:]
+    no_walk = "--no-walk" in args
+    only = set(a for a in args if not a.startswith("-"))
     todo = units(only)
     if not todo:
         log("нечего генерировать")
@@ -196,6 +207,9 @@ def main():
                     log(f"  · {key} отрисован")
 
             elif st["phase"] == "created":
+                if no_walk:
+                    st["phase"] = "sheets"; save_state(state); progressed = True
+                    continue
                 if busy:
                     continue
                 res = animate(key, st["cid"], entry)
@@ -212,7 +226,7 @@ def main():
                     st["phase"] = "sheets"; save_state(state); progressed = True
 
             if st["phase"] == "sheets":
-                ok = sheets(key, st["cid"], entry)
+                ok = sheets(key, st["cid"], entry, no_walk)
                 st["phase"] = "done" if ok else "sheets"
                 save_state(state)
                 if ok:

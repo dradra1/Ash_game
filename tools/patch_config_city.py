@@ -41,8 +41,10 @@ def building(bid, texture, x, y, color, name, hint, action, locked=None):
 
 # Порядок — порядок обхода табом: слева направо, сверху вниз
 BUILDINGS = [
-    building("wip_a", "bl_wip_a", 64, 104, "#6b6156",
-             "ui.city.soon", "ui.city.soon_hint", {"type": "none"}),
+    # Бывшая заглушка wip_a: площадку занял Ловчий Дом (patch_config_lodge.py).
+    # Тип действия `quests` не бывает закрытым — сюжет доступен с первого входа.
+    building("lodge", "bl_lodge", 64, 104, "#c8a35a",
+             "ui.city.lodge", "ui.city.lodge_hint", {"type": "quests"}),
     building("tavern", "bl_tavern", 248, 104, "#c8a35a",
              "ui.city.tavern", "ui.city.tavern_hint",
              {"type": "meta", "tabs": ["factions", "characters"]},

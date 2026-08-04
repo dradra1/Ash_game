@@ -11,6 +11,7 @@ export function createScreens(root, config, t) {
   const city = createCity(root, config, null, t, {
     play: () => handlers.onPlay && handlers.onPlay(),
     meta: (tabs) => handlers.onMeta && handlers.onMeta(tabs),
+    lodge: () => handlers.onLodge && handlers.onLodge(),
     coop: () => handlers.onCoop && handlers.onCoop(),
     join: (code) => (handlers.onJoin ? handlers.onJoin(code) : null),
     audio: () => handlers.onAudio && handlers.onAudio(),

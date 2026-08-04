@@ -811,11 +811,122 @@ html, body {
 .owned-tag { color: #a8d07a; }
 .mini.buy { position: absolute; right: 10px; bottom: 6px; }
 
+/* ---- Ловчий Дом -------------------------------------------------------- */
+
+.lodge-hint { margin-bottom: 10px; }
+
+/* Зал — обычный грид карточек, а не расстановка по фону, как в городе: фона у
+   зала нет, и абсолютные координаты не к чему привязывать. */
+.lodge-hall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    max-height: 62vh;
+    overflow-y: auto;
+}
+
+.npc {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    border: 10px solid transparent;
+    border-image: url(/static/ui/ui_cell.png) 20 fill / 10px / 0 stretch;
+    background: var(--surface);
+    padding: 10px 6px 22px;
+    font-size: 12px;
+    color: var(--ink);
+    font-family: monospace;
+    appearance: none;
+    text-align: center;
+    cursor: pointer;
+}
+.npc.locked-out { opacity: 0.35; cursor: default; }
+.npc:hover:not(.locked-out) { outline: 2px solid var(--accent); }
+
+/* Портрет: idle-лист — четыре квадратных кадра столбиком (S, E, N, W), поэтому
+   ширина фона в сторону кадра и позиция 0 0 дают ровно южный кадр. Тот же
+   приём, что у .tip-face; арифметики в JS не требуется. */
+.npc-face {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+.npc-name { font-size: 13px; }
+.npc-title { color: #7a7568; font-style: italic; font-size: 11px; }
+.npc .badge { left: auto; right: 6px; bottom: 4px; top: auto; }
+
+.dlg-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--accent);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+.dlg-face {
+    width: 96px;
+    height: 96px;
+    flex: 0 0 96px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+.dlg-name { font-size: 16px; }
+.dlg-title { color: #7a7568; font-style: italic; font-size: 12px; }
+
+.dlg-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    max-height: 56vh;
+    overflow-y: auto;
+}
+.dlg-col { min-width: 0; }
+.lore-frag { margin-bottom: 12px; font-size: 12px; }
+.lore-frag b { color: var(--gold); display: block; margin-bottom: 2px; }
+.lore-frag p { color: #9a9488; margin: 0; white-space: pre-wrap; line-height: 1.45; }
+
+.quest-row {
+    position: relative;
+    border: 10px solid transparent;
+    border-image: url(/static/ui/ui_cell.png) 20 fill / 10px / 0 stretch;
+    background: var(--surface);
+    padding: 4px 6px 26px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+.quest-row.quest-claimed { opacity: 0.6; }
+.quest-name { font-size: 13px; color: var(--ink); }
+.quest-desc { color: #9a9488; margin-bottom: 4px; }
+.quest-say { color: #7a7568; font-style: italic; margin-bottom: 6px; line-height: 1.4; }
+
+/* Шкала рисуется рамкой и заливкой, без градиентов и теней: бюджет рендера
+   один на всю страницу (CLAUDE.md §4). */
+.quest-bar {
+    height: 6px;
+    background: #14171d;
+    border: 1px solid var(--line);
+    margin-bottom: 3px;
+}
+.quest-bar > i { display: block; height: 100%; background: var(--gold); }
+.quest-num { color: #7a7568; font-size: 11px; }
+.quest-foot { position: absolute; left: 12px; bottom: 8px; }
+.quest-foot .price { color: #c8a35a; }
+.quest-tag { position: absolute; right: 12px; bottom: 8px; color: #9a9488; }
+.quest-row .owned-tag { position: absolute; right: 12px; bottom: 8px; }
+.quest-row .mini.buy { position: absolute; right: 10px; bottom: 6px; }
+
 /* ---- Экран итогов ------------------------------------------------------ */
 
 .result-rows { margin: 10px 0 12px; min-width: 300px; }
 .result-awards { margin-bottom: 10px; }
 .result-award { color: #a8d07a; font-size: 12px; padding: 2px 0; }
+.result-award.quest { color: #c8a35a; }
 .result-flag { color: #c34b4b; font-size: 12px; padding: 4px 0; }
 
 /* ---- Мобильный режим --------------------------------------------------- */
@@ -827,6 +938,10 @@ html, body {
     .card { min-width: 44%; min-height: 108px; }
     .shop-cols { flex-direction: column; gap: 10px; }
     .meta-body { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    /* Две колонки диалога в 96vw не помещаются: летопись и заказы ложатся
+       столбиком, летопись сверху — её читают, а не листают мимо. */
+    .dlg-cols { grid-template-columns: 1fr; }
+    .lodge-hall { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     /* Пальцем нужно куда попадать: увеличиваем все интерактивные элементы */
     .btn, .mini, .choice { min-height: 40px; padding: 10px 14px; font-size: 13px; }
     .lock { width: 32px; height: 32px; font-size: 18px; }

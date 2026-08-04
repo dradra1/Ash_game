@@ -78,6 +78,14 @@ export function createResultUi(root, config, t) {
         const a = config.achievements[achs[i]];
         if (a) html += `<div class="result-award">★ ${a.name} — ${a.desc}</div>`;
       }
+      // Выполненные заказы — рядом с ачивками, но своим значком: награду за
+      // них ещё надо забрать у персонажа, и строка должна об этом напоминать.
+      const quests = (award && award.quests_done) || [];
+      const table = (config.lodge && config.lodge.quests) || {};
+      for (let i = 0; i < quests.length; i++) {
+        const q = table[quests[i]];
+        if (q) html += `<div class="result-award quest">✦ ${q.name} — ${t('ui.result.quest_done')}</div>`;
+      }
       awardsEl.innerHTML = html;
       panel.style.display = '';
     },

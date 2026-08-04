@@ -54,6 +54,7 @@
   Хост-миграции нет: отвал хоста завершает забег, результат сохраняется всем.
 - `app.py` — auth (сессии, werkzeug-хэши), REST `/api/*`, socket-релей.
   `rooms.py` — реестр комнат в памяти. `meta.py` — реликвии, ачивки, валидация забегов.
+  `lodge.py` — Ловчий Дом: цепочки заказов, прогресс по итогам забега, сдача.
   `db.py` — SQLite.
 - `data/` (volume): `users.db`, `game_config.json` (живой конфиг), `secret_key`.
 
@@ -64,7 +65,7 @@ main.js          точка входа: конфиг, профиль, роуте
 engine/          loop rng pool grid input sprites render audio
 net/             transport lobby host client protocol
 sim/             run player stats weapon turret projectile enemy spawn pickup level shop economy
-ui/              screens hud shop_ui levelup_ui meta_ui tooltip
+ui/              screens city_ui hud shop_ui levelup_ui meta_ui lodge_ui lodge_state tooltip
 ```
 
 ---

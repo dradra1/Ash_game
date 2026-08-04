@@ -65,15 +65,21 @@ def main():
 
         page.goto(a.url + "/", wait_until="networkidle")
 
-        # Кнопка «Играть» — ищем по тексту из конфига, чтобы не завязываться на разметку
-        label = page.evaluate(
+        # Забег начинают Врата — здание города с action `play` (ui/city_ui.js).
+        # Отдельной кнопки «Играть» нет с тех пор, как меню стало экраном города:
+        # у зданий подпись лежит в aria-label, отсюда поиск по роли и имени.
+        # Старые селекторы оставлены запасными на случай отката меню.
+        label, gate = page.evaluate(
             """async () => {
                 const c = await (await fetch('/api/config')).json();
-                return c.i18n.ru['ui.menu.play'];
+                const b = (c.city.buildings || []).find(
+                    (x) => x.action && x.action.type === 'play');
+                return [c.i18n.ru['ui.menu.play'],
+                        b ? c.i18n.ru[b.name] : ''];
             }""")
         clicked = False
-        # Сначала по id — он стабильнее подписи, которая меняется вместе с меню
-        for locator in (page.locator("#btn-play"),
+        for locator in (page.get_by_role("button", name=gate),
+                        page.locator("#btn-play"),
                         page.get_by_role("button", name=label),
                         page.get_by_text(label)):
             try:
@@ -83,7 +89,7 @@ def main():
             except Exception:
                 continue
         if not clicked:
-            problems.append(f"не нашёл кликабельную кнопку «{label}»")
+            problems.append(f"не нашёл кликабельное здание «{gate}» (и кнопку «{label}»)")
 
         # «Играть» больше не запускает забег сразу: сначала преран-мастер
         # (персонаж → арена → сложность → проклятия). Прокликиваем «Дальше»,

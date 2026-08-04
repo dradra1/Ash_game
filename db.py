@@ -54,6 +54,31 @@ def init_db():
                 PRIMARY KEY (user_id, ach_id)
             );
 
+            -- Заказы Ловчего Дома. state: active | done | claimed.
+            -- Строка появляется в момент, когда игрок берёт заказ у персонажа:
+            -- прогресс считается только с этого момента, задним числом история
+            -- забегов не зачитывается (иначе «убей 50 крыс» закрывался бы в
+            -- ту же секунду и разговор терял смысл).
+            CREATE TABLE IF NOT EXISTS quests (
+                user_id INTEGER,
+                quest_id TEXT,
+                state TEXT NOT NULL DEFAULT 'active',
+                progress INTEGER NOT NULL DEFAULT 0,
+                taken_at REAL,
+                done_at REAL,
+                claimed_at REAL,
+                PRIMARY KEY (user_id, quest_id)
+            );
+
+            -- Открытые фрагменты лора. seen гасит бейдж «новое» на здании.
+            CREATE TABLE IF NOT EXISTS lore (
+                user_id INTEGER,
+                lore_id TEXT,
+                at REAL,
+                seen INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, lore_id)
+            );
+
             CREATE TABLE IF NOT EXISTS runs (
                 id INTEGER PRIMARY KEY,
                 run_id TEXT UNIQUE NOT NULL,
@@ -99,6 +124,9 @@ def _migrate_runs(conn):
         ("damage_taken", "INTEGER DEFAULT 0"),
         ("ash_gained", "INTEGER DEFAULT 0"),
         ("shop_buys", "INTEGER DEFAULT 0"),
+        # Убийства по типам врагов, JSON {enemy_id: count}. Нужны заказам вида
+        # «убить 50 ульевых крыс»: суммарный kills на такое не отвечает.
+        ("kills_by_type", "TEXT DEFAULT '{}'"),
     ):
         if name not in cols:
             conn.execute(f"ALTER TABLE runs ADD COLUMN {name} {decl}")
@@ -221,15 +249,16 @@ def finish_run(
     damage_taken: int = 0,
     ash_gained: int = 0,
     shop_buys: int = 0,
+    kills_by_type: str = "{}",
 ):
     conn = get_db()
     try:
         conn.execute(
             "UPDATE runs SET wave = ?, win = ?, bosses = ?, time_sec = ?, kills = ?, "
             "score = ?, relics = ?, damage_taken = ?, ash_gained = ?, shop_buys = ?, "
-            "finished_at = ? WHERE run_id = ?",
+            "kills_by_type = ?, finished_at = ? WHERE run_id = ?",
             (wave, win, bosses, time_sec, kills, score, relics_gained,
-             damage_taken, ash_gained, shop_buys, time.time(), run_id),
+             damage_taken, ash_gained, shop_buys, kills_by_type, time.time(), run_id),
         )
         conn.commit()
     finally:
@@ -317,6 +346,107 @@ def add_relics(user_id: int, amount: int):
     try:
         conn.execute(
             "UPDATE users SET relics = relics + ? WHERE id = ?", (amount, user_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# --- Ловчий Дом: заказы и лор ---------------------------------------------
+
+def get_user_quests(user_id: int) -> dict:
+    """{quest_id: {state, progress}} — всё, что игрок когда-либо брал."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT quest_id, state, progress FROM quests WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+        return {r["quest_id"]: {"state": r["state"], "progress": r["progress"]}
+                for r in rows}
+    finally:
+        conn.close()
+
+
+def take_quest(user_id: int, quest_id: str) -> bool:
+    """Взять заказ. False, если он уже брался — повторный приём обнулил бы прогресс."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO quests (user_id, quest_id, state, progress, taken_at) "
+            "VALUES (?, ?, 'active', 0, ?)",
+            (user_id, quest_id, time.time()),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def set_quest_progress(conn, user_id: int, quest_id: str, progress: int, done: bool):
+    """Обновить прогресс активного заказа. Работает на переданном соединении:
+    зовётся пачкой внутри одной транзакции завершения забега."""
+    if done:
+        conn.execute(
+            "UPDATE quests SET progress = ?, state = 'done', done_at = ? "
+            "WHERE user_id = ? AND quest_id = ? AND state = 'active'",
+            (progress, time.time(), user_id, quest_id),
+        )
+    else:
+        conn.execute(
+            "UPDATE quests SET progress = ? "
+            "WHERE user_id = ? AND quest_id = ? AND state = 'active'",
+            (progress, user_id, quest_id),
+        )
+
+
+def claim_quest(user_id: int, quest_id: str) -> bool:
+    """Пометить заказ сданным. Условие state='done' прямо в UPDATE: два запроса
+    подряд не выдадут награду дважды."""
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "UPDATE quests SET state = 'claimed', claimed_at = ? "
+            "WHERE user_id = ? AND quest_id = ? AND state = 'done'",
+            (time.time(), user_id, quest_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def get_user_lore(user_id: int) -> dict:
+    """{lore_id: seen} — открытые фрагменты и признак «прочитан»."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT lore_id, seen FROM lore WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        return {r["lore_id"]: int(r["seen"]) for r in rows}
+    finally:
+        conn.close()
+
+
+def add_lore(user_id: int, lore_id: str) -> bool:
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO lore (user_id, lore_id, at, seen) VALUES (?, ?, ?, 0)",
+            (user_id, lore_id, time.time()),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def mark_lore_seen(user_id: int, lore_ids):
+    conn = get_db()
+    try:
+        conn.executemany(
+            "UPDATE lore SET seen = 1 WHERE user_id = ? AND lore_id = ?",
+            [(user_id, lid) for lid in lore_ids],
         )
         conn.commit()
     finally:

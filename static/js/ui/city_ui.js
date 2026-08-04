@@ -1,12 +1,14 @@
 // Город — точка входа в игру: фон-картинка, поверх неё кликабельные здания.
 // Каждое здание — кнопка с действием из config.city.buildings: meta (раздел
-// реликвария), play (настройка забега), none (резерв, «скоро»).
+// реликвария), quests (Ловчий Дом), play (настройка забега), none (резерв).
 //
 // cityState — чистая функция «конфиг + профиль → состояние зданий», без DOM:
 // её гоняют node-тесты. createCity — экран поверх неё.
 //
 // В коде нет ни одного id здания: резерв и разделы различаются только по
 // action.type и списку вкладок (CLAUDE.md §3.1 — контент живёт в конфиге).
+
+import { lodgeHasNew } from './lodge_state.js';
 
 // Та же проверка, что hasAch в meta_ui.js: ачивки в профиле — список объектов
 function hasAch(profile, id) {
@@ -128,6 +130,13 @@ export function cityState(config, profile) {
     const reserved = action.type === 'none';
     let locked = false;
     let unlockable = false;
+    // Ловчий Дом никогда не заперт: сюжет должен быть виден с первого входа,
+    // иначе игрок просто не узнает, что он в игре есть. Бейдж у него не про
+    // «хватает реликвий», а про «есть что взять, сдать или прочитать».
+    let hasNew = false;
+    if (action.type === 'quests') {
+      hasNew = lodgeHasNew(config, profile);
+    }
     if (action.type === 'meta') {
       const tabs = action.tabs || [];
       let anyContent = false;
@@ -148,9 +157,7 @@ export function cityState(config, profile) {
       locked,
       reserved,
       unlockable: reserved ? false : unlockable,
-      // В профиле пока нет отметок «просмотрено» — поле добавляется отдельной
-      // задачей, до её появления бейдж «Новое» по новизне не горит
-      hasNew: false,
+      hasNew,
       texture: locked && b.texture_locked ? b.texture_locked : b.texture,
       x: b.x, y: b.y, w: b.w, h: b.h,
       color: b.color,
@@ -318,6 +325,8 @@ export function createCity(root, config, profile, t, on) {
       const a = b.action || {};
       if (a.type === 'meta') {
         if (on.meta) on.meta(a.tabs);
+      } else if (a.type === 'quests') {
+        if (on.lodge) on.lodge();
       } else if (a.type === 'play') {
         if (on.play) on.play();
       } else {

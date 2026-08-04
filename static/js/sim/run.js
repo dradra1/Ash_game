@@ -27,6 +27,19 @@ export const PHASE_LEVELUP = 'levelup';
 export const PHASE_SHOP = 'shop';
 export const PHASE_OVER = 'over';
 
+// Счётчик убийств по типам, заведённый заранее по всем врагам и боссам конфига.
+// Предсоздание ключей — не оптимизация ради оптимизации: заведение свойства на
+// первом убийстве каждого типа меняет форму объекта прямо в горячем цикле, а
+// правило §4 требует ноль аллокаций именно там.
+export function killsByType(config) {
+  const out = {};
+  const keys = Object.keys(config.enemies || {});
+  for (let i = 0; i < keys.length; i++) out[keys[i]] = 0;
+  const bosses = Object.keys(config.bosses || {});
+  for (let i = 0; i < bosses.length; i++) out[bosses[i]] = 0;
+  return out;
+}
+
 // unlocked — что открыто метапрогрессией у ХОЗЯИНА забега: пул лавки ограничен
 // им (ТЗ §3.9). В коопе это открытия хоста: мир один, и ассортимент общий.
 export function createRun({ config, seed, transport, players, arena, danger, unlocked, curses, onImpact }) {
@@ -66,6 +79,10 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
     damage_taken: 0,
     ash_gained: 0,
     shop_buys: 0,
+    // Убийства по типам: нужны заказам Ловчего Дома («убить 50 ульевых крыс»),
+    // суммарный kills на такое не отвечает. Все ключи заводятся здесь, один
+    // раз за забег — в damageEnemy остаётся чистый инкремент.
+    kills_by_type: killsByType(config),
   };
 
   const economy = createEconomy(config, players.length);
@@ -221,6 +238,10 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
         return;
       }
       state.kills += 1;
+      // Ключи предсозданы в killsByType(), так что инкремент не заводит новых
+      // свойств и не аллоцирует в горячем цикле (CLAUDE.md §4). Проверка — на
+      // случай типа, которого не было в конфиге на старте забега.
+      if (state.kills_by_type[e.type] !== undefined) state.kills_by_type[e.type] += 1;
       if (e.boss) {
         state.bosses += 1;
         if (e.uid === state.bossUid) {
@@ -656,7 +677,7 @@ export function createRun({ config, seed, transport, players, arena, danger, unl
       wave: state.wave, kills: state.kills, score: state.score,
       time: state.time, bosses: state.bosses, win: !!win,
       damage_taken: state.damage_taken, ash_gained: state.ash_gained,
-      shop_buys: state.shop_buys,
+      shop_buys: state.shop_buys, kills_by_type: state.kills_by_type,
     });
   }
 

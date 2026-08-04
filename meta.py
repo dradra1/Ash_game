@@ -170,6 +170,29 @@ def max_plausible_score(config, kills):
     return int(kills * best * SCORE_SLACK) + 1000
 
 
+def kills_cap(config, run_row, wave, players):
+    """Потолок убийств за забег с поправкой на плотность проклятий.
+
+    Вынесен из check_run отдельно, потому что тем же потолком проверяется и
+    словарь убийств по типам (lodge.sanitize_kills_by_type): две независимые
+    формулы разошлись бы на первом же новом проклятии.
+    """
+    dens_extra = 1.0
+    table = config.get("curses") or {}
+    raw = run_row["curses"] if run_row is not None and "curses" in run_row.keys() else None
+    if raw:
+        import json
+        try:
+            ids = json.loads(raw) if isinstance(raw, str) else list(raw)
+            for cid in ids:
+                m = ((table.get(cid) or {}).get("effects") or {}).get("density_mult")
+                if m:
+                    dens_extra *= float(m)
+        except (TypeError, ValueError):
+            pass
+    return int(max_plausible_kills(config, wave, players) * dens_extra)
+
+
 def check_run(config, run_row, wave, win, bosses, time_sec, kills, score, players):
     """Возвращает список причин, по которым забег выглядит невозможным."""
     reasons = []
@@ -187,22 +210,7 @@ def check_run(config, run_row, wave, win, bosses, time_sec, kills, score, player
     if time_sec + TIME_SLACK < need:
         reasons.append("too_fast")
 
-    # Плотность проклятий может раздуть убийства — учитываем max density_mult
-    dens_extra = 1.0
-    table = config.get("curses") or {}
-    raw = run_row["curses"] if run_row is not None and "curses" in run_row.keys() else None
-    if raw:
-        import json
-        try:
-            ids = json.loads(raw) if isinstance(raw, str) else list(raw)
-            for cid in ids:
-                m = ((table.get(cid) or {}).get("effects") or {}).get("density_mult")
-                if m:
-                    dens_extra *= float(m)
-        except (TypeError, ValueError):
-            pass
-
-    cap_kills = int(max_plausible_kills(config, min(wave, waves_total), players) * dens_extra)
+    cap_kills = kills_cap(config, run_row, min(wave, waves_total), players)
     if kills > cap_kills:
         reasons.append("too_many_kills")
 

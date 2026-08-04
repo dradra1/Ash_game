@@ -21,6 +21,7 @@ from flask_socketio import SocketIO, join_room, leave_room
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import db
+import lodge
 import meta
 from rooms import Rooms
 
@@ -321,6 +322,12 @@ def api_profile():
             "upgrades": db.get_user_upgrades(user["id"]),
             "achievements": db.get_user_achievements(user["id"]),
             "best": db.get_user_best(user["id"]),
+            # Заказы и лор едут вместе с профилем, а не отдельным запросом:
+            # бейдж «новое» на здании города рисуется из тех же данных, что и
+            # сам Ловчий Дом, а профиль город и так перечитывает при каждом
+            # возврате в меню.
+            "quests": db.get_user_quests(user["id"]),
+            "lore": db.get_user_lore(user["id"]),
             "admin": is_admin_user(user),
         }
     )
@@ -483,17 +490,34 @@ def run_finish():
     # лидерборд, но реликвии всегда считает сервер по своей формуле.
     reasons = meta.check_run(cfg, run, wave, win, bosses, time_sec, kills, score, players)
 
+    cap = meta.kills_cap(cfg, run, min(wave, cfg["run"]["waves"]), players)
+    kills_by_type, kbt_reason = lodge.sanitize_kills_by_type(
+        cfg, data.get("kills_by_type"), cap)
+    if kbt_reason:
+        reasons.append(kbt_reason)
+
     relics = meta.award_relics(cfg, run, wave, win, bosses, players)
     db.finish_run(run_id, wave, win, bosses, time_sec, kills, score, relics,
-                  damage_taken, ash_gained, shop_buys)
+                  damage_taken, ash_gained, shop_buys,
+                  json.dumps(kills_by_type, ensure_ascii=False))
     if reasons:
         db.flag_run(run_id, ",".join(reasons))
+
+    summary = {
+        "wave": wave, "win": win, "bosses": bosses, "kills": kills,
+        "damage_taken": damage_taken, "ash_gained": ash_gained,
+        "shop_buys": shop_buys, "kills_by_type": kills_by_type,
+    }
 
     conn = db.get_db()
     try:
         run_after = conn.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
         relics += meta.first_clear_bonus(cfg, conn, user["id"], run_after, win)
         fresh = meta.check_achievements(cfg, conn, user["id"])
+        # Заказы двигаются по УЖЕ обновлённой строке: флаг подозрительности к
+        # этому моменту проставлен, и флагнутый забег прогресса не даёт.
+        quests_done = lodge.apply_run(cfg, conn, user["id"], run_after, summary)
+        conn.commit()
     finally:
         conn.close()
 
@@ -502,7 +526,8 @@ def run_finish():
     for aid in fresh:
         db.add_achievement(user["id"], aid)
 
-    out = {"relics_gained": relics, "unlocks": [], "achievements": fresh}
+    out = {"relics_gained": relics, "unlocks": [], "achievements": fresh,
+           "quests_done": quests_done}
     if reasons:
         out["flagged"] = reasons
     return jsonify(out)
@@ -561,6 +586,81 @@ def api_meta_unlock():
     db.add_unlock(uid, kind, item_id)
     return jsonify({"ok": True, "kind": kind, "id": item_id, "spent": price,
                     "relics": user["relics"] - price})
+
+
+@app.route("/api/lodge/talk", methods=["POST"])
+@login_required
+def api_lodge_talk():
+    """Разговор с персонажем: открывает вступительный фрагмент и гасит бейджи.
+
+    Открытый фрагмент помечается прочитанным ровно здесь — «поговорил» и есть
+    «прочитал». Отдельной кнопки «отметить прочитанным» в UI нет и не нужно.
+    """
+    user = current_user()
+    if user is None:
+        session.clear()
+        return jsonify({"error": "auth_required"}), 401
+
+    data = request.get_json(silent=True) or {}
+    npc_id = data.get("npc_id")
+    cfg = get_config()
+    npc = next((n for n in lodge.npcs(cfg) if n["id"] == npc_id), None)
+    if npc is None:
+        return jsonify({"error": "unknown_npc"}), 400
+
+    user_quests = db.get_user_quests(user["id"])
+    if not lodge.npc_open(cfg, user_quests, npc):
+        return jsonify({"error": "quest_not_available"}), 409
+
+    intro = lodge.intro_lore(cfg, user["id"], npc_id)
+    mine = [lid for lid, l in lodge.lore(cfg).items() if l.get("npc") == npc_id]
+    db.mark_lore_seen(user["id"], mine)
+    return jsonify({"ok": True, "lore": intro})
+
+
+@app.route("/api/lodge/take", methods=["POST"])
+@login_required
+def api_lodge_take():
+    user = current_user()
+    if user is None:
+        session.clear()
+        return jsonify({"error": "auth_required"}), 401
+
+    data = request.get_json(silent=True) or {}
+    quest_id = data.get("quest_id")
+    cfg = get_config()
+    if quest_id not in lodge.quests(cfg):
+        return jsonify({"error": "unknown_quest"}), 400
+
+    user_quests = db.get_user_quests(user["id"])
+    if quest_id in user_quests:
+        return jsonify({"error": "quest_taken"}), 409
+    if not lodge.quest_available(cfg, user_quests, quest_id):
+        return jsonify({"error": "quest_not_available"}), 409
+    if not db.take_quest(user["id"], quest_id):
+        return jsonify({"error": "quest_taken"}), 409
+    return jsonify({"ok": True, "quest_id": quest_id})
+
+
+@app.route("/api/lodge/claim", methods=["POST"])
+@login_required
+def api_lodge_claim():
+    """Сдача заказа. Реликвии начисляет сервер по числу из конфига (CLAUDE.md §3.8)."""
+    user = current_user()
+    if user is None:
+        session.clear()
+        return jsonify({"error": "auth_required"}), 401
+
+    data = request.get_json(silent=True) or {}
+    quest_id = data.get("quest_id")
+    cfg = get_config()
+
+    relics, lore_id, err = lodge.claim(cfg, user["id"], quest_id)
+    if err:
+        code = 400 if err == "unknown_quest" else 409
+        return jsonify({"error": err}), code
+    return jsonify({"ok": True, "quest_id": quest_id, "relics": relics,
+                    "lore": lore_id})
 
 
 @app.route("/api/board")

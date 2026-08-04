@@ -207,6 +207,48 @@
       "attack": "cutting with both identical blades in perfect mirror"
     }
   },
+  "npcs": {
+    "np_master": {
+      "faction": "cov",
+      "accent": "#c8a35a",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "прямая высокая фигура, непокрытая седая голова и цепь бумажных листов на груди — единственный в Доме без капюшона и без маски",
+      "prompt": "stern elderly lodge master standing straight in a long heavy ochre mantle over dark steel pauldrons, BARE HEAD, NO HOOD, close-cropped grey hair and a scarred bare face, a chain of paper warrant sheets and red wax seals hanging across the chest, one gloved hand resting on a tall iron staff, a small lit lamp on the belt, accent color #c8a35a"
+    },
+    "np_clerk": {
+      "faction": "forge",
+      "accent": "#a83a2a",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "сгорбленный, ниже всех, горб из книги на цепи и тонкий манипулятор с пером над плечом",
+      "prompt": "hunched short bookkeeper priest in a closed deep red robe, NO HOOD, bald head behind a brass multi-lens visor, one thin extra mechanical arm rising over the shoulder holding a long quill, a thick ledger book chained to the belt, ink-stained bandaged fingers, brass and bakelite fittings, accent color #a83a2a"
+    },
+    "np_tracker": {
+      "faction": "scrap",
+      "accent": "#6d8f3a",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "приземистый и вдвое шире прочих, бритая голова в железном ошейнике, гроздь капканов на поясе",
+      "prompt": "short and very broad hunt-driver in layered animal hides and riveted scrap-iron shoulder plates, NO HOOD, shaved head with a thick iron collar, heavy jaw, several rusty leg-hold traps and coiled chains hanging from a wide belt, a long barbed goad in one hand, accent color #6d8f3a"
+    },
+    "np_ashwright": {
+      "faction": "tomb",
+      "accent": "#2fa8a0",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "самая высокая и худая, длинный фартук до земли, респиратор на пол-лица, длинный скребок",
+      "prompt": "very tall gaunt woman ash-burner in a long soot-stained leather apron over dark grey work clothes, NO HOOD, hair tied back tight, a heavy filtered respirator mask covering the lower face, thick elbow-length gloves, a long-handled iron scraper in one hand and a flat ash shovel in the other, a faint verdigris green lens on the mask, accent color #2fa8a0"
+    },
+    "np_guest": {
+      "faction": "rift",
+      "accent": "#7a2f8f",
+      "size": 64,
+      "fit": 48,
+      "silhouette": "единственный сидящий силуэт, асимметричный: одно плечо выше, одна рука длиннее, лицо без рта",
+      "prompt": "seated cross-legged mute figure wrapped in tattered violet cloth, asymmetric body with one shoulder much higher than the other, NO HOOD, smooth pale face with NO MOUTH AT ALL and four small extra eyes across the brow, one overlong arm resting on the knee, thin pale dust swirling around the hands, accent color #7a2f8f"
+    }
+  },
   "enemies": {
     "e_cultist": {
       "accent": "#8a6a4a",

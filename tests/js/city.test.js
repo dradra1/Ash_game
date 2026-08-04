@@ -13,8 +13,8 @@ function makeConfig() {
       width: 1000,
       height: 500,
       buildings: [
-        { id: 'wip_a', texture: 't_a', x: 0, y: 0, w: 10, h: 10, color: '#111',
-          name: 'n.soon', hint: 'h.soon', action: { type: 'none' } },
+        { id: 'lodge', texture: 't_lod', x: 0, y: 0, w: 10, h: 10, color: '#111',
+          name: 'n.lodge', hint: 'h.lodge', action: { type: 'quests' } },
         { id: 'tavern', texture: 't_tav', texture_locked: 't_tav_ruin',
           x: 100, y: 0, w: 10, h: 10, color: '#222', name: 'n.tav', hint: 'h.tav',
           action: { type: 'meta', tabs: ['factions', 'characters'] } },
@@ -68,6 +68,26 @@ function makeConfig() {
     },
     curses: { cu_x: { unlock_achievement: 'ac_x' } },
     achievements: { ac_x: {} },
+    lodge: {
+      npcs: [
+        { id: 'np_a', name: 'A', title: 'a', color: '#111', texture: 'np_a',
+          intro: 'l_a0', quests: ['q_a1'] },
+        { id: 'np_b', name: 'B', title: 'b', color: '#222', texture: 'np_b',
+          requires: 'q_a1', intro: 'l_b0', quests: ['q_b1'] },
+      ],
+      quests: {
+        q_a1: { npc: 'np_a', name: 'A1', desc: '', brief: '', done: '',
+          lore: 'l_a1', reward: 10, goal: { metric: 'kills', scope: 'total', value: 5 } },
+        q_b1: { npc: 'np_b', name: 'B1', desc: '', brief: '', done: '',
+          lore: 'l_b1', reward: 20, goal: { metric: 'kills', scope: 'total', value: 5 } },
+      },
+      lore: {
+        l_a0: { npc: 'np_a', title: 'a0', text: '' },
+        l_a1: { npc: 'np_a', title: 'a1', text: '' },
+        l_b0: { npc: 'np_b', title: 'b0', text: '' },
+        l_b1: { npc: 'np_b', title: 'b1', text: '' },
+      },
+    },
   };
 }
 
@@ -77,6 +97,8 @@ function makeProfile(over) {
     unlocks: { faction: [], character: [], weapon: [] },
     achievements: [],
     upgrades: {},
+    quests: {},
+    lore: {},
   }, over);
 }
 
@@ -88,8 +110,46 @@ test('девять зданий из конфига дают девять зап
   const states = cityState(makeConfig(), makeProfile());
   assert.equal(states.length, 9);
   assert.deepEqual(states.map((s) => s.id),
-    ['wip_a', 'tavern', 'forge', 'chapel', 'waystation', 'wip_c', 'crypt', 'gate',
+    ['lodge', 'tavern', 'forge', 'chapel', 'waystation', 'wip_c', 'crypt', 'gate',
       'obelisk']);
+});
+
+// Ловчий Дом занял площадку бывшего резерва wip_a. Он не meta-раздел, и логика
+// locked/unlockable к нему не применяется вовсе: сюжет виден с первого входа.
+test('Ловчий Дом: никогда не закрыт, не резерв, бейджем не торгует', () => {
+  const states = cityState(makeConfig(), makeProfile({ relics: 999999 }));
+  const s = byId(states, 'lodge');
+  assert.equal(s.locked, false);
+  assert.equal(s.reserved, false);
+  assert.equal(s.unlockable, false);
+  assert.equal(s.action.type, 'quests');
+});
+
+test('Ловчий Дом: бейдж «Новое» — по непрочитанному, а не по реликвиям', () => {
+  const config = makeConfig();
+  // Свежий профиль: разговора не было, вступительный лор не выдан
+  assert.equal(byId(cityState(config, makeProfile()), 'lodge').hasNew, true);
+
+  // Поговорил, взял единственный доступный заказ — брать и сдавать нечего
+  const busy = makeProfile({
+    lore: { l_a0: 1 },
+    quests: { q_a1: { state: 'active', progress: 1 } },
+  });
+  assert.equal(byId(cityState(config, busy), 'lodge').hasNew, false);
+
+  // Заказ выполнен — надо идти сдавать
+  const ready = makeProfile({
+    lore: { l_a0: 1 },
+    quests: { q_a1: { state: 'done', progress: 5 } },
+  });
+  assert.equal(byId(cityState(config, ready), 'lodge').hasNew, true);
+
+  // Сдал: открылся второй персонаж, у него есть непрочитанное и новый заказ
+  const next = makeProfile({
+    lore: { l_a0: 1, l_a1: 1 },
+    quests: { q_a1: { state: 'claimed', progress: 5 } },
+  });
+  assert.equal(byId(cityState(config, next), 'lodge').hasNew, true);
 });
 
 // Арены заехали на площадку бывшего резерва wip_b. Вкладка `arenas` живёт в
@@ -112,7 +172,7 @@ test('арены: раздел открыт, цена читается, бейд
 
 test('резерв: reserved, без бейджей и без locked даже при горе реликвий', () => {
   const states = cityState(makeConfig(), makeProfile({ relics: 999999 }));
-  for (const id of ['wip_a', 'wip_c']) {
+  for (const id of ['wip_c']) {
     const s = byId(states, id);
     assert.equal(s.reserved, true, id);
     assert.equal(s.locked, false, id);

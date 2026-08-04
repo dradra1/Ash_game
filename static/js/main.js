@@ -23,6 +23,7 @@ import { localAdapter, remoteAdapter } from './ui/shop_adapter.js';
 import { createLobbyUi } from './ui/lobby_ui.js';
 import { createSetupUi } from './ui/setup_ui.js';
 import { createMetaUi } from './ui/meta_ui.js';
+import { createLodgeUi } from './ui/lodge_ui.js';
 import { createResultUi } from './ui/result_ui.js';
 import { createPauseUi } from './ui/pause_ui.js';
 import { createAdminUi } from './ui/admin_ui.js';
@@ -50,6 +51,22 @@ async function fetchJson(url, options) {
   const res = await fetch(url, Object.assign({ credentials: 'same-origin' }, options));
   if (!res.ok) throw new Error(url + ' → ' + res.status);
   return res.json();
+}
+
+// POST, у которого тело ответа нужно и при отказе: сервер возвращает код ошибки
+// строкой ({error: "quest_not_done"}), а UI показывает его через t('ui.error.…').
+async function postJson(url, body) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return await res.json();
+  } catch (e) {
+    return { error: 'unknown' };
+  }
 }
 
 async function boot() {
@@ -157,6 +174,14 @@ async function boot() {
         return res.json().catch(() => ({ error: 'unknown' }));
       }
     },
+  });
+  // Ловчий Дом ходит на сервер тремя ручками; ошибку он показывает сам, поэтому
+  // тело ответа нужно и при неуспешном коде — postJson его достаёт.
+  const lodgeUi = createLodgeUi(uiRoot, config, t, {
+    profile: () => fetchJson('/api/profile'),
+    talk: (npcId) => postJson('/api/lodge/talk', { npc_id: npcId }),
+    take: (questId) => postJson('/api/lodge/take', { quest_id: questId }),
+    claim: (questId) => postJson('/api/lodge/claim', { quest_id: questId }),
   });
   const adminUi = isAdmin ? createAdminUi(uiRoot, config, t, {
     async load() { return fetchJson('/api/admin/config'); },
@@ -776,10 +801,11 @@ async function boot() {
           damage_taken: st.damage_taken || 0,
           ash_gained: st.ash_gained || 0,
           shop_buys: st.shop_buys || 0,
+          kills_by_type: st.kills_by_type || {},
         }),
       });
     } catch (e) {
-      return { relics_gained: 0, achievements: [] };
+      return { relics_gained: 0, achievements: [], quests_done: [] };
     }
   }
 
@@ -1019,6 +1045,7 @@ async function boot() {
       onCoop: openCoopSetup,
       onJoin: coopJoin,
       onMeta: (tabs) => metaUi.show(showMenu, tabs),
+      onLodge: () => lodgeUi.show(showMenu),
       onAudio: () => {
         // Любое имя, кроме 'menu', прячет панель меню — настройки открываются
         // поверх пустого экрана, а кнопка «Назад» возвращает сюда же.

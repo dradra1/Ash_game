@@ -41,6 +41,22 @@ def focus_id(page):
     return page.evaluate("() => document.activeElement && document.activeElement.id")
 
 
+def focus_label(page):
+    """Здания города — кнопки без id, узнаются по aria-label."""
+    return page.evaluate(
+        "() => document.activeElement"
+        " && document.activeElement.getAttribute('aria-label')")
+
+
+def walk_to(page, pred, limit=24):
+    """Идти «вниз», пока не встретится нужный элемент. -> дошли ли."""
+    for _ in range(limit):
+        if pred(page):
+            return True
+        tap(page, DOWN)
+    return pred(page)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default="http://127.0.0.1:8150")
@@ -72,23 +88,23 @@ def main():
         page.goto(a.url + "/", wait_until="networkidle")
         page.wait_for_timeout(600)
 
-        # 1. Крестовина двигает фокус по пунктам меню
+        # 1. Крестовина двигает фокус по пунктам меню.
+        # Первой в городе стоит «Кооп»: отдельной кнопки «Играть» нет с тех пор,
+        # как меню стало экраном города — забег начинают Врата, а это здание, а
+        # не кнопка верхней панели (ui/city_ui.js).
         first = focus_id(page)
-        if first != "btn-play":
+        if first != "btn-coop":
             problems.append(f"фокус при открытии меню не на первой кнопке: {first}")
         tap(page, DOWN)
-        if focus_id(page) != "btn-coop":
-            problems.append(f"«вниз» не сдвинул фокус: {focus_id(page)}")
+        moved = focus_id(page)
+        if moved == first:
+            problems.append(f"«вниз» не сдвинул фокус: {moved}")
         tap(page, UP)
-        if focus_id(page) != "btn-play":
+        if focus_id(page) != first:
             problems.append(f"«вверх» не вернул фокус: {focus_id(page)}")
 
         # 2. A нажимает — доходим до настроек звука и открываем их
-        for _ in range(8):
-            if focus_id(page) == "btn-audio":
-                break
-            tap(page, DOWN)
-        if focus_id(page) != "btn-audio":
+        if not walk_to(page, lambda pg: focus_id(pg) == "btn-audio", 8):
             problems.append("до кнопки звука фокус не дошёл")
         tap(page, A)
         if not page.locator("#audio-settings").is_visible():
@@ -111,6 +127,40 @@ def main():
             problems.append("B не закрыл настройки")
         if not page.locator("#screen-menu").is_visible():
             problems.append("после B не вернулись в меню")
+
+        # 5. Здания города тоже под падом: доходим до Ловчего Дома и заходим в
+        # него. Зал и диалог — обычная панель `.modal` с кнопкой `.btn.back`,
+        # поэтому focus.js подхватывает их без единой строчки в lodge_ui.js;
+        # проверяем, что это действительно так, а не на словах.
+        lodge_name = page.evaluate(
+            """async () => {
+                const c = await (await fetch('/api/config')).json();
+                const b = (c.city.buildings || []).find(
+                    (x) => x.action && x.action.type === 'quests');
+                return b ? c.i18n.ru[b.name] : '';
+            }""")
+        if lodge_name:
+            if not walk_to(page, lambda pg: (focus_label(pg) or "") == lodge_name):
+                problems.append(f"до здания «{lodge_name}» фокус не дошёл")
+            else:
+                tap(page, A)
+                if not page.locator("#lodge").is_visible():
+                    problems.append("A не открыл Ловчий Дом")
+                # В зале фокус должен встать на первого персонажа, а не улететь
+                if not walk_to(page, lambda pg: page.evaluate(
+                        "() => !!(document.activeElement"
+                        " && document.activeElement.closest('#lodge .npc'))"), 6):
+                    problems.append("в зале Ловчего Дома фокус не встал на персонажа")
+                else:
+                    tap(page, A)
+                    if page.locator("#lodge .dlg-head").count() == 0:
+                        problems.append("A не открыл диалог с персонажем")
+                    tap(page, B)
+                    if page.locator("#lodge .dlg-head").count() != 0:
+                        problems.append("B не вернул из диалога в зал")
+                tap(page, B)
+                if page.locator("#lodge").is_visible():
+                    problems.append("B не закрыл Ловчий Дом")
 
         browser.close()
 
