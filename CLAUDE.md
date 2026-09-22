@@ -199,6 +199,7 @@ cd /opt/sites/ash-and-iron && docker compose up -d --build
 `data/ash-and-iron-offline.apk`, раздаётся `/download/apk-offline`; ссылки — на
 странице входа и в меню города (видны только когда файл есть). Правишь `meta.py` /
 `lodge.py` — правь и порт в ветке offline (`static/js/offline/`).
+
 ## 11. Ветка `offline` — одиночная игра без сервера
 
 Эта ветка — офлайн-форк: та же игра, собранная в APK, который работает без сети.
