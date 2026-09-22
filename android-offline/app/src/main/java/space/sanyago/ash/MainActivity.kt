@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
 
         setupWebView()
         applyImmersive()
+        keepClearOfCutout()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = handleBack()
@@ -101,6 +103,24 @@ class MainActivity : ComponentActivity() {
         web.evaluateJavascript(BACK_JS) { result ->
             if (result != "true") moveTaskToBack(true)
         }
+    }
+
+    /**
+     * Вырез под камеру. Окно рисуется от края до края (edge-to-edge, а на
+     * Android 15 с targetSdk 35 иначе и нельзя), поэтому без этого верх игры —
+     * HUD, реликвии, кнопки города — уезжал под «чёлку». Сдвигаем WebView на
+     * размер выреза; полоса над ней закрашена фоном игры (R.color.bg).
+     * Системные панели скрыты immersive-режимом и места не занимают, вырез же
+     * остаётся всегда — поэтому берём только displayCutout.
+     */
+    private fun keepClearOfCutout() {
+        val root = web.parent as View
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val c = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(c.left, c.top, c.right, c.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     private fun applyImmersive() {
