@@ -7,6 +7,9 @@ export function createTooltip(root) {
   el.style.display = 'none';
   root.appendChild(el);
 
+  const win = doc.defaultView;
+  const coarse = !!(win && win.matchMedia && win.matchMedia('(pointer: coarse)').matches);
+
   function show(html, x, y) {
     el.innerHTML = html;
     el.style.display = '';
@@ -22,15 +25,61 @@ export function createTooltip(root) {
     el.style.display = 'none';
   }
 
+  if (coarse) {
+    // Любое следующее касание убирает подсказку. Capture-фаза обязательна:
+    // pointerdown цели сработает после, и долгое нажатие по соседней карточке
+    // покажет уже новую подсказку.
+    doc.addEventListener('pointerdown', hide, true);
+  }
+
   // Навесить тултип на элемент: содержимое считается лениво
   function bind(node, contentFn) {
-    node.addEventListener('mouseenter', (e) => show(contentFn(), e.clientX, e.clientY));
-    node.addEventListener('mousemove', (e) => show(contentFn(), e.clientX, e.clientY));
-    node.addEventListener('mouseleave', hide);
+    if (!coarse) {
+      node.addEventListener('mouseenter', (e) => show(contentFn(), e.clientX, e.clientY));
+      node.addEventListener('mousemove', (e) => show(contentFn(), e.clientX, e.clientY));
+      node.addEventListener('mouseleave', hide);
+      return;
+    }
+    // На тач-устройствах обычный тап покупает, поэтому подсказка — по долгому
+    // нажатию, а не по тапу.
+    let timer = null;
+    let px = 0;
+    let py = 0;
+
+    function cancel() {
+      if (timer !== null) {
+        win.clearTimeout(timer);
+        timer = null;
+      }
+    }
+
+    node.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;
+      px = e.clientX;
+      py = e.clientY;
+      cancel();
+      timer = win.setTimeout(() => {
+        timer = null;
+        show(contentFn(), px, py);
+      }, LONG_PRESS_MS);
+    });
+    node.addEventListener('pointermove', (e) => {
+      if (timer === null) return;
+      // Палец уехал от точки нажатия — это свайп, а не долгое нажатие
+      if (Math.abs(e.clientX - px) > MOVE_CANCEL_PX
+        || Math.abs(e.clientY - py) > MOVE_CANCEL_PX) cancel();
+    });
+    // Сам тултип не прячем — его закроет следующее касание (слушатель выше)
+    node.addEventListener('pointerup', cancel);
+    node.addEventListener('pointercancel', cancel);
+    node.addEventListener('pointerleave', cancel);
   }
 
   return { show, hide, bind, el };
 }
+
+const LONG_PRESS_MS = 350;
+const MOVE_CANCEL_PX = 12;
 
 // Иконка одиночного PNG (оружие, предмет, стат, мета-улучшение) для DOM-экранов.
 // Нет файла — onerror убирает узел: по CLAUDE.md §3.3 отсутствие текстуры это

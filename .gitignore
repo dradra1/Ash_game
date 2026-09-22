@@ -10,3 +10,14 @@ scratch/
 *.zip
 .venv/
 venv/
+
+# Android-оболочка: в git едут только исходники и gradle-обвязка.
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/signing.properties
+android-keys/
+*.jks
+*.keystore
+*.apk

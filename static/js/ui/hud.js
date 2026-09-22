@@ -30,8 +30,34 @@ export function createHud(config, t) {
     ctx.fillText(text, x, y);
   }
 
-  // run — объект из createRun, me — свой игрок, view — {w, h} экрана
-  function draw(ctx, run, me, view) {
+  // Виртуальный джойстик: кольцо в точке касания, шляпка по вектору движения.
+  // Никаких shadowBlur/filter (CLAUDE.md §4), ноль аллокаций — всё из готовых объектов.
+  function joystick(ctx, touch, move) {
+    if (!touch || !touch.active) return;
+    const j = config.render.joystick;
+    const r = config.render.joystick_radius;
+    const prev = ctx.globalAlpha;
+
+    ctx.globalAlpha = j.ring_alpha;
+    ctx.strokeStyle = j.ring_color;
+    ctx.lineWidth = j.ring_width;
+    ctx.beginPath();
+    ctx.arc(touch.x, touch.y, r, 0, TAU);
+    ctx.stroke();
+
+    ctx.globalAlpha = j.thumb_alpha;
+    ctx.fillStyle = j.thumb_color;
+    ctx.beginPath();
+    ctx.arc(touch.x + (move ? move.x : 0) * r, touch.y + (move ? move.y : 0) * r,
+      j.thumb_radius, 0, TAU);
+    ctx.fill();
+
+    ctx.globalAlpha = prev;
+  }
+
+  // run — объект из createRun, me — свой игрок, view — {w, h} экрана,
+  // touch и move — состояние виртуального джойстика (необязательно)
+  function draw(ctx, run, me, view, touch, move) {
     const state = run.state;
     ctx.save();
 
@@ -132,6 +158,7 @@ export function createHud(config, t) {
       }
     }
 
+    joystick(ctx, touch, move);
     ctx.restore();
   }
 
@@ -148,6 +175,7 @@ function formatTime(sec) {
 const FONT = '12px monospace';
 const FONT_BIG = '16px monospace';
 const XP_H = 6;
+const TAU = Math.PI * 2;
 const LOW_HP = 0.3;
 // Сколько иконок оружия помещается в один ряд HUD: шесть — обычный лоадаут,
 // всё сверх переносится вниз (sim/unique.js даёт персонажам до десяти слотов).

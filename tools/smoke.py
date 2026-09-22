@@ -7,6 +7,7 @@ DoD этапов формулируется в терминах «залогин
     tools/smoke.py                       # прогон по умолчанию, 6 секунд
     tools/smoke.py --seconds 12 --shot scratch/game.png
     tools/smoke.py --url http://127.0.0.1:8150 --user testrunner --password pepel123
+    tools/smoke.py --mobile              # телефон 360×800 dpr 3: тач, зум, пауза
 
 Выход 0 — всё сошлось; 1 — упало, с описанием. Скриншот пишется всегда.
 """
@@ -14,6 +15,20 @@ import argparse
 import sys
 
 from playwright.sync_api import sync_playwright
+
+# Синтетическое касание канваса: playwright умеет только tap, а виртуальному
+# джойстику нужен полноценный touchstart→touchmove→touchend (engine/input.js).
+TOUCH_JS = """([phase, x, y]) => {
+  const c = document.getElementById('game');
+  const t = new Touch({ identifier: 1, target: c, clientX: x, clientY: y });
+  const list = phase === 'end' ? [] : [t];
+  const type = phase === 'start' ? 'touchstart'
+    : phase === 'move' ? 'touchmove' : 'touchend';
+  c.dispatchEvent(new TouchEvent(type, {
+    bubbles: true, cancelable: true,
+    touches: list, targetTouches: list, changedTouches: [t],
+  }));
+}"""
 
 
 def main():
@@ -28,14 +43,34 @@ def main():
                     help="прокликивать левелапы и лавку, чтобы забег шёл дальше")
     ap.add_argument("--expect-ui", default="",
                     help="через запятую: какие панели обязаны показаться (choice, shop)")
+    ap.add_argument("--mobile", action="store_true",
+                    help="профиль телефона: тач-джойстик вместо WASD, проверка зума и паузы")
     a = ap.parse_args()
 
     errors, problems, bad_responses = [], [], []
     seen_ui = set()
+    zoom = None
+    pause_ok = None
+
+    # Телефон 360×800 при dpr 3 — самый частый профиль. Ожидаемый зум считается
+    # по той же формуле, что в engine/render.js: s = 2 device-px на мировую
+    # единицу при minView 500, значит в CSS-пикселях 2/3.
+    if a.mobile:
+        page_kwargs = {
+            "viewport": {"width": 360, "height": 800},
+            "device_scale_factor": 3,
+            "is_mobile": True,
+            "has_touch": True,
+        }
+        expect_zoom = 2 / 3
+    else:
+        page_kwargs = {"viewport": {"width": 1280, "height": 800}}
+        # Десктоп обязан остаться ровно таким, каким был до мобильного режима.
+        expect_zoom = 1.0
 
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--no-sandbox"])
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        page = browser.new_page(**page_kwargs)
         # Сетевые ошибки ловим по URL ответа, а не по тексту консоли: браузер пишет
         # «Failed to load resource: 404» без адреса, и отличить отсутствующую текстуру
         # (штатное поведение) от сломанного эндпоинта по тексту нельзя.
@@ -114,8 +149,14 @@ def main():
                 "? [r.state.players[0].x, r.state.players[0].y] : null; }")
 
         before = pos()
-        page.keyboard.down("KeyD")
-        page.keyboard.down("KeyS")
+        if a.mobile:
+            # Левая половина экрана — джойстик; палец уезжает вправо-вниз, то же
+            # направление, что даёт связка D+S на клавиатуре.
+            page.evaluate(TOUCH_JS, ["start", 60, 620])
+            page.evaluate(TOUCH_JS, ["move", 110, 660])
+        else:
+            page.keyboard.down("KeyD")
+            page.keyboard.down("KeyS")
         if a.autoplay:
             # Прокликиваем левелапы и лавку: без этого соло-игра встаёт на паузе
             # и до лавки прогон не доходит.
@@ -135,9 +176,28 @@ def main():
                         pass
         else:
             page.wait_for_timeout(int(a.seconds * 1000))
-        page.keyboard.up("KeyD")
-        page.keyboard.up("KeyS")
+        if a.mobile:
+            page.evaluate(TOUCH_JS, ["end", 110, 660])
+        else:
+            page.keyboard.up("KeyD")
+            page.keyboard.up("KeyS")
         after = pos()
+
+        zoom = page.evaluate(
+            "() => globalThis.__RENDER__ ? globalThis.__RENDER__.view.zoom : null")
+
+        # Кнопку паузы жмём последней: она останавливает забег.
+        if a.mobile:
+            try:
+                btn = page.locator(".touch-pause")
+                pause_ok = btn.is_visible()
+                if pause_ok:
+                    btn.tap()
+                    page.wait_for_timeout(400)
+                    pause_ok = page.locator("#pause").is_visible()
+            except Exception as e:
+                pause_ok = False
+                problems.append(f"кнопка паузы: {e}")
 
         fps = page.evaluate(
             "() => globalThis.__LOOP__ && globalThis.__LOOP__.stats "
@@ -159,6 +219,14 @@ def main():
         problems.append("нет globalThis.__LOOP__.stats.fps")
     elif fps < a.min_fps:
         problems.append(f"fps {fps:.1f} ниже порога {a.min_fps}")
+
+    if zoom is None:
+        problems.append("нет globalThis.__RENDER__.view.zoom")
+    elif abs(zoom - expect_zoom) > 1e-6:
+        problems.append(f"зум камеры {zoom:.4f}, ожидался {expect_zoom:.4f}")
+
+    if a.mobile and not pause_ok:
+        problems.append("экранная кнопка паузы не открыла меню паузы")
 
     # Отсутствующая текстура — штатное поведение (нет PNG → цветной прямоугольник),
     # а 409 на регистрации означает «игрок уже есть» и гасится входом.
@@ -183,7 +251,8 @@ def main():
 
     print(f"позиция: {before} → {after}")
     print(f"fps: {fps if fps is None else round(fps, 1)}   "
-          f"sim: {sim_ms if sim_ms is None else round(sim_ms, 3)} мс")
+          f"sim: {sim_ms if sim_ms is None else round(sim_ms, 3)} мс   "
+          f"зум: {zoom if zoom is None else round(zoom, 4)}")
     print(f"скриншот: {a.shot}")
     if seen_ui:
         print(f"панели показались: {', '.join(sorted(seen_ui))}")

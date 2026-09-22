@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Прах и Железо</string>
+    <string name="error_title">Нет связи</string>
+    <string name="error_hint">Игра живёт на сервере — проверь интернет и попробуй ещё раз.</string>
+    <string name="error_retry">Повторить</string>
+</resources>

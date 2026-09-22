@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Палитра совпадает с static/css/style.css: фон страницы, чернила, золото.
+     Оболочка не должна мигать чужим цветом между splash и первым кадром игры. -->
+<resources>
+    <color name="bg">#0d0f14</color>
+    <color name="ink">#c9c4b8</color>
+    <color name="ink_dim">#7a7568</color>
+    <color name="gold">#c8a35a</color>
+    <color name="ic_launcher_background">#1b2029</color>
+</resources>

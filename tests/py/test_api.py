@@ -129,3 +129,33 @@ def test_board_returns_list(client):
     r = c.get("/api/board?mode=solo")
     assert r.status_code == 200
     assert r.get_json() == []
+
+
+def test_apk_download_absent(client):
+    """Файла в volume нет — маршрут молчит, а не отдаёт пустышку."""
+    c, _ = client
+    r = c.get("/download/apk")
+    assert r.status_code == 404
+    assert r.get_json()["error"] == "not_found"
+
+
+def test_apk_download_present(client):
+    c, app = client
+    app.APK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    app.APK_FILE.write_bytes(b"PK\x03\x04not-a-real-apk")
+
+    r = c.get("/download/apk")
+    assert r.status_code == 200
+    assert r.mimetype == "application/vnd.android.package-archive"
+    assert "attachment" in r.headers["Content-Disposition"]
+    assert r.data == b"PK\x03\x04not-a-real-apk"
+
+
+def test_login_page_hides_apk_button_without_file(client):
+    """Кнопку рисуем только когда её есть чем открыть."""
+    c, app = client
+    assert b"/download/apk" not in c.get("/login").data
+
+    app.APK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    app.APK_FILE.write_bytes(b"PK\x03\x04")
+    assert b"/download/apk" in c.get("/login").data

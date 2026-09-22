@@ -21,6 +21,8 @@ export function createRenderer(canvas, config, arenaSize) {
   const cameraLag = config.arena.camera_lag;
   // Вертикальная видимая область в мировых единицах ≈ радиус обзора из конфига
   const viewRef = (config.net && config.net.view_radius) || 900;
+  // Сколько мировых единиц обязано помещаться по короткой стороне экрана
+  const minView = (config.render && config.render.min_view_units) || 0;
 
   const camera = { x: arenaW / 2, y: arenaH / 2 };
   const view = { w: 0, h: 0, zoom: 1 };
@@ -34,7 +36,18 @@ export function createRenderer(canvas, config, arenaSize) {
     canvas.height = Math.round(h * dpr);
     view.w = w;
     view.h = h;
-    view.zoom = Math.max(1, Math.floor(h / viewRef));
+
+    // Масштаб мир→device-px обязан быть целым: иначе пиксель спрайта размазывается
+    // по границе физического пикселя. view.zoom при этом дробное — оно живёт в
+    // CSS-пикселях, а целочисленность нужна произведению dpr * zoom (см. begin()).
+    let s = Math.max(1, Math.round(dpr * Math.max(1, Math.floor(h / viewRef))));
+    // Вьюпорт телефона короче десктопного обзора, и при масштабе «как есть» игрок
+    // видит вчетверо меньше арены. Снижаем масштаб, пока по короткой стороне не
+    // наберётся minView мировых единиц.
+    const short = Math.min(canvas.width, canvas.height);
+    while (s > 1 && short / s < minView) s--;
+
+    view.zoom = s / dpr;
     ctx.imageSmoothingEnabled = false;
   }
 

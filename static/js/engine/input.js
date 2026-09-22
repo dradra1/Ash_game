@@ -266,6 +266,16 @@ export function createInput(canvas, config) {
       return false;
     },
 
+    // Тап по правой половине: читает и сбрасывает флаг. Стрельба автоматическая,
+    // поэтому тап — не «выстрел», а «закрыть подсказку».
+    consumeTap() {
+      if (touch.tap) {
+        touch.tap = false;
+        return true;
+      }
+      return false;
+    },
+
     destroy() {
       win.removeEventListener('keydown', onKeyDown);
       win.removeEventListener('keyup', onKeyUp);

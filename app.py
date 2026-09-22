@@ -36,6 +36,11 @@ REPO_CONFIG = Path(os.environ.get("ASH_REPO_CONFIG")
                    or APP_ROOT / "config" / "game_config.json")
 LIVE_CONFIG = DATA_DIR / "game_config.json"
 SECRET_KEY_FILE = DATA_DIR / "secret_key"
+# Android-оболочка (android/, см. android/README.md). Лежит в volume, а не в
+# образе: бинарник не попадает ни в git, ни в docker build, а пересборка
+# контейнера его не трёт. Нет файла — маршрут отдаёт 404, кнопка на входе не
+# рисуется, всё остальное работает как раньше.
+APK_FILE = DATA_DIR / "ash-and-iron.apk"
 
 app = Flask(__name__)
 # Кука сессии — только same-site: авторизация в сокете идёт по этой же куке, и «*» в CORS
@@ -245,11 +250,26 @@ def favicon():
     )
 
 
+@app.route("/download/apk")
+def download_apk():
+    # Без авторизации: в оболочке нет ни секретов, ни игрового содержимого —
+    # это WebView на этот же сайт. Требовать логин до установки клиента значило бы
+    # запирать вход за самим входом.
+    if not APK_FILE.exists():
+        return jsonify({"error": "not_found"}), 404
+    return send_from_directory(
+        APK_FILE.parent.resolve(),
+        APK_FILE.name,
+        mimetype="application/vnd.android.package-archive",
+        as_attachment=True,
+    )
+
+
 @app.route("/login")
 def login_page():
     if "user_id" in session and current_user() is not None:
         return redirect("/")
-    return render_template("login.html")
+    return render_template("login.html", apk=APK_FILE.exists())
 
 
 @app.route("/api/register", methods=["POST"])

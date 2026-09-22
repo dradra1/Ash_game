@@ -26,6 +26,7 @@ import { createMetaUi } from './ui/meta_ui.js';
 import { createLodgeUi } from './ui/lodge_ui.js';
 import { createResultUi } from './ui/result_ui.js';
 import { createPauseUi } from './ui/pause_ui.js';
+import { createTouchUi } from './ui/touch_ui.js';
 import { createAdminUi } from './ui/admin_ui.js';
 import { createParticles } from './engine/particles.js';
 import { createRng } from './engine/rng.js';
@@ -104,6 +105,7 @@ async function boot() {
   const setupUi = createSetupUi(uiRoot, config, t, tip);
   const resultUi = createResultUi(uiRoot, config, t);
   const pauseUi = createPauseUi(uiRoot, config, t);
+  const touchUi = createTouchUi(uiRoot, config, t);
   const audio = createAudio(config);
   const audioUi = createAudioUi(uiRoot, config, t, audio);
   // Ввод создаётся ОДИН раз на всё время жизни страницы, а не на забег. Раньше он
@@ -319,6 +321,8 @@ async function boot() {
         pauseUi.hide();
         audioUi.show(() => openPauseMenu());
       },
+      // F3 с телефона недоступен, поэтому оверлей открывается из паузы
+      onDebug: touchUi.coarse ? () => debug.toggle() : null,
     });
   }
 
@@ -369,6 +373,7 @@ async function boot() {
     requestPause(true);
     openPauseMenu();
   }
+  touchUi.setHandlers({ onPause: handleEsc });
 
   // --- цикл ---------------------------------------------------------------
   function update(dt) {
@@ -379,6 +384,7 @@ async function boot() {
     syncMusic(netClient ? netClient.state : (run && run.state));
 
     if (input.consumePressed('F3')) debug.toggle();
+    if (input.consumeTap()) tip.hide();
     if (input.consumePressed('Escape')) handleEsc();
     // Start на паде — тот же Escape. Без него забег, начатый геймпадом, нельзя
     // даже поставить на паузу: пришлось бы тянуться к клавиатуре. В лавке эта же
@@ -774,7 +780,8 @@ async function boot() {
     }
 
     renderer.end();
-    hud.draw(renderer.ctx, netClient || run, me, renderer.view);
+    hud.draw(renderer.ctx, netClient || run, me, renderer.view, input.touch, input.move);
+    touchUi.sync(!pauseUi.visible && !shopUi.visible && !resultUi.visible && !levelUi.visible);
 
     if (debug.visible) {
       if (run) {
@@ -823,6 +830,9 @@ async function boot() {
     globalThis.__RUN__ = run || { state: netClient.state };
     globalThis.__NET__ = netClient || hostNet;
     globalThis.__LOOP__ = loop;
+    // Рендер нужен tools/smoke.py: масштаб камеры проверяется числом, а не
+    // глазами по скриншоту — на телефоне он обязан упасть, на десктопе остаться 1.
+    globalThis.__RENDER__ = renderer;
     screens.show('game');
     loop.start();
   }
@@ -1015,9 +1025,22 @@ async function boot() {
     }
   }
 
-  globalThis.addEventListener('resize', () => {
-    if (renderer) renderer.resize();
-  });
+  const onViewportChange = () => { if (renderer) renderer.resize(); };
+  globalThis.addEventListener('resize', onViewportChange);
+  globalThis.addEventListener('orientationchange', onViewportChange);
+  if (globalThis.visualViewport) {
+    globalThis.visualViewport.addEventListener('resize', onViewportChange);
+  }
+
+  // Аппаратная «Назад» в APK-оболочке: во время забега — пауза, иначе false,
+  // и приложение уходит в фон. Возвращаемое значение читает MainActivity.
+  globalThis.__ashBack = () => {
+    if (!run && !netClient) return false;
+    const st = world();
+    if (!st || st.phase === PHASE_OVER || resultUi.visible) return false;
+    handleEsc();
+    return true;
+  };
 
   const invited = roomFromUrl();
 

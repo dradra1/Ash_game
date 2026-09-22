@@ -1,5 +1,5 @@
 {
-  "content_version": 55,
+  "content_version": 56,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -129,7 +129,16 @@
     "turret_ring_width": 2,
     "telegraph_color": "#e03a2a",
     "telegraph_alpha": 0.72,
-    "telegraph_pulse_hz": 4
+    "telegraph_pulse_hz": 4,
+    "min_view_units": 500,
+    "joystick": {
+      "ring_color": "#c9c4b8",
+      "ring_alpha": 0.3,
+      "ring_width": 2,
+      "thumb_color": "#c8a35a",
+      "thumb_alpha": 0.55,
+      "thumb_radius": 16
+    }
   },
   "arena": {
     "size": [
@@ -8007,7 +8016,10 @@
       "ui.error.quest_taken": "Заказ уже взят",
       "ui.error.quest_not_done": "Заказ ещё не выполнен",
       "ui.error.quest_claimed": "Заказ уже сдан",
-      "ui.result.quest_done": "заказ выполнен"
+      "ui.result.quest_done": "заказ выполнен",
+      "ui.touch.pause": "❙❙",
+      "ui.touch.pause_title": "Пауза",
+      "ui.pause.debug": "Отладка"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -8209,7 +8221,10 @@
       "ui.error.quest_taken": "Contract already taken",
       "ui.error.quest_not_done": "Contract not completed yet",
       "ui.error.quest_claimed": "Contract already handed in",
-      "ui.result.quest_done": "contract completed"
+      "ui.result.quest_done": "contract completed",
+      "ui.touch.pause": "❙❙",
+      "ui.touch.pause_title": "Pause",
+      "ui.pause.debug": "Debug"
     }
   },
   "admin": {

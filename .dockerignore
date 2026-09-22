@@ -1,0 +1,18 @@
+# Без этого списка `COPY . .` тащит в слой сотни мегабайт: android/app/build и
+# android/.gradle после сборки APK, scratch, .venv, .git. Всё это к серверу
+# отношения не имеет.
+.git
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Данные — том, а не образ (там же лежит собранный APK).
+data/
+
+# Android-оболочка собирается на хосте и в контейнер не попадает.
+android/
+android-keys/
+
+scratch/

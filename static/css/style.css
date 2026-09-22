@@ -167,6 +167,24 @@ html, body {
     background: #4a3a2a;
 }
 
+/* Ссылка на APK-оболочку. Второстепенная: играть можно и во вкладке, поэтому
+   она приглушена и стоит под формой, а не спорит с кнопкой входа. Появляется
+   только когда файл лежит в data/ (app.py: APK_FILE). */
+.auth-box .apk {
+    display: block;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #3a3f4a;
+    color: #8a8f9a;
+    font-size: 12px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.auth-box .apk:hover {
+    color: var(--gold);
+}
+
 .error {
     min-height: 18px;
     margin-bottom: 8px;
@@ -982,4 +1000,104 @@ html, body {
 .modal .btn:focus {
     border-image-source: url(/static/ui/ui_btn_hover.png);
     color: var(--gold-bright);
+}
+
+/* --- Мобильный режим -------------------------------------------------------
+   Включается по грубому указателю и узкому экрану. Десктоп сюда не попадает.  */
+
+/* Канвас не должен скроллиться и подсвечиваться */
+#game {
+    touch-action: none;
+}
+body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Экранная кнопка паузы (ui/touch_ui.js). Сам узел существует только на
+   coarse-устройствах, поэтому правила десктопу ничего не стоят. */
+/* Селектор с #ui обязателен: правило `#ui > *` выше даёт всем прямым детям
+   pointer-events: auto, и по специфичности (id) оно бьёт голый класс. Слой
+   растянут на весь экран, так что «auto» на нём означало бы, что ни одно
+   касание не доходит до канваса — вместе с виртуальным джойстиком. */
+#ui > .touch-ui {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+.touch-btn {
+    pointer-events: auto;
+    min-width: 48px;
+    min-height: 48px;
+    /* Скин тот же, что у .btn; размер и центровка — свои */
+    border: 8px solid transparent;
+    border-image: url(/static/ui/ui_btn.png) 26 fill / 8px / 0 stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+}
+/* Низ, а не верх: сверху справа HUD рисует волну, таймер и прах (ui/hud.js),
+   и кнопка съедала счётчик волны. Внизу справа канвасный HUD не рисует ничего,
+   а до угла ещё и дотягивается большой палец той руки, что не на джойстике. */
+.touch-pause {
+    position: absolute;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: calc(12px + env(safe-area-inset-right));
+}
+
+/* Чёлка и вырезы: под вырезом не должно оказаться ни кнопки, ни текста.
+   max() сохраняет прежние отступы там, где выреза нет (env() = 0). */
+@media (pointer: coarse) {
+    #ui {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+            env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .modal {
+        padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+            max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    }
+    #screen-menu.menu:not(.city-screen) {
+        padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+            max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    }
+}
+
+/* Портрет на телефоне: всё в одну колонку, тап-цели не мельче 44 px */
+@media (orientation: portrait) and (max-width: 700px) {
+    /* Модалки — во всю ширину экрана, но по-прежнему абсолютом по центру.
+       Вынимать их в поток нельзя: панели перекрывают друг друга намеренно
+       (у .modal почти непрозрачный фон), и в потоке они лягут стопкой одна
+       под другой — видно сразу и лавку, и лобби, и город. Меняем только
+       габариты, центрирование из базового правила остаётся. */
+    .modal {
+        width: calc(100vw - 12px);
+        min-width: 0;
+        max-width: calc(100vw - 12px);
+        max-height: calc(100vh - 12px);
+    }
+
+    /* Одна колонка: лавка, левелап, мета, Ловчий Дом, сетап, лобби, итоги */
+    .shop-slots, .shop-cols, .choice-row { flex-direction: column; }
+    .shop-slots .card, .choice-row .choice { width: 100%; flex: none; }
+    .shop-top { flex-wrap: wrap; }
+    .meta-body, .lodge-hall, .dlg-cols, .setup-grid { grid-template-columns: 1fr; }
+    .result-rows { min-width: 0; }
+
+    /* Тап-цели */
+    .btn, .tab, .inv-cell, .choice, .meta-card, .city-b {
+        min-height: 44px;
+        font-size: 13px;
+    }
+
+    /* Тултип не уезжает за экран */
+    .tooltip { max-width: calc(100vw - 16px); }
+
+    /* Экран входа: font-size 16px, иначе Android зумит страницу при фокусе */
+    .auth-box { width: 100%; max-width: 360px; }
+    .auth-box input { min-height: 44px; font-size: 16px; }
 }
