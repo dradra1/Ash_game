@@ -41,6 +41,9 @@ SECRET_KEY_FILE = DATA_DIR / "secret_key"
 # контейнера его не трёт. Нет файла — маршрут отдаёт 404, кнопка на входе не
 # рисуется, всё остальное работает как раньше.
 APK_FILE = DATA_DIR / "ash-and-iron.apk"
+# Офлайн-сборка (ветка offline, android-offline/): вся игра внутри APK, соло без
+# сервера. Лежит там же и по тем же правилам, что и оболочка.
+OFFLINE_APK_FILE = DATA_DIR / "ash-and-iron-offline.apk"
 
 app = Flask(__name__)
 # Кука сессии — только same-site: авторизация в сокете идёт по этой же куке, и «*» в CORS
@@ -237,7 +240,8 @@ def root():
         return redirect("/login")
     return render_template(
         "index.html",
-        boot={"name": user["name"], "admin": is_admin_user(user)},
+        boot={"name": user["name"], "admin": is_admin_user(user),
+              "offline_apk": OFFLINE_APK_FILE.exists()},
     )
 
 
@@ -250,26 +254,37 @@ def favicon():
     )
 
 
+def _send_apk(path):
+    if not path.exists():
+        return jsonify({"error": "not_found"}), 404
+    return send_from_directory(
+        path.parent.resolve(),
+        path.name,
+        mimetype="application/vnd.android.package-archive",
+        as_attachment=True,
+    )
+
+
 @app.route("/download/apk")
 def download_apk():
     # Без авторизации: в оболочке нет ни секретов, ни игрового содержимого —
     # это WebView на этот же сайт. Требовать логин до установки клиента значило бы
     # запирать вход за самим входом.
-    if not APK_FILE.exists():
-        return jsonify({"error": "not_found"}), 404
-    return send_from_directory(
-        APK_FILE.parent.resolve(),
-        APK_FILE.name,
-        mimetype="application/vnd.android.package-archive",
-        as_attachment=True,
-    )
+    return _send_apk(APK_FILE)
+
+
+@app.route("/download/apk-offline")
+def download_apk_offline():
+    # Тоже без авторизации: офлайн-версия — самостоятельная игра, аккаунт ей не нужен.
+    return _send_apk(OFFLINE_APK_FILE)
 
 
 @app.route("/login")
 def login_page():
     if "user_id" in session and current_user() is not None:
         return redirect("/")
-    return render_template("login.html", apk=APK_FILE.exists())
+    return render_template("login.html", apk=APK_FILE.exists(),
+                           offline_apk=OFFLINE_APK_FILE.exists())
 
 
 @app.route("/api/register", methods=["POST"])

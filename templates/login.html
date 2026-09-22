@@ -36,13 +36,16 @@
         {% if apk %}
         <a class="apk" id="apk" href="/download/apk">Android APK</a>
         {% endif %}
+        {% if offline_apk %}
+        <a class="apk apk-offline" id="apk-offline" href="/download/apk-offline">Скачать офлайн-версию · Android, без интернета</a>
+        {% endif %}
     </div>
     <script>
         // Внутри самой оболочки ссылка на неё же бессмысленна: маркер ставит
         // MainActivity в User-Agent (android/app/src/main/java/.../MainActivity.kt).
-        const apkLink = document.getElementById('apk');
-        if (apkLink && navigator.userAgent.indexOf('AshAndIronApp') >= 0) {
-            apkLink.remove();
+        // WebView оболочки скачивания не обрабатывает — прячем обе ссылки.
+        if (navigator.userAgent.indexOf('AshAndIronApp') >= 0) {
+            document.querySelectorAll('.apk').forEach((a) => a.remove());
         }
 
         const tabs = document.querySelectorAll('.tab');

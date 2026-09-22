@@ -1,5 +1,5 @@
 {
-  "content_version": 56,
+  "content_version": 57,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -8019,7 +8019,9 @@
       "ui.result.quest_done": "заказ выполнен",
       "ui.touch.pause": "❙❙",
       "ui.touch.pause_title": "Пауза",
-      "ui.pause.debug": "Отладка"
+      "ui.pause.debug": "Отладка",
+      "ui.menu.offline_apk": "Скачать офлайн-версию",
+      "ui.menu.offline_apk_title": "Android-APK для одиночной игры без интернета"
     },
     "en": {
       "ui.menu.play": "Play",
@@ -8224,7 +8226,9 @@
       "ui.result.quest_done": "contract completed",
       "ui.touch.pause": "❙❙",
       "ui.touch.pause_title": "Pause",
-      "ui.pause.debug": "Debug"
+      "ui.pause.debug": "Debug",
+      "ui.menu.offline_apk": "Download offline version",
+      "ui.menu.offline_apk_title": "Android APK for single-player without internet"
     }
   },
   "admin": {
