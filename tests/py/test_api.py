@@ -159,3 +159,20 @@ def test_login_page_hides_apk_button_without_file(client):
     app.APK_FILE.parent.mkdir(parents=True, exist_ok=True)
     app.APK_FILE.write_bytes(b"PK\x03\x04")
     assert b"/download/apk" in c.get("/login").data
+
+
+def test_offline_apk_download(client):
+    """Офлайн-APK: 404 без файла, attachment с файлом, кнопка на входе — только с файлом."""
+    c, app = client
+    r = c.get("/download/apk-offline")
+    assert r.status_code == 404
+    assert b"/download/apk-offline" not in c.get("/login").data
+
+    app.OFFLINE_APK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    app.OFFLINE_APK_FILE.write_bytes(b"PK\x03\x04offline")
+    r = c.get("/download/apk-offline")
+    assert r.status_code == 200
+    assert r.mimetype == "application/vnd.android.package-archive"
+    assert "attachment" in r.headers["Content-Disposition"]
+    assert r.data == b"PK\x03\x04offline"
+    assert b"/download/apk-offline" in c.get("/login").data

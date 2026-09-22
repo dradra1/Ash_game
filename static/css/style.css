@@ -181,6 +181,12 @@ html, body {
     text-decoration: none;
 }
 
+.auth-box .apk + .apk {
+    margin-top: 6px;
+    padding-top: 0;
+    border-top: none;
+}
+
 .auth-box .apk:hover {
     color: var(--gold);
 }
@@ -608,6 +614,8 @@ html, body {
 }
 .city-relics { color: var(--gold); margin-right: auto; }
 .city-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+/* Ссылка на офлайн-APK выглядит как соседние кнопки, а не как текстовая ссылка */
+.city-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
 .city-join input { padding: 3px 8px; }
 .city-error {
     flex-basis: 100%;

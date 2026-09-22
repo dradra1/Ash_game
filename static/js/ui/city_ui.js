@@ -256,6 +256,20 @@ export function createCity(root, config, profile, t, on) {
   actions.appendChild(mkBtn('btn-audio', t('ui.audio.title'),
     () => on.audio && on.audio()));
 
+  // Офлайн-APK: только когда файл лежит на сервере (app.py → __BOOT__.offline_apk)
+  // и не внутри APK-оболочки — её WebView скачивания не обрабатывает.
+  const boot = globalThis.__BOOT__ || {};
+  const ua = (globalThis.navigator && globalThis.navigator.userAgent) || '';
+  if (boot.offline_apk && ua.indexOf('AshAndIronApp') < 0) {
+    const dl = doc.createElement('a');
+    dl.id = 'btn-offline-apk';
+    dl.className = 'btn';
+    dl.href = '/download/apk-offline';
+    dl.textContent = t('ui.menu.offline_apk');
+    dl.title = t('ui.menu.offline_apk_title');
+    actions.appendChild(dl);
+  }
+
   const adminBtn = mkBtn('btn-admin', t('ui.admin.title'),
     () => on.admin && on.admin());
   adminBtn.style.display = 'none';
