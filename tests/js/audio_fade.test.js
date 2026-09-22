@@ -79,3 +79,25 @@ test('поправки громкости у треков нейтральны',
     assert.equal(g, 1, `${id}: gain ${g} — файлы уже выровнены`);
   }
 });
+
+test('порядок боевых тем: все треки по кругу, без повтора подряд, от сида', async () => {
+  const { waveMusicOrder } = await import('../../static/js/engine/audio.js');
+  const { createRng } = await import('../../static/js/engine/rng.js');
+  const list = config.audio.playlist.wave;
+  const waves = config.run.waves;
+  assert.ok(list.length >= 5, 'боевых тем мало — музыка приедается');
+  const seen = new Set();
+  for (let seed = 1; seed <= 50; seed++) {
+    const order = waveMusicOrder(list, waves, createRng(seed));
+    assert.equal(order.length, waves);
+    // первый круг — каждый трек ровно по разу
+    assert.equal(new Set(order.slice(0, list.length)).size, list.length);
+    for (let i = 1; i < order.length; i++) {
+      assert.notEqual(order[i], order[i - 1], `сид ${seed}: повтор на волне ${i + 1}`);
+    }
+    assert.deepEqual(order, waveMusicOrder(list, waves, createRng(seed)), 'детерминирован по сиду');
+    seen.add(order[0]);
+  }
+  assert.ok(seen.size > 1, 'первая волна всегда начинается с одного трека');
+  for (const id of list) assert.ok(config.audio.tracks[id], `нет трека ${id}`);
+});

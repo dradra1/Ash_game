@@ -54,7 +54,8 @@ def main():
 
     # Телефон 360×800 при dpr 3 — самый частый профиль. Ожидаемый зум считается
     # по той же формуле, что в engine/render.js: s = 2 device-px на мировую
-    # единицу при minView 500, значит в CSS-пикселях 2/3.
+    # единицу при minView 500, значит в CSS-пикселях 2/3, и поверх — приближение
+    # render.touch_zoom (1.2): итого 0.8.
     if a.mobile:
         page_kwargs = {
             "viewport": {"width": 360, "height": 800},
@@ -62,7 +63,7 @@ def main():
             "is_mobile": True,
             "has_touch": True,
         }
-        expect_zoom = 2 / 3
+        expect_zoom = 2 / 3 * 1.2
     else:
         page_kwargs = {"viewport": {"width": 1280, "height": 800}}
         # Десктоп обязан остаться ровно таким, каким был до мобильного режима.

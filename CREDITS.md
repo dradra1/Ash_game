@@ -23,6 +23,10 @@ CC0 не требует указания авторства юридически
 | `static/audio/mu_wave_b.ogg` | Dark Shrine Loop | qubodup | CC0 1.0 | https://opengameart.org/content/dark-shrine-loop |
 | `static/audio/mu_wave_c.ogg` | Fast fight / battle music | XCVG | CC0 1.0 | https://opengameart.org/content/fast-fight-battle-music-looped |
 | `static/audio/mu_boss.ogg` | Boss Battle #2 (Symphonic Metal) | nene | CC0 1.0 | https://opengameart.org/content/boss-battle-2-symphonic-metal |
+| `static/audio/mu_wave_d.ogg` | Battle Theme A | cynicmusic | CC0 1.0 | https://opengameart.org/content/battle-theme-a |
+| `static/audio/mu_wave_e.ogg` | Determined Pursuit (epic orchestra loop) | Emma_MA | CC0 1.0 | https://opengameart.org/content/determined-pursuit-epic-orchestra-loop |
+| `static/audio/mu_wave_f.ogg` | Realm of Torment | vitalezzz | CC0 1.0 | https://opengameart.org/content/realm-of-torment |
+| `static/audio/mu_wave_g.ogg` | Open Warfare | Ruskerdax | CC0 1.0 | https://opengameart.org/content/open-warfare |
 
 Файлы изменены дважды, и оба раза это надо назвать вслух — CC0 модификацию
 разрешает, но молчать о ней некрасиво.
