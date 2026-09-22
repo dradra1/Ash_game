@@ -61,6 +61,29 @@ function savePrefs(p) {
   } catch (e) { /* см. выше */ }
 }
 
+// Порядок боевых треков на забег: «мешок» — каждый трек звучит по разу, потом
+// мешок перемешивается заново, и первый трек нового круга не равен последнему
+// предыдущего (иначе на стыке одна тема играла бы две волны подряд). Сид — от
+// сида забега, поэтому порядок разный от забега к забегу, но без Math.random.
+// rng — engine/rng.js; waves — сколько номеров волн нужно покрыть.
+export function waveMusicOrder(list, waves, rng) {
+  const out = [];
+  if (!Array.isArray(list) || !list.length) return out;
+  while (out.length < waves) {
+    const bag = list.slice();
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = rng.int(0, i);
+      const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+    }
+    if (bag.length > 1 && out.length && bag[0] === out[out.length - 1]) {
+      const t = bag[0]; bag[0] = bag[bag.length - 1]; bag[bag.length - 1] = t;
+    }
+    for (const id of bag) out.push(id);
+  }
+  out.length = waves;
+  return out;
+}
+
 export function createAudio(config) {
   const cfg = config.audio || {};
   const limit = cfg.sfx_instance_limit || 4;
@@ -83,6 +106,10 @@ export function createAudio(config) {
   let pendingTrack = null;   // что включить, как только браузер разрешит звук
   let pendingFade = 0;
   const defaultFade = num(cfg.fade_ms, DEFAULT_FADE_MS);
+  // Где трек остановился в прошлый раз. Каждая волна начинала тему с нуля, и за
+  // забег звучали только первые полминуты каждого трека — отсюда ощущение, что
+  // музыка одна и та же. Теперь тема продолжается с места, где её прервали.
+  const positions = {};
 
   function makeAudioEl(id) {
     const t = tracks[id];
@@ -91,6 +118,16 @@ export function createAudio(config) {
     a.loop = t.loop !== false;
     a.preload = 'auto';
     a.volume = 0;
+    const at = positions[id];
+    if (at > 0) {
+      // До загрузки метаданных currentTime может не принять значение — ставим
+      // и сразу, и по событию; если трек короче сохранённого места, с начала.
+      const seek = () => {
+        if (a.duration && at < a.duration - 1) a.currentTime = at;
+      };
+      try { a.currentTime = at; } catch (e) { /* ещё нет метаданных */ }
+      a.addEventListener('loadedmetadata', seek, { once: true });
+    }
     return a;
   }
 
@@ -107,6 +144,7 @@ export function createAudio(config) {
     if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
     const prev = el;
     const prevFrom = prev ? prev.volume : 0;
+    if (prev && elId) positions[elId] = prev.currentTime || 0;
     el = next;
     elId = nextId;
     const steps = Math.max(1, Math.round(fadeMs / FADE_STEP_MS));
@@ -145,7 +183,11 @@ export function createAudio(config) {
     pendingTrack = null;
     pendingFade = 0;
     if (fadeTimer) { globalThis.clearInterval(fadeTimer); fadeTimer = 0; }
-    if (el) { el.pause(); el.src = ''; }
+    if (el) {
+      if (elId) positions[elId] = el.currentTime || 0;
+      el.pause();
+      el.src = '';
+    }
     el = null;
     elId = null;
   }

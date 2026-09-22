@@ -23,6 +23,14 @@ export function createRenderer(canvas, config, arenaSize) {
   const viewRef = (config.net && config.net.view_radius) || 900;
   // Сколько мировых единиц обязано помещаться по короткой стороне экрана
   const minView = (config.render && config.render.min_view_units) || 0;
+  // Приближение камеры на сенсорных экранах поверх целочисленного масштаба.
+  // Телефон держат близко к глазам, и при minView игрок с врагами мелковаты.
+  // Масштаб мир→device-px здесь перестаёт быть целым, но при dpr ≥ 2 неровность
+  // пикселя спрайта (2 против 3 физических точек) глазом не видна. Десктоп
+  // (pointer: fine) не трогаем — там view.zoom обязан остаться 1 (tools/smoke.py).
+  const touchZoom = (config.render && config.render.touch_zoom) || 1;
+  const coarse = () => !!(globalThis.matchMedia
+    && globalThis.matchMedia('(pointer: coarse)').matches);
 
   const camera = { x: arenaW / 2, y: arenaH / 2 };
   const view = { w: 0, h: 0, zoom: 1 };
@@ -47,7 +55,7 @@ export function createRenderer(canvas, config, arenaSize) {
     const short = Math.min(canvas.width, canvas.height);
     while (s > 1 && short / s < minView) s--;
 
-    view.zoom = s / dpr;
+    view.zoom = (coarse() ? s * touchZoom : s) / dpr;
     ctx.imageSmoothingEnabled = false;
   }
 

@@ -30,7 +30,7 @@ import { createTouchUi } from './ui/touch_ui.js';
 import { createAdminUi } from './ui/admin_ui.js';
 import { createParticles } from './engine/particles.js';
 import { createRng } from './engine/rng.js';
-import { createAudio } from './engine/audio.js';
+import { createAudio, waveMusicOrder } from './engine/audio.js';
 import { createAudioUi } from './ui/audio_ui.js';
 import { createDebug } from './ui/debug.js';
 import { createScreens } from './ui/screens.js';
@@ -122,8 +122,20 @@ async function boot() {
     if (bossWave && pl.boss) return pl.boss;
     if (phase === PHASE_SHOP || phase === PHASE_LEVELUP) return pl.shop || pl.menu;
     const list = pl.wave;
-    if (Array.isArray(list) && list.length) return list[(wave - 1) % list.length];
+    if (Array.isArray(list) && list.length) {
+      if (musicOrder.length) return musicOrder[(wave - 1) % musicOrder.length];
+      return list[(wave - 1) % list.length];
+    }
     return list || pl.menu;
+  }
+
+  // Порядок боевых тем на забег (engine/audio.js: waveMusicOrder). В коопе у всех
+  // один сид — и одна последовательность музыки.
+  let musicOrder = [];
+  function shuffleMusic(seed) {
+    const pl = (config.audio && config.audio.playlist) || {};
+    musicOrder = waveMusicOrder(Array.isArray(pl.wave) ? pl.wave : [],
+      config.run.waves, createRng((seed ^ MUSIC_SALT) >>> 0));
   }
 
   let musicWave = -1;
@@ -882,6 +894,7 @@ async function boot() {
         arena: arenaId, danger, unlocked: unlockedWeapons, curses, onImpact,
       });
       debugExtra.seed = data.seed;
+      shuffleMusic(data.seed);
       arenaLayout = run.layout;
       bootEngine([run.arenaW, run.arenaH]);
     } catch (e) {
@@ -966,6 +979,7 @@ async function boot() {
 
     transport = createSocketTransport(socket, { isHost: hostFlag, id: myIndex });
     debugExtra.seed = msg.seed;
+    shuffleMusic(msg.seed);
 
     if (hostFlag) {
       const players = room.players.map((p, i) => ({
@@ -1091,6 +1105,8 @@ const PING_INTERVAL_MS = 2000;
 // Сид генератора косметики. Фиксированный и свой: искры не имеют права влиять на
 // случайность забега, которую сервер сверяет при валидации результата.
 const FX_SEED = 0x5eed1;
+// Соль сида для порядка музыки: свой поток, не пересекающийся с rng забега.
+const MUSIC_SALT = 0x6d75736;
 const TAU = Math.PI * 2;
 
 boot();

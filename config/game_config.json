@@ -1,5 +1,5 @@
 {
-  "content_version": 57,
+  "content_version": 58,
   "sim": {
     "dt": 0.0166667,
     "max_catchup_steps": 5,
@@ -138,7 +138,8 @@
       "thumb_color": "#c8a35a",
       "thumb_alpha": 0.55,
       "thumb_radius": 16
-    }
+    },
+    "touch_zoom": 1.2
   },
   "arena": {
     "size": [
@@ -7798,6 +7799,42 @@
         "url": "https://opengameart.org/content/boss-battle-2-symphonic-metal",
         "loop": true,
         "gain": 1.0
+      },
+      "mu_wave_d": {
+        "src": "/static/audio/mu_wave_d.ogg",
+        "title": "Battle Theme A",
+        "author": "cynicmusic",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/battle-theme-a",
+        "loop": true,
+        "gain": 1.0
+      },
+      "mu_wave_e": {
+        "src": "/static/audio/mu_wave_e.ogg",
+        "title": "Determined Pursuit (epic orchestra loop)",
+        "author": "Emma_MA",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/determined-pursuit-epic-orchestra-loop",
+        "loop": true,
+        "gain": 1.0
+      },
+      "mu_wave_f": {
+        "src": "/static/audio/mu_wave_f.ogg",
+        "title": "Realm of Torment",
+        "author": "vitalezzz",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/realm-of-torment",
+        "loop": true,
+        "gain": 1.0
+      },
+      "mu_wave_g": {
+        "src": "/static/audio/mu_wave_g.ogg",
+        "title": "Open Warfare",
+        "author": "Ruskerdax",
+        "license": "CC0",
+        "url": "https://opengameart.org/content/open-warfare",
+        "loop": true,
+        "gain": 1.0
       }
     },
     "music_volume": 0.5,
@@ -7807,7 +7844,11 @@
       "wave": [
         "mu_wave_a",
         "mu_wave_b",
-        "mu_wave_c"
+        "mu_wave_c",
+        "mu_wave_d",
+        "mu_wave_e",
+        "mu_wave_f",
+        "mu_wave_g"
       ],
       "boss": "mu_boss",
       "shop": "mu_menu"
