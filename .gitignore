@@ -21,3 +21,13 @@ android-keys/
 *.jks
 *.keystore
 *.apk
+
+# Офлайн-сборка (ветка offline): стейдж веба и его копия в assets генерируются
+# offline/build_web.sh / build_apk.sh из static/ + конфига.
+offline/build/
+android-offline/.gradle/
+android-offline/app/build/
+android-offline/build/
+android-offline/app/src/main/assets/
+android-offline/local.properties
+android-offline/signing.properties

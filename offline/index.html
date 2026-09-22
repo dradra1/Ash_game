@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Прах и Железо</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/static/favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <div id="ui"></div>
+    <!-- Офлайн-сборка: сервера нет. /api/* отвечает static/js/offline/api.js,
+         поэтому подмена fetch ставится ДО загрузки main.js (тот сразу зовёт boot()). -->
+    <script>window.__BOOT__ = { name: 'Странник', admin: false, offline: true };</script>
+    <script type="module">
+        import { installOffline } from '/static/js/offline/api.js';
+        installOffline();
+        import('/static/js/main.js');
+    </script>
+</body>
+</html>

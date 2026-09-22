@@ -223,7 +223,11 @@ export function createCity(root, config, profile, t, on) {
     return btn;
   }
 
-  actions.appendChild(mkBtn('btn-coop', t('ui.menu.coop'),
+  // Офлайн-сборка (ветка offline, APK без сервера): кооп и вход по коду
+  // требуют релея комнат, которого нет, — кнопок нет вовсе, а не «серые».
+  const offline = !!(globalThis.__BOOT__ && globalThis.__BOOT__.offline);
+
+  if (!offline) actions.appendChild(mkBtn('btn-coop', t('ui.menu.coop'),
     () => on.coop && on.coop()));
 
   const joinRow = doc.createElement('div');
@@ -233,7 +237,7 @@ export function createCity(root, config, profile, t, on) {
   codeInput.maxLength = config.net.room_code_len;
   codeInput.placeholder = t('ui.lobby.code');
   joinRow.appendChild(codeInput);
-  actions.appendChild(joinRow);
+  if (!offline) actions.appendChild(joinRow);
 
   const errEl = doc.createElement('div');
   errEl.className = 'city-error';
@@ -257,8 +261,10 @@ export function createCity(root, config, profile, t, on) {
   adminBtn.style.display = 'none';
   actions.appendChild(adminBtn);
 
-  actions.appendChild(mkBtn('btn-logout', t('ui.menu.logout'),
-    () => on.logout && on.logout()));
+  if (!offline) {
+    actions.appendChild(mkBtn('btn-logout', t('ui.menu.logout'),
+      () => on.logout && on.logout()));
+  }
 
   top.appendChild(errEl);
   cityEl.appendChild(top);

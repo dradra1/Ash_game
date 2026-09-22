@@ -193,3 +193,27 @@ cd /opt/sites/ash-and-iron && docker compose up -d --build
 Нативной симуляции там нет и быть не должно: вторая ветка кода разъедется с
 браузерным хостом в коопе (§2). Собранный APK кладётся в `data/ash-and-iron.apk` —
 том, а не образ и не git, — и раздаётся маршрутом `/download/apk`.
+
+## 11. Ветка `offline` — одиночная игра без сервера
+
+Эта ветка — офлайн-форк: та же игра, собранная в APK, который работает без сети.
+Это **не** второй «одиночный режим» из §6: симуляция, UI и соло через
+`LocalTransport` — тот же код, что на `arena-combat-ui`. Подменён только слой `/api/*`:
+
+- `static/js/offline/api.js` — подмена `fetch` для `/api/*`, ответы той же формы, что
+  `app.py`; профиль (реликвии, открытия, ачивки, заказы, лор, история забегов) — в
+  `localStorage` (`ash_offline_v1`). Сид забега — `crypto.getRandomValues`.
+- `static/js/offline/meta.js`, `lodge.js` — порт `meta.py` / `lodge.py`. **Правишь формулу
+  на сервере — правь и порт**: `tests/js/offline.test.js` сверяет их с Python на репо-
+  конфиге и упадёт при расхождении.
+- Кооп, вход по коду и «Выйти» скрыты по `__BOOT__.offline` (`ui/city_ui.js`).
+- `offline/index.html` — точка входа без Jinja и socket.io; `offline/build_web.sh` стейджит
+  сайт в `offline/build/web` (конфиг — копия с бОльшим `content_version` из репо или
+  живого тома), `offline/build_apk.sh` кладёт его в `android-offline/…/assets/web` и
+  собирает APK (`android-offline/README.md`).
+
+Обновление из основной ветки: `git merge arena-combat-ui`, затем `offline/build_apk.sh`,
+затем `cp android-offline/app/build/outputs/apk/release/app-release.apk
+/opt/sites/ash-and-iron/data/ash-and-iron-offline.apk` — сайт отдаёт его по `/download/apk-offline`.
+Рабочая копия ветки — git worktree `/opt/sites/ash-offline` (не переключать ветки в
+`/opt/sites/ash-and-iron`: оттуда собирается Docker-образ сайта).
